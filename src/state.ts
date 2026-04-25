@@ -156,7 +156,8 @@ function ensureWritableWhiteCell(puzzle: CrosswordPuzzle, coord: Coord): void {
 function toClueSelection(slot: Slot): ClueSelection {
   return {
     slotId: slot.id,
-    clueNumber: slot.clueNumber,
+    groupNum: slot.groupNum,
+    wordIndexInGroup: slot.wordIndexInGroup,
     clue: slot.clue,
     length: slot.length,
     direction: slot.direction,

@@ -11,7 +11,7 @@ import type {
   ValidationResult,
 } from "./types.js";
 
-const SLOT_ID_PATTERN = /^[1-9]\d*[AD]$/;
+const SLOT_ID_PATTERN = /^[RC]\d+-[1-9]\d*$/;
 
 export class CrosswordValidationError extends Error {
   readonly issues: readonly ValidationIssue[];
@@ -318,7 +318,7 @@ function validateKnownSlotKey(
   if (!SLOT_ID_PATTERN.test(key)) {
     issues.push({
       code: "invalid_slot_id",
-      message: `Slot ID ${key} must look like 1A or 1D.`,
+      message: `Slot ID ${key} must look like R1-1 or C1-1.`,
       path: `${path}.${key}`,
       slotId: key,
     });

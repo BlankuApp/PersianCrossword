@@ -28,12 +28,12 @@ describe("crossword state", () => {
     expect(selection.inBounds).toBe(true);
     expect(selection.isBlock).toBe(false);
     expect(selection.clues.across).toMatchObject({
-      slotId: "1A",
+      slotId: "R1-1",
       clue: "ردیف بالا",
       direction: "across",
     });
     expect(selection.clues.down).toMatchObject({
-      slotId: "1D",
+      slotId: "C1-1",
       clue: "ستون راست",
       direction: "down",
     });
@@ -60,28 +60,28 @@ describe("crossword state", () => {
       version: 1,
       size: { rows: 1, cols: 2 },
       blocks: [],
-      clues: { "1A": "یک" },
-      answers: { "1A": "یک" },
+      clues: { "R1-1": "یک" },
+      answers: { "R1-1": "یک" },
     });
     const state = createState(puzzle);
 
-    expect(state.checkSlot("1A")).toBe("incomplete");
+    expect(state.checkSlot("R1-1")).toBe("incomplete");
 
     state.setCell({ row: 0, col: 1 }, "ي");
     state.setCell({ row: 0, col: 0 }, "ك");
 
-    expect(state.checkSlot("1A")).toBe("correct");
+    expect(state.checkSlot("R1-1")).toBe("correct");
 
     state.setCell({ row: 0, col: 0 }, "ن");
 
-    expect(state.checkSlot("1A")).toBe("incorrect");
+    expect(state.checkSlot("R1-1")).toBe("incorrect");
   });
 
   it("returns unknownAnswer when the answer is missing or null", () => {
     const puzzle = compilePuzzle(basicPuzzle);
     const state = createState(puzzle);
 
-    expect(state.checkSlot("2D")).toBe("unknownAnswer");
+    expect(state.checkSlot("C3-1")).toBe("unknownAnswer");
   });
 
   it("rejects writes to black, out-of-bounds, or multi-character cells", () => {

@@ -13,65 +13,56 @@ export function deriveSlots(
   size: GridSize,
   blocks: ReadonlySet<CellKey>,
 ): DerivedSlot[] {
-  const startsByCell = new Map<CellKey, SlotStart[]>();
+  const acrossStarts = deriveAcrossStarts(size, blocks);
+  const downStarts = deriveDownStarts(size, blocks);
 
-  for (const start of deriveAcrossStarts(size, blocks)) {
-    addStart(startsByCell, start);
-  }
+  const acrossSlots: DerivedSlot[] = [];
+  let currentRow = -1;
+  let wordIndex = 0;
 
-  for (const start of deriveDownStarts(size, blocks)) {
-    addStart(startsByCell, start);
-  }
-
-  const slots: DerivedSlot[] = [];
-  let clueNumber = 1;
-
-  for (let row = 0; row < size.rows; row += 1) {
-    for (let col = size.cols - 1; col >= 0; col -= 1) {
-      const starts = startsByCell.get(cellKey({ row, col }));
-      if (!starts) {
-        continue;
-      }
-
-      for (const start of orderStarts(starts)) {
-        const suffix = start.direction === "across" ? "A" : "D";
-        slots.push({
-          id: `${clueNumber}${suffix}`,
-          clueNumber,
-          direction: start.direction,
-          start: cloneCoord(start.start),
-          cells: start.cells.map(cloneCoord),
-          length: start.cells.length,
-        });
-      }
-
-      clueNumber += 1;
+  for (const start of acrossStarts) {
+    if (start.start.row !== currentRow) {
+      currentRow = start.start.row;
+      wordIndex = 1;
+    } else {
+      wordIndex += 1;
     }
+    const groupNum = start.start.row + 1;
+    acrossSlots.push({
+      id: `R${groupNum}-${wordIndex}`,
+      groupNum,
+      wordIndexInGroup: wordIndex,
+      direction: "across",
+      start: cloneCoord(start.start),
+      cells: start.cells.map(cloneCoord),
+      length: start.cells.length,
+    });
   }
 
-  return slots;
-}
+  const downSlots: DerivedSlot[] = [];
+  let currentCol = -1;
+  wordIndex = 0;
 
-function addStart(map: Map<CellKey, SlotStart[]>, start: SlotStart): void {
-  const key = cellKey(start.start);
-  const existing = map.get(key);
-
-  if (existing) {
-    existing.push(start);
-    return;
-  }
-
-  map.set(key, [start]);
-}
-
-function orderStarts(starts: readonly SlotStart[]): SlotStart[] {
-  return [...starts].sort((a, b) => {
-    if (a.direction === b.direction) {
-      return 0;
+  for (const start of downStarts) {
+    if (start.start.col !== currentCol) {
+      currentCol = start.start.col;
+      wordIndex = 1;
+    } else {
+      wordIndex += 1;
     }
+    const groupNum = size.cols - start.start.col;
+    downSlots.push({
+      id: `C${groupNum}-${wordIndex}`,
+      groupNum,
+      wordIndexInGroup: wordIndex,
+      direction: "down",
+      start: cloneCoord(start.start),
+      cells: start.cells.map(cloneCoord),
+      length: start.cells.length,
+    });
+  }
 
-    return a.direction === "across" ? -1 : 1;
-  });
+  return [...acrossSlots, ...downSlots];
 }
 
 function deriveAcrossStarts(

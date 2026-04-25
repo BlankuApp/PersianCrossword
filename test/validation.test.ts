@@ -45,7 +45,7 @@ describe("puzzle validation", () => {
       version: 1,
       size: { rows: 1, cols: 2 },
       blocks: [],
-      clues: { "99A": "extra" },
+      clues: { "R99-1": "extra" },
     });
 
     expect(result.issues.map((issue) => issue.code)).toEqual(
@@ -58,8 +58,8 @@ describe("puzzle validation", () => {
       version: 1,
       size: { rows: 1, cols: 2 },
       blocks: [],
-      clues: { "1A": "two letters" },
-      answers: { "1A": "سلام" },
+      clues: { "R1-1": "two letters" },
+      answers: { "R1-1": "سلام" },
     });
 
     expect(result.issues.map((issue) => issue.code)).toContain(

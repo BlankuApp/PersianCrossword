@@ -68,7 +68,11 @@ export function App() {
   }
 
   function selectCell(coord: Coord): void {
-    setSelection((current) => handleCellSelection(puzzle, coord, current));
+    setSelection((current) => {
+      const next = handleCellSelection(puzzle, coord, current);
+      setClueTab(next.direction);
+      return next;
+    });
     boardRef.current?.focus();
   }
 
@@ -167,16 +171,18 @@ export function App() {
 
       <section className="solver-layout">
         <div className="board-panel">
-          <CrosswordBoard
-            boardRef={boardRef}
-            puzzle={puzzle}
-            state={crosswordState}
-            selection={selection}
-            activeKeys={activeKeys}
-            crossingKeys={crossingKeys}
-            onCellClick={selectCell}
-            onKeyDown={handleKeyDown}
-          />
+          <BoardWithLabels puzzle={puzzle}>
+            <CrosswordBoard
+              boardRef={boardRef}
+              puzzle={puzzle}
+              state={crosswordState}
+              selection={selection}
+              activeKeys={activeKeys}
+              crossingKeys={crossingKeys}
+              onCellClick={selectCell}
+              onKeyDown={handleKeyDown}
+            />
+          </BoardWithLabels>
           <ActiveClue slot={activeSlot} />
         </div>
 
@@ -234,7 +240,6 @@ function CrosswordBoard({
           const coord = { row, col };
           const key = cellKey(coord);
           const isBlock = puzzle.isBlock(coord);
-          const startSlot = puzzle.slots.find((slot) => sameCoord(slot.start, coord));
           const isSelected = selection ? sameCoord(selection.coord, coord) : false;
           const value = state.getCell(coord);
 
@@ -254,9 +259,6 @@ function CrosswordBoard({
               disabled={isBlock}
               onClick={() => onCellClick(coord)}
             >
-              {!isBlock && startSlot ? (
-                <span className="cell-number">{startSlot.clueNumber}</span>
-              ) : null}
               {!isBlock ? <span className="cell-value">{value ?? ""}</span> : null}
             </button>
           );
@@ -272,7 +274,7 @@ function ActiveClue({ slot }: { readonly slot: Slot | undefined }) {
       {slot ? (
         <>
           <div className="clue-kicker">
-            {slot.direction === "across" ? "افقی" : "عمودی"} {slot.clueNumber}
+            {slot.direction === "across" ? "ردیف" : "ستون"} {slot.groupNum}، کلمه {slot.wordIndexInGroup}
             <span>{slot.length} حرف</span>
           </div>
           <p>{slot.clue}</p>
@@ -281,6 +283,43 @@ function ActiveClue({ slot }: { readonly slot: Slot | undefined }) {
         <p>یک خانه سفید را انتخاب کنید.</p>
       )}
     </section>
+  );
+}
+
+function BoardWithLabels({
+  puzzle,
+  children,
+}: {
+  readonly puzzle: ReturnType<typeof compilePuzzle>;
+  readonly children: React.ReactNode;
+}) {
+  const { rows, cols } = puzzle.size;
+  return (
+    <div className="board-with-labels">
+      <div className="board-top-row">
+        <div className="corner-spacer" />
+        <div
+          className="col-numbers"
+          style={{ "--grid-cols": cols } as React.CSSProperties}
+        >
+          {Array.from({ length: cols }, (_, c) => (
+            <span key={c} className="col-number">
+              {c + 1}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="board-bottom-row">
+        <div className="row-numbers">
+          {Array.from({ length: rows }, (_, r) => (
+            <span key={r} className="row-number">
+              {r + 1}
+            </span>
+          ))}
+        </div>
+        {children}
+      </div>
+    </div>
   );
 }
 
@@ -310,7 +349,7 @@ function CluePanel({
           aria-selected={clueTab === "across"}
           onClick={() => onTabChange("across")}
         >
-          افقی
+          ردیف‌ها
         </button>
         <button
           type="button"
@@ -318,20 +357,20 @@ function CluePanel({
           aria-selected={clueTab === "down"}
           onClick={() => onTabChange("down")}
         >
-          عمودی
+          ستون‌ها
         </button>
       </div>
 
       <div className="clue-lists">
-        <ClueList
-          title="افقی"
+        <GroupedClueList
+          title="ردیف‌ها"
           slots={acrossSlots}
           activeSlot={activeSlot}
           visibleOnSmall={clueTab === "across"}
           onClueClick={onClueClick}
         />
-        <ClueList
-          title="عمودی"
+        <GroupedClueList
+          title="ستون‌ها"
           slots={downSlots}
           activeSlot={activeSlot}
           visibleOnSmall={clueTab === "down"}
@@ -342,7 +381,20 @@ function CluePanel({
   );
 }
 
-function ClueList({
+function groupSlotsByGroupNum(slots: readonly Slot[]): [number, Slot[]][] {
+  const map = new Map<number, Slot[]>();
+  for (const slot of slots) {
+    const group = map.get(slot.groupNum);
+    if (group) {
+      group.push(slot);
+    } else {
+      map.set(slot.groupNum, [slot]);
+    }
+  }
+  return Array.from(map.entries()).sort(([a], [b]) => a - b);
+}
+
+function GroupedClueList({
   title,
   slots,
   activeSlot,
@@ -355,20 +407,28 @@ function ClueList({
   readonly visibleOnSmall: boolean;
   readonly onClueClick: (slot: Slot) => void;
 }) {
+  const groups = groupSlotsByGroupNum(slots);
   return (
     <section className={`clue-list ${visibleOnSmall ? "clue-list-visible" : ""}`}>
       <h2>{title}</h2>
       <ol>
-        {slots.map((slot) => (
-          <li key={slot.id}>
-            <button
-              type="button"
-              className={activeSlot?.id === slot.id ? "clue-selected" : ""}
-              onClick={() => onClueClick(slot)}
-            >
-              <span>{slot.clueNumber}</span>
-              <span>{slot.clue}</span>
-            </button>
+        {groups.map(([groupNum, groupSlots]) => (
+          <li key={groupNum} className="clue-group">
+            <span className="clue-group-number">{groupNum}</span>
+            <span className="clue-group-words">
+              {groupSlots.map((slot, i) => (
+                <span key={slot.id} className="clue-word-entry">
+                  {i > 0 && <span className="clue-sep"> — </span>}
+                  <button
+                    type="button"
+                    className={`clue-item-btn${activeSlot?.id === slot.id ? " clue-selected" : ""}`}
+                    onClick={() => onClueClick(slot)}
+                  >
+                    {slot.clue}
+                  </button>
+                </span>
+              ))}
+            </span>
           </li>
         ))}
       </ol>

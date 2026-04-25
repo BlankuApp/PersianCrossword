@@ -7,28 +7,28 @@ describe("slot derivation and numbering", () => {
     const puzzle = compilePuzzle(basicPuzzle);
 
     expect(puzzle.slots.map((slot) => slot.id)).toEqual([
-      "1A",
-      "1D",
-      "2D",
-      "3D",
-      "4A",
-      "5A",
+      "R1-1",
+      "R2-1",
+      "R3-1",
+      "C1-1",
+      "C3-1",
+      "C4-1",
     ]);
 
-    expect(puzzle.getCellsForSlot("1A")).toEqual([
+    expect(puzzle.getCellsForSlot("R1-1")).toEqual([
       { row: 0, col: 3 },
       { row: 0, col: 2 },
       { row: 0, col: 1 },
       { row: 0, col: 0 },
     ]);
 
-    expect(puzzle.getCellsForSlot("1D")).toEqual([
+    expect(puzzle.getCellsForSlot("C1-1")).toEqual([
       { row: 0, col: 3 },
       { row: 1, col: 3 },
       { row: 2, col: 3 },
     ]);
 
-    expect(puzzle.getCellsForSlot("5A")).toEqual([
+    expect(puzzle.getCellsForSlot("R3-1")).toEqual([
       { row: 2, col: 3 },
       { row: 2, col: 2 },
       { row: 2, col: 1 },
@@ -54,8 +54,8 @@ describe("slot derivation and numbering", () => {
     const puzzle = compilePuzzle(basicPuzzle);
     const slots = puzzle.getSlotsForCell({ row: 0, col: 3 });
 
-    expect(slots.across?.id).toBe("1A");
-    expect(slots.down?.id).toBe("1D");
+    expect(slots.across?.id).toBe("R1-1");
+    expect(slots.down?.id).toBe("C1-1");
   });
 
   it("returns no slots for black and out-of-bounds cells", () => {

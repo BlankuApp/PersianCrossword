@@ -23,7 +23,8 @@ export interface CrosswordJson {
 
 export interface DerivedSlot {
   readonly id: SlotId;
-  readonly clueNumber: number;
+  readonly groupNum: number;
+  readonly wordIndexInGroup: number;
   readonly direction: Direction;
   readonly start: Coord;
   readonly cells: readonly Coord[];
@@ -43,7 +44,8 @@ export interface SlotsForCell {
 
 export interface ClueSelection {
   readonly slotId: SlotId;
-  readonly clueNumber: number;
+  readonly groupNum: number;
+  readonly wordIndexInGroup: number;
   readonly clue: string;
   readonly length: number;
   readonly direction: Direction;
