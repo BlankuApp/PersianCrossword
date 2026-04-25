@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crossword Grid Importer</title>
+  <style>
+    /* ----- Reset ----- */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ----- Base ----- */
+    body {
+      font-family: system-ui, Tahoma, Arial, sans-serif;
+      background: #f3f4f6;
+      color: #111;
+      padding: 1.75rem 2rem;
+      min-height: 100vh;
+    }
+    h1 { font-size: 1.4rem; margin-bottom: 1.5rem; }
+
+    /* ----- Form controls ----- */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: flex-end;
+      margin-bottom: 1.25rem;
+    }
+    .field { display: flex; flex-direction: column; gap: 0.35rem; }
+    label  { font-size: 0.82rem; font-weight: 600; color: #333; }
+    .hint  { font-size: 0.78rem; color: #888; }
+
+    input[type="file"],
+    input[type="number"] {
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 0.88rem;
+      background: #fff;
+    }
+    input[type="file"]   { padding: 0.35rem 0.6rem; cursor: pointer; }
+    input[type="number"] { padding: 0.4rem 0.6rem; width: 7rem; }
+
+    button {
+      padding: 0.48rem 1.1rem;
+      border: 1px solid #b0b0b0;
+      border-radius: 5px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 0.88rem;
+      transition: background 0.12s;
+      white-space: nowrap;
+    }
+    button:hover:not(:disabled) { background: #e8e8e8; }
+    button.primary { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+    button.primary:hover:not(:disabled) { background: #1558b0; }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ----- Status banner ----- */
+    .status {
+      padding: 0.55rem 0.85rem;
+      border-radius: 5px;
+      font-size: 0.875rem;
+      margin-bottom: 1.1rem;
+      display: none;
+    }
+    .status.info  { display: block; background: #e8f0fe; border: 1px solid #aac4f5; color: #174ea6; }
+    .status.error { display: block; background: #fdecea; border: 1px solid #f5a5a0; color: #900; }
+
+    /* ----- Preview area ----- */
+    #preview-area { display: none; margin-top: 1.5rem; }
+
+    .previews {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      align-items: flex-start;
+    }
+    .preview-col { display: flex; flex-direction: column; gap: 0.4rem; }
+    .preview-label { font-size: 0.78rem; font-weight: 600; color: #555; text-align: center; }
+
+    /* Image containers */
+    .img-box {
+      position: relative;
+      display: inline-block;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      overflow: hidden;
+      background: #000;
+    }
+    .img-box img {
+      display: block;
+      max-width: min(500px, calc(100vw - 4rem));
+      height: auto;
+    }
+
+    /* Grid overlay — must be LTR so column indices match image pixels */
+    #grid-overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      direction: ltr;
+    }
+
+    /* Individual cell buttons */
+    .cell {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      padding: 0;
+      outline: none;
+      position: relative;
+      transition: background 0.08s;
+    }
+    .cell:hover          { background: rgba(26, 115, 232, 0.12); }
+    .cell:focus-visible  { box-shadow: inset 0 0 0 2px #1a73e8; }
+
+    /* Red circle for detected black squares */
+    .cell.black::after {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 60%; height: 60%;
+      border-radius: 50%;
+      background: rgba(220, 38, 38, 0.80);
+      border: 2px solid rgba(255, 255, 255, 0.70);
+      pointer-events: none;
+      transition: background 0.10s;
+    }
+    .cell.black:hover::after { background: rgba(185, 20, 20, 0.90); }
+
+    /* ----- Toolbar & output ----- */
+    .toolbar {
+      margin-top: 0.9rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    #output {
+      margin-top: 0.9rem;
+      padding: 0.75rem 0.9rem;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 0.78rem;
+      max-height: 18rem;
+      overflow: auto;
+      white-space: pre;
+      direction: ltr;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Crossword Grid Importer</h1>
+
+  <div class="controls">
+    <div class="field">
+      <label for="file-input">تصویر جدول</label>
+      <input type="file" id="file-input" accept="image/*">
+      <span class="hint">یا Ctrl+V برای paste از کلیپ‌بورد</span>
+    </div>
+    <div class="field">
+      <label for="n-input">اندازه جدول</label>
+      <input type="number" id="n-input" placeholder="خودکار" min="3" max="50" value="15">
+      <span class="hint">خالی = تشخیص خودکار</span>
+    </div>
+    <button class="primary" id="detect-btn">تشخیص جدول</button>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <div id="preview-area">
+    <div class="previews">
+      <div class="preview-col" id="raw-col" style="display:none">
+        <div class="preview-label">تصویر ورودی</div>
+        <div class="img-box">
+          <img id="raw-img" alt="تصویر اصلی">
+        </div>
+      </div>
+      <div class="preview-col">
+        <div class="preview-label">پس از پردازش — روی خانه‌ها کلیک کنید تا تغییر دهید</div>
+        <div class="img-box">
+          <img id="warped-img" alt="جدول تصحیح‌شده">
+          <div id="grid-overlay" role="grid" aria-label="ویرایش خانه‌های جدول"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <button id="copy-btn">Copy</button>
+      <button id="reset-btn">بازنشانی</button>
+    </div>
+
+    <pre id="output" dir="ltr"></pre>
+  </div>
+
+  <script>
+    // ----- Element refs -----
+    const fileInput   = document.getElementById('file-input');
+    const nInput      = document.getElementById('n-input');
+    const detectBtn   = document.getElementById('detect-btn');
+    const statusEl    = document.getElementById('status');
+    const previewArea = document.getElementById('preview-area');
+    const rawCol      = document.getElementById('raw-col');
+    const rawImg      = document.getElementById('raw-img');
+    const warpedImg   = document.getElementById('warped-img');
+    const gridOverlay = document.getElementById('grid-overlay');
+    const outputEl    = document.getElementById('output');
+    const copyBtn     = document.getElementById('copy-btn');
+    const resetBtn    = document.getElementById('reset-btn');
+
+    // ----- State -----
+    let detectedMatrix = null;  // pristine server result
+    let currentMatrix  = null;  // user-edited copy
+    let numRows = 0, numCols = 0;
+
+    // ----- Status -----
+    function showStatus(msg, type = 'info') {
+      statusEl.textContent = msg;
+      statusEl.className = 'status ' + type;
+    }
+    function clearStatus() { statusEl.className = 'status'; }
+
+    // ----- Raw-image preview -----
+    function showRawPreview(blob) {
+      if (rawImg._objectUrl) URL.revokeObjectURL(rawImg._objectUrl);
+      rawImg._objectUrl = URL.createObjectURL(blob);
+      rawImg.src = rawImg._objectUrl;
+      rawCol.style.display = '';
+    }
+
+    // ----- API call -----
+    async function detect(blob) {
+      showRawPreview(blob);
+
+      const fd = new FormData();
+      fd.append('image', blob, 'image.png');
+      const nVal = nInput.value.trim();
+      if (nVal !== '') fd.append('n', nVal);
+
+      detectBtn.disabled = true;
+      showStatus('در حال پردازش تصویر…');
+
+      try {
+        const resp = await fetch('/api/detect', { method: 'POST', body: fd });
+        const data = await resp.json();
+
+        if (!resp.ok) {
+          showStatus('خطا: ' + (data.detail ?? resp.statusText), 'error');
+          return;
+        }
+
+        clearStatus();
+        numRows = data.rows;
+        numCols = data.cols;
+        detectedMatrix = data.matrix.map(r => [...r]);
+        currentMatrix  = data.matrix.map(r => [...r]);
+
+        warpedImg.src = 'data:image/png;base64,' + data.warped_png_b64;
+        previewArea.style.display = 'block';
+        buildOverlay();
+        updateOutput();
+      } catch (err) {
+        showStatus('خطای شبکه: ' + err.message, 'error');
+      } finally {
+        detectBtn.disabled = false;
+      }
+    }
+
+    // ----- Input sources -----
+    detectBtn.addEventListener('click', () => {
+      if (!fileInput.files.length) {
+        showStatus('لطفاً ابتدا یک تصویر انتخاب کنید.', 'error');
+        return;
+      }
+      detect(fileInput.files[0]);
+    });
+
+    document.addEventListener('paste', (e) => {
+      const item = [...(e.clipboardData?.items ?? [])].find(i => i.kind === 'file');
+      if (!item) {
+        showStatus('هیچ تصویری در کلیپ‌بورد یافت نشد. ابتدا یک تصویر کپی کنید.', 'error');
+        return;
+      }
+      e.preventDefault();
+      detect(item.getAsFile());
+    });
+
+    // ----- Grid overlay -----
+    function buildOverlay() {
+      gridOverlay.style.gridTemplateColumns = `repeat(${numCols}, 1fr)`;
+      gridOverlay.style.gridTemplateRows    = `repeat(${numRows}, 1fr)`;
+      gridOverlay.innerHTML = '';
+
+      for (let r = 0; r < numRows; r++) {
+        for (let c = 0; c < numCols; c++) {
+          const btn = document.createElement('button');
+          btn.className = 'cell' + (currentMatrix[r][c] ? ' black' : '');
+          btn.dataset.r = r;
+          btn.dataset.c = c;
+          btn.setAttribute('role', 'gridcell');
+          btn.setAttribute('aria-label', `ردیف ${r + 1} ستون ${c + 1}`);
+          btn.setAttribute('tabindex', r === 0 && c === 0 ? '0' : '-1');
+          btn.addEventListener('click', onCellClick);
+          btn.addEventListener('keydown', onCellKeydown);
+          gridOverlay.appendChild(btn);
+        }
+      }
+    }
+
+    function cellAt(r, c) { return gridOverlay.children[r * numCols + c]; }
+
+    function toggleCell(r, c) {
+      currentMatrix[r][c] ^= 1;
+      cellAt(r, c).className = 'cell' + (currentMatrix[r][c] ? ' black' : '');
+      updateOutput();
+    }
+
+    function onCellClick(e) {
+      toggleCell(+e.currentTarget.dataset.r, +e.currentTarget.dataset.c);
+    }
+
+    function onCellKeydown(e) {
+      const r = +e.currentTarget.dataset.r;
+      const c = +e.currentTarget.dataset.c;
+      let nr = r, nc = c;
+
+      switch (e.key) {
+        case 'ArrowRight': nc = (c - 1 + numCols) % numCols; break;
+        case 'ArrowLeft':  nc = (c + 1) % numCols;           break;
+        case 'ArrowDown':  nr = (r + 1) % numRows;           break;
+        case 'ArrowUp':    nr = (r - 1 + numRows) % numRows; break;
+        case ' ':
+        case 'Enter': e.preventDefault(); toggleCell(r, c); return;
+        default: return;
+      }
+
+      e.preventDefault();
+      e.currentTarget.setAttribute('tabindex', '-1');
+      const next = cellAt(nr, nc);
+      next.setAttribute('tabindex', '0');
+      next.focus();
+    }
+
+    // ----- Output -----
+    function formatMatrix() {
+      return '[\n' + currentMatrix.map(row => '    [' + row.join(', ') + ']').join(',\n') + '\n  ]';
+    }
+
+    function updateOutput() { outputEl.textContent = formatMatrix(); }
+
+    copyBtn.addEventListener('click', () =>
+      navigator.clipboard.writeText(formatMatrix())
+        .then(() => showStatus('جدول در کلیپ‌بورد کپی شد.'))
+    );
+
+    resetBtn.addEventListener('click', () => {
+      if (!detectedMatrix) return;
+      currentMatrix = detectedMatrix.map(r => [...r]);
+      buildOverlay();
+      updateOutput();
+    });
+  </script>
+
+</body>
+</html>

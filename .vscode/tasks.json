@@ -1,0 +1,32 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run Grid Importer",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\uvicorn.exe",
+      "args": ["app:app", "--reload"],
+      "options": {
+        "cwd": "${workspaceFolder}/tools/grid-importer/backend"
+      },
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always",
+        "focus": false
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "uvicorn",
+        "pattern": {
+          "regexp": "^ERROR.*$",
+          "message": 0
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Started reloader process",
+          "endsPattern": "Application startup complete"
+        }
+      }
+    }
+  ]
+}
