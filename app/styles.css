@@ -1,0 +1,355 @@
+:root {
+  color: #17201b;
+  background: #f6f4ef;
+  font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: #f6f4ef;
+}
+
+button,
+select {
+  font: inherit;
+}
+
+.app-shell {
+  width: min(1180px, 100%);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  line-height: 1.2;
+}
+
+.app-header p {
+  margin: 6px 0 0;
+  color: #5a645d;
+  font-size: 0.95rem;
+}
+
+.toolbar {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.toolbar label {
+  display: grid;
+  gap: 6px;
+  color: #4c564f;
+  font-size: 0.85rem;
+}
+
+.toolbar select,
+.toolbar button {
+  min-height: 40px;
+  border: 1px solid #bac3bc;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #17201b;
+}
+
+.toolbar select {
+  padding: 0 12px;
+}
+
+.toolbar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.solver-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 680px) minmax(280px, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.board-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.crossword-board {
+  display: grid;
+  width: min(100%, 680px);
+  aspect-ratio: 1 / 1;
+  border: 2px solid #1e2a23;
+  background: #1e2a23;
+  gap: 1px;
+  grid-auto-rows: 1fr;
+  outline: none;
+  direction: ltr;
+  touch-action: manipulation;
+}
+
+.crossword-board:focus-visible {
+  box-shadow: 0 0 0 4px #4c9f7080;
+}
+
+.cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: #17201b;
+  overflow: hidden;
+}
+
+.cell-open {
+  background: #fffdf7;
+  cursor: pointer;
+}
+
+.cell-block {
+  background: #1e2a23;
+}
+
+.cell-active-word {
+  background: #d7eadf;
+}
+
+.cell-crossing-word {
+  background: #e9edf1;
+}
+
+.cell-selected {
+  background: #f0c96a;
+  box-shadow: inset 0 0 0 3px #86630d;
+  z-index: 1;
+}
+
+.cell-number {
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  font-size: clamp(0.52rem, 1.3vw, 0.72rem);
+  line-height: 1;
+  color: #4d574f;
+  direction: ltr;
+}
+
+.cell-value {
+  display: block;
+  max-width: 82%;
+  margin: auto;
+  font-size: min(
+    clamp(0.9rem, 2.7vw, 1.45rem),
+    calc((min(100vw - 40px, 680px) / var(--grid-cols, 12)) * 0.4)
+  );
+  font-weight: 700;
+  line-height: 1.2;
+  direction: rtl;
+  text-align: center;
+}
+
+.active-clue,
+.clue-panel {
+  border: 1px solid #d3d8d2;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.active-clue {
+  padding: 14px 16px;
+  min-height: 84px;
+}
+
+.active-clue p {
+  margin: 8px 0 0;
+  font-size: 1.1rem;
+  line-height: 1.7;
+}
+
+.clue-kicker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #486151;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.clue-kicker span {
+  color: #657068;
+  font-weight: 500;
+}
+
+.clue-panel {
+  overflow: hidden;
+}
+
+.clue-tabs {
+  display: none;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid #d3d8d2;
+}
+
+.clue-tabs button {
+  min-height: 44px;
+  border: 0;
+  background: #f1f4f2;
+  color: #4e5b53;
+  cursor: pointer;
+}
+
+.clue-tabs button[aria-selected="true"] {
+  background: #ffffff;
+  color: #17201b;
+  font-weight: 700;
+}
+
+.clue-lists {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  max-height: calc(100vh - 150px);
+  overflow: auto;
+}
+
+.clue-list {
+  padding: 14px;
+}
+
+.clue-list + .clue-list {
+  border-right: 1px solid #e1e5e0;
+}
+
+.clue-list h2 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+}
+
+.clue-list ol {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.clue-list button {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #26312a;
+  text-align: right;
+  cursor: pointer;
+}
+
+.clue-list button:hover,
+.clue-list button:focus-visible,
+.clue-list .clue-selected {
+  background: #edf6f0;
+  outline: none;
+}
+
+.clue-list button span:first-child {
+  color: #69746c;
+  direction: ltr;
+}
+
+@media (max-width: 860px) {
+  .app-shell {
+    padding: 14px;
+  }
+
+  .app-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .toolbar {
+    justify-content: space-between;
+  }
+
+  .solver-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .crossword-board {
+    width: 100%;
+  }
+
+  .clue-tabs {
+    display: grid;
+  }
+
+  .clue-lists {
+    grid-template-columns: 1fr;
+    max-height: none;
+  }
+
+  .clue-list {
+    display: none;
+  }
+
+  .clue-list-visible {
+    display: block;
+  }
+
+  .clue-list + .clue-list {
+    border-right: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-shell {
+    padding: 10px;
+  }
+
+  .toolbar,
+  .toolbar label,
+  .toolbar select,
+  .toolbar button {
+    width: 100%;
+  }
+
+  .cell-number {
+    top: 2px;
+    left: 2px;
+  }
+
+  .cell-value {
+    font-size: min(
+      clamp(0.82rem, 3.8vw, 1.15rem),
+      calc((100vw - 22px) / var(--grid-cols, 12) * 0.38)
+    );
+    line-height: 1.05;
+  }
+}

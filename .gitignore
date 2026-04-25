@@ -1,4 +1,6 @@
 node_modules/
 dist/
+app-dist/
 coverage/
 .vitest/
+vite-dev.*.log
