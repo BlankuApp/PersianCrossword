@@ -12,12 +12,32 @@ export type Direction = "across" | "down";
 export type SlotId = string;
 export type CellKey = `${number},${number}`;
 
+/**
+ * Grouped clues / answers keyed by direction, then by 1-based group number.
+ *
+ * For `horizontal`, the group number is the 1-based row index. The array is
+ * ordered right-to-left (Persian RTL): index 0 is the rightmost across slot
+ * in that row (matches internal slot ID `R{row}-1`).
+ *
+ * For `vertical`, the group number is the column number counted from the
+ * right (`1` = rightmost column). The array is ordered top-to-bottom: index 0
+ * is the topmost down slot in that column (matches internal `C{col}-1`).
+ */
+export interface CrosswordClues {
+  readonly horizontal: Readonly<Record<string, readonly string[]>>;
+  readonly vertical: Readonly<Record<string, readonly string[]>>;
+}
+
+export interface CrosswordAnswers {
+  readonly horizontal?: Readonly<Record<string, readonly (string | null)[]>>;
+  readonly vertical?: Readonly<Record<string, readonly (string | null)[]>>;
+}
+
 export interface CrosswordJson {
-  readonly version?: 1;
-  readonly size: GridSize;
-  readonly blocks: readonly Coord[];
-  readonly clues: Readonly<Record<SlotId, string>>;
-  readonly answers?: Readonly<Record<SlotId, string | null>>;
+  readonly version: 2;
+  readonly grid: readonly (readonly number[])[];
+  readonly clues: CrosswordClues;
+  readonly answers?: CrosswordAnswers;
   readonly meta?: Readonly<Record<string, unknown>>;
 }
 

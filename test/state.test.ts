@@ -57,11 +57,10 @@ describe("crossword state", () => {
 
   it("checks known answers with Persian normalization", () => {
     const puzzle = compilePuzzle({
-      version: 1,
-      size: { rows: 1, cols: 2 },
-      blocks: [],
-      clues: { "R1-1": "یک" },
-      answers: { "R1-1": "یک" },
+      version: 2,
+      grid: [[0, 0]],
+      clues: { horizontal: { "1": ["یک"] }, vertical: {} },
+      answers: { horizontal: { "1": ["یک"] }, vertical: {} },
     });
     const state = createState(puzzle);
 

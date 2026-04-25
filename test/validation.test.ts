@@ -11,70 +11,105 @@ describe("puzzle validation", () => {
     expect(result.derivedSlots).toHaveLength(6);
   });
 
-  it("rejects invalid grid size", () => {
+  it("rejects v1 puzzles with an actionable message", () => {
     const result = validatePuzzleJson({
       version: 1,
-      size: { rows: 0, cols: 4 },
+      size: { rows: 1, cols: 2 },
       blocks: [],
       clues: {},
     });
 
     expect(result.valid).toBe(false);
-    expect(result.issues.map((issue) => issue.code)).toContain("invalid_size");
+    expect(result.issues[0]?.code).toBe("unsupported_version");
+    expect(result.issues[0]?.message).toMatch(/migrate-v1-to-v2/);
   });
 
-  it("rejects duplicate and out-of-bounds blocks", () => {
+  it("requires version 2", () => {
     const result = validatePuzzleJson({
-      version: 1,
-      size: { rows: 2, cols: 2 },
-      blocks: [
-        { row: 0, col: 1 },
-        { row: 0, col: 1 },
-        { row: 5, col: 0 },
+      grid: [[0, 0]],
+      clues: { horizontal: { "1": ["clue"] }, vertical: {} },
+    });
+
+    expect(result.issues.map((i) => i.code)).toContain("unsupported_version");
+  });
+
+  it("rejects a non-rectangular grid", () => {
+    const result = validatePuzzleJson({
+      version: 2,
+      grid: [
+        [0, 0, 0],
+        [0, 0],
       ],
-      clues: {},
+      clues: { horizontal: {}, vertical: {} },
     });
 
-    expect(result.issues.map((issue) => issue.code)).toEqual(
-      expect.arrayContaining(["duplicate_block", "block_out_of_bounds"]),
-    );
+    expect(result.issues.map((i) => i.code)).toContain("invalid_grid");
   });
 
-  it("reports missing and orphaned clues", () => {
+  it("rejects non-0/1 grid cells", () => {
     const result = validatePuzzleJson({
-      version: 1,
-      size: { rows: 1, cols: 2 },
-      blocks: [],
-      clues: { "R99-1": "extra" },
+      version: 2,
+      grid: [[0, 2]],
+      clues: { horizontal: {}, vertical: {} },
     });
 
-    expect(result.issues.map((issue) => issue.code)).toEqual(
-      expect.arrayContaining(["missing_clue", "orphaned_slot_data"]),
-    );
+    expect(result.issues.map((i) => i.code)).toContain("invalid_grid_cell");
+  });
+
+  it("reports clue array length mismatches", () => {
+    const result = validatePuzzleJson({
+      version: 2,
+      grid: [[0, 0]],
+      clues: {
+        horizontal: { "1": ["one", "two"] },
+        vertical: {},
+      },
+    });
+
+    expect(result.issues.map((i) => i.code)).toContain("clue_length_mismatch");
+  });
+
+  it("reports missing clue groups", () => {
+    const result = validatePuzzleJson({
+      version: 2,
+      grid: [[0, 0]],
+      clues: { horizontal: {}, vertical: {} },
+    });
+
+    expect(result.issues.map((i) => i.code)).toContain("missing_clue_group");
+  });
+
+  it("reports clue groups that don't exist in the grid", () => {
+    const result = validatePuzzleJson({
+      version: 2,
+      grid: [[0, 0]],
+      clues: {
+        horizontal: { "1": ["clue"], "5": ["extra"] },
+        vertical: {},
+      },
+    });
+
+    expect(result.issues.map((i) => i.code)).toContain("orphaned_clue_group");
   });
 
   it("reports answer length mismatches after Persian normalization", () => {
     const result = validatePuzzleJson({
-      version: 1,
-      size: { rows: 1, cols: 2 },
-      blocks: [],
-      clues: { "R1-1": "two letters" },
-      answers: { "R1-1": "سلام" },
+      version: 2,
+      grid: [[0, 0]],
+      clues: { horizontal: { "1": ["two letters"] }, vertical: {} },
+      answers: { horizontal: { "1": ["سلام"] }, vertical: {} },
     });
 
-    expect(result.issues.map((issue) => issue.code)).toContain(
-      "answer_length_mismatch",
-    );
+    expect(result.issues.map((i) => i.code)).toContain("answer_length_mismatch");
   });
 
   it("throws a validation error when compiling invalid JSON", () => {
     expect(() =>
       compilePuzzle({
-        version: 1,
-        size: { rows: 1, cols: 2 },
-        blocks: [],
-        clues: {},
-      }),
+        version: 2,
+        grid: [[0, 0]],
+        clues: { horizontal: {}, vertical: {} },
+      } as never),
     ).toThrow(CrosswordValidationError);
   });
 });

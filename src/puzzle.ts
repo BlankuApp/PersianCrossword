@@ -1,10 +1,11 @@
-import { buildBlockSet, cellKey, cloneCoord, isInBounds } from "./grid.js";
+import { cellKey, cloneCoord, isInBounds } from "./grid.js";
 import { normalizePersianText } from "./text.js";
 import type {
   CellKey,
   Coord,
   CrosswordJson,
   CrosswordPuzzle,
+  Direction,
   Slot,
   SlotId,
   SlotsForCell,
@@ -18,19 +19,54 @@ export function compilePuzzle(input: CrosswordJson): CrosswordPuzzle {
     throw new CrosswordValidationError(validation.issues);
   }
 
-  const blocks = buildBlockSet(input.blocks);
+  const blocks = new Set<CellKey>();
+  for (let row = 0; row < input.grid.length; row += 1) {
+    const rowValues = input.grid[row]!;
+    for (let col = 0; col < rowValues.length; col += 1) {
+      if (rowValues[col] === 1) {
+        blocks.add(cellKey({ row, col }));
+      }
+    }
+  }
+
   const slots = validation.derivedSlots.map<Slot>((slot) => {
-    const answer = input.answers?.[slot.id] ?? null;
+    const clue = lookupGroupEntry(input.clues, slot.direction, slot.groupNum, slot.wordIndexInGroup);
+    const rawAnswer = lookupGroupEntry(
+      input.answers,
+      slot.direction,
+      slot.groupNum,
+      slot.wordIndexInGroup,
+    );
+    const answer = typeof rawAnswer === "string" ? rawAnswer : null;
 
     return {
       ...slot,
-      clue: input.clues[slot.id]!,
+      clue: clue as string,
       answer,
       normalizedAnswer: answer === null ? null : normalizePersianText(answer),
     };
   });
 
   return new CompiledCrosswordPuzzle(input, blocks, slots);
+}
+
+function lookupGroupEntry(
+  source:
+    | {
+        readonly horizontal?: Readonly<Record<string, readonly (string | null)[]>>;
+        readonly vertical?: Readonly<Record<string, readonly (string | null)[]>>;
+      }
+    | undefined,
+  direction: Direction,
+  groupNum: number,
+  wordIndexInGroup: number,
+): string | null | undefined {
+  if (!source) {
+    return undefined;
+  }
+  const group = direction === "across" ? source.horizontal : source.vertical;
+  const arr = group?.[String(groupNum)];
+  return arr ? arr[wordIndexInGroup - 1] : undefined;
 }
 
 class CompiledCrosswordPuzzle implements CrosswordPuzzle {
@@ -46,7 +82,10 @@ class CompiledCrosswordPuzzle implements CrosswordPuzzle {
 
   constructor(source: CrosswordJson, blocks: ReadonlySet<CellKey>, slots: readonly Slot[]) {
     this.source = source;
-    this.size = { ...source.size };
+    this.size = {
+      rows: source.grid.length,
+      cols: source.grid[0]?.length ?? 0,
+    };
     this.blocks = new Set(blocks);
     this.slots = slots.map(cloneSlot);
     this.acrossSlots = this.slots.filter((slot) => slot.direction === "across");

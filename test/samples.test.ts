@@ -14,6 +14,7 @@ describe("sample crossword JSON files", () => {
       "sample-10x10-garden.json",
       "sample-11x11-city.json",
       "sample-12x12-weekend.json",
+      "sample-15x15-9439.json",
     ]);
   });
 

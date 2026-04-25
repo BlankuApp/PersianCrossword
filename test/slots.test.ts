@@ -38,13 +38,9 @@ describe("slot derivation and numbering", () => {
 
   it("ignores single-cell runs", () => {
     const puzzle = compilePuzzle({
-      version: 1,
-      size: { rows: 1, cols: 3 },
-      blocks: [
-        { row: 0, col: 0 },
-        { row: 0, col: 2 },
-      ],
-      clues: {},
+      version: 2,
+      grid: [[1, 0, 1]],
+      clues: { horizontal: {}, vertical: {} },
     });
 
     expect(puzzle.slots).toEqual([]);

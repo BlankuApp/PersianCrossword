@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "meta": {
+    "title": "نام جدول",
+    "language": "fa",
+    "direction": "rtl"
+  },
+  "grid": [],
+  "clues": {
+    "horizontal": {},
+    "vertical": {}
+  }
+}

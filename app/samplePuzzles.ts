@@ -2,6 +2,7 @@ import type { CrosswordJson } from "../src/index";
 import sample10 from "../samples/sample-10x10-garden.json";
 import sample11 from "../samples/sample-11x11-city.json";
 import sample12 from "../samples/sample-12x12-weekend.json";
+import sample15 from "../samples/sample-15x15-9439.json";
 
 export interface SamplePuzzle {
   readonly id: string;
@@ -25,4 +26,9 @@ export const samplePuzzles: readonly SamplePuzzle[] = [
     label: "۱۲ × ۱۲",
     json: sample12 as CrosswordJson,
   },
+  {
+    id: "sample-15x15-9439",
+    label: "۱۵ × ۱۵",
+    json: sample15 as CrosswordJson,
+  }
 ];

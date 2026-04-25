@@ -1,23 +1,41 @@
 import type { CrosswordJson } from "../src/index.js";
 
+// 3x4 grid with one black square at (1, 2):
+//   row 0: open open open open
+//   row 1: open open ████ open
+//   row 2: open open open open
 export const basicPuzzle: CrosswordJson = {
-  version: 1,
-  size: { rows: 3, cols: 4 },
-  blocks: [{ row: 1, col: 2 }],
+  version: 2,
+  grid: [
+    [0, 0, 0, 0],
+    [0, 0, 1, 0],
+    [0, 0, 0, 0],
+  ],
+  // horizontal: row → across clues, ordered RIGHT-to-LEFT.
+  // vertical: column-from-right → down clues, ordered TOP-to-BOTTOM.
   clues: {
-    "R1-1": "ردیف بالا",
-    "R2-1": "ردیف میانی",
-    "R3-1": "ردیف پایین",
-    "C1-1": "ستون راست",
-    "C3-1": "ستون دوم از چپ",
-    "C4-1": "ستون چپ",
+    horizontal: {
+      "1": ["ردیف بالا"],
+      "2": ["ردیف میانی"],
+      "3": ["ردیف پایین"],
+    },
+    vertical: {
+      "1": ["ستون راست"],
+      "3": ["ستون دوم از چپ"],
+      "4": ["ستون چپ"],
+    },
   },
   answers: {
-    "R1-1": "سلام",
-    "R2-1": "پا",
-    "R3-1": "دریا",
-    "C1-1": "سرد",
-    "C3-1": null,
-    "C4-1": "مرد",
+    horizontal: {
+      "1": ["سلام"],
+      "2": ["پا"],
+      "3": ["دریا"],
+    },
+    vertical: {
+      "1": ["سرد"],
+      "3": [null],
+      "4": ["مرد"],
+    },
   },
 };
+
