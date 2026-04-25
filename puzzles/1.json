@@ -1,12 +1,12 @@
 {
   "version": 2,
   "meta": {
-    "id": "sample-15x15-imported",
-    "title": "جدول ۱۵ در ۱۵ واردشده",
-    "description": "جدول فارسی ۱۵ در ۱۵ ساخته‌شده از شبکه و سرنخ‌های متنی ارائه‌شده",
-    "difficulty": "hard",
+    "id": "1",
+    "title": "جدول شماره 1",
+    "description": "",
+    "difficulty": "",
     "author": "",
-    "publishedAt": "",
+    "publishedAt": "2026-04-26",
     "size": { "rows": 15, "cols": 15 },
     "language": "fa",
     "direction": "rtl"

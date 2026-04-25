@@ -33,12 +33,24 @@ export interface CrosswordAnswers {
   readonly vertical?: Readonly<Record<string, readonly (string | null)[]>>;
 }
 
+export interface CrosswordMeta {
+  readonly id?: string;
+  readonly title?: string;
+  readonly description?: string;
+  readonly difficulty?: "easy" | "medium" | "hard";
+  readonly author?: string;
+  readonly publishedAt?: string;
+  readonly size?: { readonly rows: number; readonly cols: number };
+  readonly language?: string;
+  readonly direction?: string;
+}
+
 export interface CrosswordJson {
   readonly version: 2;
   readonly grid: readonly (readonly number[])[];
   readonly clues: CrosswordClues;
   readonly answers?: CrosswordAnswers;
-  readonly meta?: Readonly<Record<string, unknown>>;
+  readonly meta?: CrosswordMeta;
 }
 
 export interface DerivedSlot {

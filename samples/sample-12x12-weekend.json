@@ -1,8 +1,13 @@
 {
   "version": 2,
   "meta": {
-    "title": "نمونه ۱۲ در ۱۲",
-    "description": "داده نمونه برای تست رابط کاربری جدول کلمات فارسی",
+    "id": "sample-12x12-weekend",
+    "title": "آخر هفته — ۱۲ در ۱۲",
+    "description": "جدول نمونه با تم تعطیلات و اوقات فراغت",
+    "difficulty": "medium",
+    "author": "",
+    "publishedAt": "",
+    "size": { "rows": 12, "cols": 12 },
     "language": "fa",
     "direction": "rtl"
   },

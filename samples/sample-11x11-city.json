@@ -1,8 +1,13 @@
 {
   "version": 2,
   "meta": {
-    "title": "نمونه ۱۱ در ۱۱",
-    "description": "داده نمونه برای تست رابط کاربری جدول کلمات فارسی",
+    "id": "sample-11x11-city",
+    "title": "شهر — ۱۱ در ۱۱",
+    "description": "جدول نمونه با تم شهر و زندگی شهری",
+    "difficulty": "easy",
+    "author": "",
+    "publishedAt": "",
+    "size": { "rows": 11, "cols": 11 },
     "language": "fa",
     "direction": "rtl"
   },

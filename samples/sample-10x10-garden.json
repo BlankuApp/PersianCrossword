@@ -1,8 +1,13 @@
 {
   "version": 2,
   "meta": {
-    "title": "نمونه ۱۰ در ۱۰",
-    "description": "داده نمونه برای تست رابط کاربری جدول کلمات فارسی",
+    "id": "sample-10x10-garden",
+    "title": "باغ — ۱۰ در ۱۰",
+    "description": "جدول نمونه با تم باغ و گل",
+    "difficulty": "easy",
+    "author": "",
+    "publishedAt": "",
+    "size": { "rows": 10, "cols": 10 },
     "language": "fa",
     "direction": "rtl"
   },

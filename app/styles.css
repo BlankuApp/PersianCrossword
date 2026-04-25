@@ -56,33 +56,29 @@ select {
   flex-wrap: wrap;
 }
 
-.toolbar label {
-  display: grid;
-  gap: 6px;
-  color: #4c564f;
-  font-size: 0.85rem;
-}
-
-.toolbar select,
-.toolbar button {
-  min-height: 40px;
-  border: 1px solid #bac3bc;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #17201b;
-}
-
-.toolbar select {
-  padding: 0 12px;
-}
-
 .toolbar button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 0 12px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #bac3bc;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #17201b;
   cursor: pointer;
+}
+
+.toolbar button:hover {
+  background: #f0f4f2;
+}
+
+.btn-home {
+  background: #edf6f0 !important;
+  border-color: #8cbca0 !important;
+  color: #1e5c38 !important;
+  font-weight: 600;
 }
 
 .solver-layout {
@@ -418,8 +414,6 @@ select {
   }
 
   .toolbar,
-  .toolbar label,
-  .toolbar select,
   .toolbar button {
     width: 100%;
   }
@@ -427,6 +421,234 @@ select {
   .cell-number {
     top: 2px;
     left: 2px;
+  }
+}
+
+/* ─────────────── Home page ─────────────── */
+
+.home-shell {
+  max-width: 960px;
+}
+
+.home-header {
+  margin-bottom: 24px;
+}
+
+.home-header h1 {
+  margin: 0 0 6px;
+  font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+  line-height: 1.2;
+}
+
+.home-header p {
+  margin: 0;
+  color: #5a645d;
+  font-size: 1rem;
+}
+
+.empty-state {
+  padding: 40px 20px;
+  text-align: center;
+  color: #5a645d;
+  font-size: 1.1rem;
+}
+
+.empty-hint {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  color: #86948c;
+}
+
+.empty-hint code {
+  background: #eef1ee;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+/* Puzzle table */
+
+.puzzle-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid #d3d8d2;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.puzzle-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.puzzle-table thead {
+  background: #f1f4f2;
+  border-bottom: 1px solid #d3d8d2;
+}
+
+.puzzle-table th,
+.puzzle-table td {
+  padding: 10px 14px;
+  text-align: right;
+}
+
+.th-sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  color: #3e4f43;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.th-sortable:hover {
+  background: #e6ece8;
+}
+
+.th-active {
+  color: #1e5c38;
+}
+
+.sort-indicator {
+  font-size: 0.7em;
+  margin-right: 2px;
+  opacity: 0.7;
+}
+
+.puzzle-row {
+  border-top: 1px solid #e8ebe8;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.puzzle-row:hover {
+  background: #f4f8f5;
+}
+
+.puzzle-row:focus-visible {
+  outline: 2px solid #4c9f70;
+  outline-offset: -2px;
+}
+
+.puzzle-row-done {
+  background: #f0faf4;
+}
+
+.puzzle-row-done:hover {
+  background: #e6f5ec;
+}
+
+.td-title {
+  min-width: 140px;
+}
+
+.puzzle-title {
+  display: block;
+  font-weight: 600;
+  color: #17201b;
+}
+
+.puzzle-desc {
+  display: block;
+  font-size: 0.82rem;
+  color: #7a8880;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+
+.td-size {
+  font-variant-numeric: tabular-nums;
+  color: #4e5b53;
+  white-space: nowrap;
+}
+
+.td-difficulty {
+  white-space: nowrap;
+}
+
+.td-author,
+.td-date {
+  color: #6a766e;
+  white-space: nowrap;
+  font-size: 0.9rem;
+}
+
+.td-progress {
+  min-width: 100px;
+}
+
+/* Badges */
+
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badge-easy {
+  background: #ddf4e8;
+  color: #1a6b3c;
+}
+
+.badge-medium {
+  background: #fff3cd;
+  color: #7a5200;
+}
+
+.badge-hard {
+  background: #fde8e8;
+  color: #8b1a1a;
+}
+
+.badge-done {
+  background: #d0f0de;
+  color: #145c35;
+}
+
+/* Progress bar */
+
+.progress-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.progress-bar-fill {
+  flex: 1;
+  max-width: 80px;
+  height: 6px;
+  background: #4c9f70;
+  border-radius: 4px;
+}
+
+.progress-pct {
+  font-size: 0.82rem;
+  color: #4e5b53;
+  direction: ltr;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-empty {
+  color: #aab4ad;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 640px) {
+  .puzzle-table th,
+  .puzzle-table td {
+    padding: 8px 10px;
+  }
+
+  .td-author,
+  .td-date {
+    display: none;
   }
 
   .cell-value {

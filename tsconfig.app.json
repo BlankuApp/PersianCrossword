@@ -16,7 +16,7 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "types": ["vitest/globals", "@testing-library/jest-dom"]
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"]
   },
   "include": ["app", "test/**/*.tsx", "samples/**/*.json", "vite.config.ts"]
 }

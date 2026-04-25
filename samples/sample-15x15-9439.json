@@ -1,8 +1,13 @@
 {
   "version": 2,
   "meta": {
+    "id": "sample-15x15-9439",
     "title": "جدول ۹۴۳۹",
-    "designer": "محمدرضا علیزاده",
+    "description": "",
+    "difficulty": "hard",
+    "author": "محمدرضا علیزاده",
+    "publishedAt": "",
+    "size": { "rows": 15, "cols": 15 },
     "language": "fa",
     "direction": "rtl"
   },
