@@ -4,3 +4,6 @@ app-dist/
 coverage/
 .vitest/
 vite-dev.*.log
+.vite/
+node_modules/.vite/
+tools/grid-importer/backend/__pycache__/
