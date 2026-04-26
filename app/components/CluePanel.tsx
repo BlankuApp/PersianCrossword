@@ -44,7 +44,7 @@ export function CluePanel({
           aria-selected={clueTab === "across"}
           onClick={() => onTabChange("across")}
         >
-          ردیف‌ها
+          افقی
         </button>
         <button
           type="button"
@@ -52,20 +52,20 @@ export function CluePanel({
           aria-selected={clueTab === "down"}
           onClick={() => onTabChange("down")}
         >
-          ستون‌ها
+          عمودی
         </button>
       </div>
 
       <div className="clue-lists">
         <GroupedClueList
-          title="ردیف‌ها"
+          title="افقی"
           slots={acrossSlots}
           activeSlot={activeSlot}
           visibleOnSmall={clueTab === "across"}
           onClueClick={onClueClick}
         />
         <GroupedClueList
-          title="ستون‌ها"
+          title="عمودی"
           slots={downSlots}
           activeSlot={activeSlot}
           visibleOnSmall={clueTab === "down"}
@@ -104,8 +104,7 @@ function GroupedClueList({
 }) {
   const groups = groupSlotsByGroupNum(slots);
   return (
-    <section className={`clue-list ${visibleOnSmall ? "clue-list-visible" : ""}`}>
-      <h2>{title}</h2>
+    <section className={`clue-list ${visibleOnSmall ? "clue-list-visible" : ""}`} aria-label={title}>
       <ol>
         {groups.map(([groupNum, groupSlots]) => (
           <li key={groupNum} className="clue-group">

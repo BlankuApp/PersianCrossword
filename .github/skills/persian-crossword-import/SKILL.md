@@ -15,8 +15,9 @@ argument-hint: 'Source crossword image or raw grid/clue data to convert into app
 ## Output
 - Return one JSON file using the v2 format.
 - Required top-level fields: `version` (= `2`), `grid`, and `clues`.
-- Optional top-level fields: `answers` and `meta`.
+- Prefer including `meta` for repository imports; `answers` remains optional.
 - If grid cells or clue entries are uncertain, stop and ask before writing the final file.
+- If asked to save into this repo, create a new puzzle file instead of overwriting an existing one unless the user explicitly requests a replacement.
 
 ## Procedure
 
@@ -64,6 +65,8 @@ Map this directly into the file:
 - Trim whitespace from each split clue. Preserve the Persian text exactly, including any `، N حرف` length hint.
 - Treat the hyphen-separated clue text as the authoritative count for that row or column in the source material.
 - If a row like `0 1 0 0 0 0 0 1 0 0 0 0 1 0 0` appears, it has **2** across clues, not 4, because the isolated single `0` cells are not slots and the clue line determines how many entries should exist.
+- If OCR or pasted text contains an explicit stray token inside a clue line such as `N` or `R`, preserve it only when it is actually present in the source text and needed to satisfy the clue count. Do not silently normalize, translate, or invent a replacement.
+- If a clue boundary is ambiguous because numbering collapsed into the previous clue (for example `R۱۱)`), use the slot-count check to determine whether the preceding line needs one more entry. If the text itself is still unclear after that check, ask before writing the final file.
 
 ### 4. Validate by counting
 Before saving, use the clue text and the grid together:
@@ -91,7 +94,33 @@ If you have a solution grid or answer list, mirror the `clues` shape under `answ
 - Start from [JSON template](./assets/puzzle-template.json).
 - Set `"version": 2`.
 - Fill `grid` and `clues`.
-- Optionally add `meta` (e.g. `"language": "fa"`, `"direction": "rtl"`, `"title"`).
+- Prefer a full `meta` block for repo imports:
+
+```json
+"meta": {
+  "id": "3",
+  "title": "جدول ۷۲۱۷ جام جم",
+  "newspaper": "جام جم",
+  "difficulty": "hard",
+  "author": "بیژن گورانی",
+  "publishedAt": "2026-04-26",
+  "size": { "rows": 15, "cols": 15 },
+  "language": "fa",
+  "direction": "rtl"
+}
+```
+
+- Metadata guidance for this repository:
+  - `id`: use a stable unique ID. For files under `puzzles/`, default to the filename slug or next available numeric filename such as `2`, `3`, `4`.
+  - `title`: use the published puzzle title/number. If the source or newspaper name is known and helpful, include it, for example `جدول ۷۲۱۷ جام جم`.
+  - `newspaper`: use the newspaper or publication name such as `جام جم` or `جوان`.
+  - `difficulty`: include it when the source or user provides one; for this repo use one of `easy`, `medium`, or `hard`. Leave it empty only when unknown.
+  - `author`: include the constructor/designer line such as `بیژن گورانی` when available.
+  - `publishedAt`: include the provided or requested date; otherwise leave it empty instead of guessing.
+  - `size`: always populate from the grid dimensions.
+  - `language`: use `fa`.
+  - `direction`: use `rtl`.
+- When writing into `puzzles/`, do not overwrite an existing numbered file unless the user explicitly asks for that file to be replaced. Create the next requested or available filename instead.
 - Save the result as a `.json` file.
 
 ### 7. Final check
@@ -99,12 +128,17 @@ If you have a solution grid or answer list, mirror the `clues` shape under `answ
 - Every row with at least one across run of length ≥ 2 has a key in `clues.horizontal` with the right number of entries.
 - Every column with at least one down run of length ≥ 2 has a key (counted from the right) in `clues.vertical` with the right number of entries.
 - All clue strings are non-empty.
+- `meta.size` matches the actual grid dimensions.
+- If the file is saved into this repository, the filename/`meta.id` combination is new or was explicitly requested.
+- After writing the file, run the repository validator (`validatePuzzleJson`) and only finish if it reports `valid: true`.
 
 ## Decision Rules
 - If image quality makes a square or clue line ambiguous, ask for confirmation instead of guessing.
 - If the source's hyphen-separated clue text disagrees with the geometric count of slots in a row/column, trust the clue text as the intended count and re-check the grid transcription before asking the user.
 - One-cell runs are not slots — never include a clue for them.
 - The vertical group key is column-from-right, matching Persian newspaper convention. Double-check the rightmost column gets key `"1"`.
+- Preserve explicit raw source tokens only when the source actually contains them; otherwise ask instead of fabricating filler text to satisfy a count.
+- For repo updates, default to additive file creation (`2.json`, `3.json`, etc.) rather than replacing `1.json` or any existing puzzle file.
 
 ## References
 - [App format reference](./references/app-format.md) — full schema and validation rules.

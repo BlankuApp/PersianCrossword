@@ -3,11 +3,8 @@ import { listPuzzles, type PuzzleSummary } from "../puzzleLibrary";
 import { loadProgress, computeProgress, type ProgressInfo } from "../progress";
 import { navigate } from "../router";
 
-type SortKey = "title" | "size" | "difficulty" | "author" | "publishedAt" | "progress";
+type SortKey = "id" | "title" | "difficulty" | "author" | "newspaper" | "publishedAt" | "progress";
 type SortDir = "asc" | "desc";
-
-const DIFFICULTY_ORDER: Record<string, number> = { easy: 0, medium: 1, hard: 2 };
-const DIFFICULTY_LABEL: Record<string, string> = { easy: "آسان", medium: "متوسط", hard: "سخت" };
 
 function formatDate(iso: string): string {
   if (!iso) return "—";
@@ -49,19 +46,20 @@ export function HomePage() {
     return [...puzzles].sort((a, b) => {
       let cmp = 0;
       switch (sortKey) {
+        case "id":
+          cmp = a.id.localeCompare(b.id, "fa");
+          break;
         case "title":
           cmp = a.title.localeCompare(b.title, "fa");
           break;
-        case "size":
-          cmp = a.rows * a.cols - b.rows * b.cols;
-          break;
         case "difficulty":
-          cmp =
-            (DIFFICULTY_ORDER[a.difficulty ?? ""] ?? 99) -
-            (DIFFICULTY_ORDER[b.difficulty ?? ""] ?? 99);
+          cmp = (a.difficulty ?? "").localeCompare(b.difficulty ?? "", "fa");
           break;
         case "author":
           cmp = a.author.localeCompare(b.author, "fa");
+          break;
+        case "newspaper":
+          cmp = a.newspaper.localeCompare(b.newspaper, "fa");
           break;
         case "publishedAt":
           cmp = a.publishedAt.localeCompare(b.publishedAt);
@@ -116,10 +114,11 @@ export function HomePage() {
           <table className="puzzle-table" aria-label="فهرست جدول‌ها">
             <thead>
               <tr>
+                <SortHeader colKey="id">شناسه</SortHeader>
                 <SortHeader colKey="title">عنوان</SortHeader>
-                <SortHeader colKey="size">اندازه</SortHeader>
                 <SortHeader colKey="difficulty">سطح</SortHeader>
                 <SortHeader colKey="author">نویسنده</SortHeader>
+                <SortHeader colKey="newspaper">روزنامه</SortHeader>
                 <SortHeader colKey="publishedAt">تاریخ</SortHeader>
                 <SortHeader colKey="progress">پیشرفت</SortHeader>
               </tr>
@@ -162,30 +161,20 @@ function PuzzleRow({
       onClick={onClick}
       tabIndex={0}
       role="button"
-      aria-label={`باز کردن جدول ${puzzle.title}`}
+      aria-label={`باز کردن جدول ${puzzle.title} با شناسه ${puzzle.id}`}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") onClick();
       }}
     >
+      <td className="td-id">{puzzle.id}</td>
       <td className="td-title">
         <span className="puzzle-title">{puzzle.title}</span>
-        {puzzle.description ? (
-          <span className="puzzle-desc">{puzzle.description}</span>
-        ) : null}
-      </td>
-      <td className="td-size" dir="ltr">
-        {puzzle.rows} × {puzzle.cols}
       </td>
       <td className="td-difficulty">
-        {puzzle.difficulty ? (
-          <span className={`badge badge-${puzzle.difficulty}`}>
-            {DIFFICULTY_LABEL[puzzle.difficulty]}
-          </span>
-        ) : (
-          "—"
-        )}
+        {puzzle.difficulty?.trim() || "—"}
       </td>
       <td className="td-author">{puzzle.author || "—"}</td>
+      <td className="td-newspaper">{puzzle.newspaper || "—"}</td>
       <td className="td-date">{formatDate(puzzle.publishedAt)}</td>
       <td className="td-progress">
         {done ? (

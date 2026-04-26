@@ -1,4 +1,4 @@
-import { RotateCcw, ArrowRight } from "lucide-react";
+import { RotateCcw, ArrowRight, HelpCircle } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   compilePuzzle,
@@ -37,17 +37,12 @@ export function SolverPage({ id, json }: SolverPageProps) {
     return firstSlot ? selectSlot(firstSlot) : undefined;
   });
   const [clueTab, setClueTab] = useState<Direction>("across");
+  const [showHelp, setShowHelp] = useState(false);
   const boardRef = useRef<HTMLDivElement>(null);
 
   const crosswordState = useMemo(() => createState(puzzle, savedState), [puzzle, savedState]);
   const activeSlot = getActiveSlot(puzzle, selection);
   const activeKeys = slotCellKeys(activeSlot);
-  const crossingSlot = selection
-    ? selection.direction === "across"
-      ? puzzle.getSlotsForCell(selection.coord).down
-      : puzzle.getSlotsForCell(selection.coord).across
-    : undefined;
-  const crossingKeys = slotCellKeys(crossingSlot);
 
   useEffect(() => {
     const restored = loadProgress(id);
@@ -113,6 +108,18 @@ export function SolverPage({ id, json }: SolverPageProps) {
       return;
     }
 
+    if (event.key === " " || event.code === "Space") {
+      event.preventDefault();
+      const slots = puzzle.getSlotsForCell(selection.coord);
+      if (slots.across && slots.down) {
+        setSelection({
+          ...selection,
+          direction: selection.direction === "across" ? "down" : "across",
+        });
+      }
+      return;
+    }
+
     const graphemes = splitPersianGraphemes(event.key);
     if (graphemes.length !== 1 || event.ctrlKey || event.metaKey || event.altKey) return;
 
@@ -134,14 +141,14 @@ export function SolverPage({ id, json }: SolverPageProps) {
   }
 
   const title = json.meta?.title ?? id;
-  const description = json.meta?.description;
+  const newspaper = json.meta?.newspaper;
 
   return (
     <main className="app-shell" dir="rtl">
       <header className="app-header">
         <div>
           <h1>{title}</h1>
-          {description ? <p>{description}</p> : null}
+          {newspaper ? <p>{newspaper}</p> : null}
         </div>
         <div className="toolbar">
           <button
@@ -157,8 +164,46 @@ export function SolverPage({ id, json }: SolverPageProps) {
             <RotateCcw size={18} aria-hidden="true" />
             <span>پاک کردن</span>
           </button>
+          <button
+            type="button"
+            onClick={() => setShowHelp((v) => !v)}
+            title="راهنمای استفاده"
+            aria-expanded={showHelp}
+          >
+            <HelpCircle size={18} aria-hidden="true" />
+            <span>راهنما</span>
+          </button>
         </div>
       </header>
+
+      {showHelp ? (
+        <section className="help-panel" aria-label="راهنمای استفاده">
+          <h2>راهنمای استفاده</h2>
+          <ul>
+            <li>برای انتخاب یک خانه روی آن کلیک کنید.</li>
+            <li>
+              با کلیک دوباره روی همان خانه یا فشردن کلید <kbd>Space</kbd>،
+              جهت بین افقی و عمودی جابجا می‌شود.
+            </li>
+            <li>
+              برای حرکت بین خانه‌ها از کلیدهای جهت‌نما
+              (<kbd>↑</kbd> <kbd>↓</kbd> <kbd>→</kbd> <kbd>←</kbd>) استفاده کنید.
+            </li>
+            <li>
+              برای پاک کردن محتوای یک خانه، کلید <kbd>Backspace</kbd> را بزنید.
+              اگر خانه خالی باشد، خانهٔ قبلی در همان کلمه پاک می‌شود.
+            </li>
+            <li>برای وارد کردن حرف، کافی است حرف فارسی را تایپ کنید.</li>
+            <li>
+              با کلیک روی هر سرنخ در فهرست کنار جدول، خانهٔ مربوط به آن سرنخ
+              فعال می‌شود.
+            </li>
+            <li>
+              با دکمهٔ <strong>پاک کردن</strong> همهٔ پاسخ‌های ذخیره‌شده حذف می‌شوند.
+            </li>
+          </ul>
+        </section>
+      ) : null}
 
       <section className="solver-layout">
         <div className="board-panel">
@@ -169,7 +214,6 @@ export function SolverPage({ id, json }: SolverPageProps) {
               state={crosswordState}
               selection={selection}
               activeKeys={activeKeys}
-              crossingKeys={crossingKeys}
               onCellClick={selectCell}
               onKeyDown={handleKeyDown}
             />

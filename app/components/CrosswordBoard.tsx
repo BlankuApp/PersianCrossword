@@ -7,7 +7,6 @@ interface CrosswordBoardProps {
   readonly state: ReturnType<typeof createState>;
   readonly selection: Selection | undefined;
   readonly activeKeys: ReadonlySet<string>;
-  readonly crossingKeys: ReadonlySet<string>;
   readonly onCellClick: (coord: Coord) => void;
   readonly onKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => void;
 }
@@ -18,7 +17,6 @@ export function CrosswordBoard({
   state,
   selection,
   activeKeys,
-  crossingKeys,
   onCellClick,
   onKeyDown,
 }: CrosswordBoardProps) {
@@ -54,7 +52,6 @@ export function CrosswordBoard({
                 "cell",
                 isBlock ? "cell-block" : "cell-open",
                 activeKeys.has(key) ? "cell-active-word" : "",
-                crossingKeys.has(key) ? "cell-crossing-word" : "",
                 isSelected ? "cell-selected" : "",
               ].join(" ")}
               aria-label={`ردیف ${row + 1} ستون ${col + 1}`}

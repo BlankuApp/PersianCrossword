@@ -81,6 +81,43 @@ select {
   font-weight: 600;
 }
 
+.help-panel {
+  margin-bottom: 18px;
+  padding: 14px 18px;
+  border: 1px solid #bac3bc;
+  border-radius: 10px;
+  background: #f7faf8;
+  color: #17201b;
+  line-height: 1.9;
+}
+
+.help-panel h2 {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  color: #1e5c38;
+}
+
+.help-panel ul {
+  margin: 0;
+  padding-inline-start: 20px;
+}
+
+.help-panel li {
+  margin-bottom: 4px;
+}
+
+.help-panel kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  border: 1px solid #bac3bc;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: #ffffff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85em;
+  color: #17201b;
+}
+
 .solver-layout {
   display: grid;
   grid-template-columns: minmax(320px, 680px) minmax(280px, 1fr);
@@ -291,7 +328,7 @@ select {
 
 .clue-list {
   display: none;
-  padding: 14px;
+  padding: 8px 10px;
 }
 
 .clue-list-visible {
@@ -302,14 +339,9 @@ select {
   border-right: 0;
 }
 
-.clue-list h2 {
-  margin: 0 0 10px;
-  font-size: 1rem;
-}
-
 .clue-list ol {
   display: grid;
-  gap: 2px;
+  gap: 0;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -319,9 +351,10 @@ select {
 .clue-group {
   display: flex;
   align-items: baseline;
-  gap: 6px;
-  padding: 4px 8px;
-  border-radius: 6px;
+  gap: 4px;
+  padding: 2px;
+  border-radius: 4px;
+  font-size: 1.1rem;
 }
 
 .clue-group:hover {
@@ -330,9 +363,8 @@ select {
 
 .clue-group-number {
   flex-shrink: 0;
-  min-width: 22px;
+  min-width: 18px;
   color: #69746c;
-  font-size: 0.82rem;
   font-weight: 700;
   direction: ltr;
   text-align: center;
@@ -364,10 +396,9 @@ select {
   color: #26312a;
   text-align: right;
   cursor: pointer;
-  padding: 2px 4px;
+  padding: 1px;
   border-radius: 4px;
   font: inherit;
-  line-height: 1.5;
 }
 
 .clue-item-btn:hover,
@@ -571,6 +602,7 @@ select {
 }
 
 .td-author,
+.td-newspaper,
 .td-date {
   color: #6a766e;
   white-space: nowrap;
@@ -647,6 +679,7 @@ select {
   }
 
   .td-author,
+  .td-newspaper,
   .td-date {
     display: none;
   }

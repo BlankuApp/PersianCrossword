@@ -3,8 +3,8 @@ import type { CrosswordJson } from "../src/index";
 export interface PuzzleSummary {
   readonly id: string;
   readonly title: string;
-  readonly description: string;
-  readonly difficulty: "easy" | "medium" | "hard" | undefined;
+  readonly newspaper: string;
+  readonly difficulty: string | undefined;
   readonly author: string;
   readonly publishedAt: string;
   readonly rows: number;
@@ -29,7 +29,7 @@ function deriveSummary(path: string, json: CrosswordJson): PuzzleSummary {
 
   const id = meta.id ?? slug;
   const title = meta.title ?? slug;
-  const description = meta.description ?? "";
+  const newspaper = meta.newspaper ?? "";
   const difficulty = meta.difficulty;
   const author = meta.author ?? "";
   const publishedAt = meta.publishedAt ?? "";
@@ -44,7 +44,7 @@ function deriveSummary(path: string, json: CrosswordJson): PuzzleSummary {
     );
   }
 
-  return { id, title, description, difficulty, author, publishedAt, rows, cols, json };
+  return { id, title, newspaper, difficulty, author, publishedAt, rows, cols, json };
 }
 
 const _all: PuzzleSummary[] = Object.entries(modules).map(([path, json]) =>

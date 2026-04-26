@@ -36,8 +36,8 @@ export interface CrosswordAnswers {
 export interface CrosswordMeta {
   readonly id?: string;
   readonly title?: string;
-  readonly description?: string;
-  readonly difficulty?: "easy" | "medium" | "hard";
+  readonly newspaper?: string;
+  readonly difficulty?: string;
   readonly author?: string;
   readonly publishedAt?: string;
   readonly size?: { readonly rows: number; readonly cols: number };

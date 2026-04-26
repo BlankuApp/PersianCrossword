@@ -9,6 +9,7 @@ The app accepts crossword JSON shaped like this:
   "version": 2,
   "meta": {
     "title": "نمونه",
+    "newspaper": "نام روزنامه",
     "language": "fa",
     "direction": "rtl"
   },
@@ -44,7 +45,7 @@ The app accepts crossword JSON shaped like this:
 
 ## Optional fields
 - `answers` — same shape as `clues`, with values that are strings or `null`.
-- `meta` — free-form object; not validated.
+- `meta` — free-form object; not validated. In this repository, `meta.newspaper` is used for the publication name shown in the UI.
 
 ## Clue grouping rules
 
