@@ -318,10 +318,31 @@ select {
   outline: none;
   direction: ltr;
   touch-action: manipulation;
+  position: relative;
 }
 
 .crossword-board:focus-visible {
   box-shadow: 0 0 0 4px #4c9f7080;
+}
+
+/* Hidden input that captures mobile virtual-keyboard events. */
+.cell-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+  /* 16px avoids iOS zoom-on-focus. */
+  font-size: 16px;
+  color: transparent;
+  background: transparent;
+  caret-color: transparent;
+  z-index: -1;
 }
 
 .cell {
@@ -540,7 +561,15 @@ select {
   }
 
   .toolbar {
-    justify-content: space-between;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .toolbar button {
+    min-height: 38px;
+    padding: 0 12px;
+    gap: 6px;
   }
 
   .solver-layout {
@@ -565,9 +594,22 @@ select {
     padding: 10px;
   }
 
-  .toolbar,
-  .toolbar button {
+  .toolbar {
+    flex-wrap: nowrap;
+    gap: 6px;
     width: 100%;
+    justify-content: flex-start;
+  }
+
+  .toolbar button {
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 0 10px;
+    gap: 0;
+  }
+
+  .toolbar button span {
+    display: none;
   }
 
   .cell-number {

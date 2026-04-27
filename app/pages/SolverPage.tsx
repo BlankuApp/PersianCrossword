@@ -44,6 +44,17 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
   const SOLUTION_AUTO_HIDE_SECONDS = 10;
   const [solutionCountdown, setSolutionCountdown] = useState(SOLUTION_AUTO_HIDE_SECONDS);
   const boardRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function focusInput(): void {
+    const el = inputRef.current;
+    if (el) {
+      el.value = "";
+      el.focus();
+    } else {
+      boardRef.current?.focus();
+    }
+  }
 
   const crosswordState = useMemo(() => createState(puzzle, savedState), [puzzle, savedState]);
   const activeSlot = getActiveSlot(puzzle, selection);
@@ -114,13 +125,42 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
       if (next) setClueTab(next.direction);
       return next;
     });
-    boardRef.current?.focus();
+    focusInput();
   }
 
   function selectClue(slot: Slot): void {
     setSelection(selectSlot(slot));
     setClueTab(slot.direction);
-    boardRef.current?.focus();
+    focusInput();
+  }
+
+  function commitGrapheme(grapheme: string): void {
+    if (!selection) return;
+    const graphemes = splitPersianGraphemes(grapheme);
+    if (graphemes.length !== 1) return;
+    updateCell(selection.coord, graphemes[0]);
+    const active = getActiveSlot(puzzle, selection);
+    if (active) {
+      const next = nextCoordInSlot(active, selection.coord, 1);
+      setSelection({ ...selection, coord: next });
+    }
+  }
+
+  function handleInputBeforeInput(event: React.FormEvent<HTMLInputElement>): void {
+    const native = event.nativeEvent as InputEvent;
+    const data = native.data;
+    if (!data) return;
+    event.preventDefault();
+    if (inputRef.current) inputRef.current.value = "";
+    commitGrapheme(data);
+  }
+
+  function handleInputChange(event: React.ChangeEvent<HTMLInputElement>): void {
+    // Fallback for IMEs that don't fire beforeinput with data.
+    const value = event.target.value;
+    event.target.value = "";
+    if (!value) return;
+    commitGrapheme(value);
   }
 
   function updateCell(coord: Coord, value: string | null): void {
@@ -129,7 +169,7 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
     commitState(nextState);
   }
 
-  function handleKeyDown(event: React.KeyboardEvent<HTMLDivElement>): void {
+  function handleKeyDown(event: React.KeyboardEvent<HTMLElement>): void {
     if (!selection) return;
 
     const active = getActiveSlot(puzzle, selection);
@@ -204,11 +244,17 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
             className="btn-home"
             onClick={() => navigate("#/")}
             title="بازگشت به فهرست جدول‌ها"
+            aria-label="بازگشت به فهرست جدول‌ها"
           >
             <ArrowRight size={18} aria-hidden="true" />
             <span>بازگشت</span>
           </button>
-          <button type="button" onClick={resetProgress} title="پاک کردن پاسخ‌ها">
+          <button
+            type="button"
+            onClick={resetProgress}
+            title="پاک کردن پاسخ‌ها"
+            aria-label="پاک کردن پاسخ‌ها"
+          >
             <RotateCcw size={18} aria-hidden="true" />
             <span>پاک کردن</span>
           </button>
@@ -216,6 +262,7 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
             type="button"
             onClick={() => setShowHelp((v) => !v)}
             title="راهنمای استفاده"
+            aria-label="راهنمای استفاده"
             aria-expanded={showHelp}
           >
             <HelpCircle size={18} aria-hidden="true" />
@@ -226,6 +273,7 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
               type="button"
               onClick={() => setShowSolution((v) => !v)}
               title="نمایش پاسخ جدول"
+              aria-label={showSolution ? "پنهان کردن پاسخ" : "نمایش پاسخ"}
               aria-expanded={showSolution}
             >
               {showSolution ? (
@@ -320,12 +368,15 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
           <BoardWithLabels puzzle={puzzle}>
             <CrosswordBoard
               boardRef={boardRef}
+              inputRef={inputRef}
               puzzle={puzzle}
               state={crosswordState}
               selection={selection}
               activeKeys={activeKeys}
               onCellClick={selectCell}
               onKeyDown={handleKeyDown}
+              onInputBeforeInput={handleInputBeforeInput}
+              onInputChange={handleInputChange}
             />
           </BoardWithLabels>
           <ActiveClue slot={activeSlot} />

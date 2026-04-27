@@ -2,6 +2,33 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Run App Dev Server (LAN)",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "dev", "--", "--host"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always",
+        "focus": false
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": {
+          "regexp": "^ERROR.*$",
+          "message": 0
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*vite.*$",
+          "endsPattern": "^.*ready in .*ms.*$"
+        }
+      }
+    },
+    {
       "label": "Run Grid Importer",
       "type": "shell",
       "command": "${workspaceFolder}\\.venv\\Scripts\\uvicorn.exe",
