@@ -47,10 +47,10 @@ export function HomePage() {
       let cmp = 0;
       switch (sortKey) {
         case "id":
-          cmp = a.id.localeCompare(b.id, "fa");
+          cmp = a.id.localeCompare(b.id, "fa", { numeric: true });
           break;
         case "title":
-          cmp = a.title.localeCompare(b.title, "fa");
+          cmp = a.title.localeCompare(b.title, "fa", { numeric: true });
           break;
         case "difficulty":
           cmp = (a.difficulty ?? "").localeCompare(b.difficulty ?? "", "fa");

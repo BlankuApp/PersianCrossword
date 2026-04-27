@@ -127,7 +127,7 @@ If you have a solution grid or answer list, mirror the `clues` shape under `answ
   - `newspaper`: use the newspaper or publication name such as `جام جم` or `جوان`.
   - `difficulty`: include it when the source or user provides one; for example `عادی` or `ویژه`. Otherwise, leave it empty instead of guessing.
   - `author`: include the constructor/designer line such as `بیژن گورانی` when available.
-  - `publishedAt`: include the provided or requested date; otherwise leave it empty instead of guessing.
+  - `publishedAt`: include the current day's date in `YYYY-MM-DD` format.
   - `size`: always populate from the grid dimensions.
   - `language`: use `fa`.
   - `direction`: use `rtl`.

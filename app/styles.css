@@ -118,6 +118,127 @@ select {
   color: #17201b;
 }
 
+.solution-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 25, 20, 0.78);
+  backdrop-filter: blur(2px);
+  animation: solution-fade-in 0.2s ease-out;
+}
+
+@keyframes solution-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.solution-modal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: min(95vw, 900px);
+  max-height: 95vh;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: #f7faf8;
+  color: #17201b;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  overflow: auto;
+}
+
+.solution-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.solution-modal-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #1e5c38;
+}
+
+.solution-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.solution-countdown {
+  font-size: 0.9rem;
+  color: #6b4a14;
+  font-variant-numeric: tabular-nums;
+}
+
+.solution-close-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #bac3bc;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #17201b;
+  cursor: pointer;
+}
+
+.solution-close-button:hover {
+  background: #eef3ef;
+}
+
+.solution-image {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.solution-image img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(95vh - 100px);
+  height: auto;
+  object-fit: contain;
+  transition: filter 0.4s ease;
+}
+
+.solution-image.is-blurred img {
+  filter: blur(20px);
+}
+
+.solution-reveal-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: rgba(255, 255, 255, 0.55);
+  color: #1e5c38;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.solution-reveal-overlay:hover {
+  background: rgba(255, 255, 255, 0.7);
+}
+
 .solver-layout {
   display: grid;
   grid-template-columns: minmax(320px, 680px) minmax(280px, 1fr);

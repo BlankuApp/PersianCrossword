@@ -17,7 +17,13 @@ export function App() {
   if (route.name === "puzzle") {
     const puzzle = getPuzzleById(route.id);
     if (puzzle) {
-      return <SolverPage id={puzzle.id} json={puzzle.json} />;
+      return (
+        <SolverPage
+          id={puzzle.id}
+          json={puzzle.json}
+          solutionImageUrl={puzzle.solutionImageUrl}
+        />
+      );
     }
     return null; // will redirect via effect above
   }
