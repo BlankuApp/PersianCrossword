@@ -2,7 +2,11 @@
   "version": 2,
   "meta": {
     "title": "نام جدول",
-    "newspaper": "",
+    "newspaper": "نام روزنامه",
+    "difficulty": "سختی جدول (مثلاً آسان، متوسط، عادی، ویژه)",
+    "author": "نام سازنده جدول",
+    "publishedAt": "تاریخ امروز (فرمت YYYY-MM-DD)",
+    "size": { "rows": 15, "cols": 15 },
     "language": "fa",
     "direction": "rtl"
   },
