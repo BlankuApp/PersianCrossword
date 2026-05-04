@@ -72,6 +72,7 @@ export function CrosswordBoard({
               key={key}
               type="button"
               role="gridcell"
+              data-cell-key={key}
               className={[
                 "cell",
                 isBlock ? "cell-block" : "cell-open",

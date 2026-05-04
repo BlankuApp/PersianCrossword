@@ -1,7 +1,7 @@
 :root {
   color: #17201b;
   background: #f6f4ef;
-  font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+  font-family: "Vazirmatn", "Segoe UI", Tahoma, Arial, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
@@ -35,6 +35,10 @@ select {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 18px;
+}
+
+.app-header-meta {
+  min-width: 0;
 }
 
 .app-header h1 {
@@ -239,6 +243,19 @@ select {
   background: rgba(255, 255, 255, 0.7);
 }
 
+.active-clue-overlay {
+  max-width: min(360px, calc(100vw - 24px));
+  padding: 10px 12px;
+  border: 1px solid #cfd7cf;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.98);
+  color: #17201b;
+  line-height: 1.6;
+  box-shadow:
+    0 12px 28px rgba(24, 36, 30, 0.2),
+    0 2px 8px rgba(24, 36, 30, 0.08);
+}
+
 .solver-layout {
   display: grid;
   grid-template-columns: minmax(320px, 680px) minmax(280px, 1fr);
@@ -249,6 +266,12 @@ select {
 .board-panel {
   display: grid;
   gap: 12px;
+}
+
+.clue-sidebar {
+  display: grid;
+  gap: 12px;
+  align-items: start;
 }
 
 /* Board with row/column number labels */
@@ -393,14 +416,14 @@ select {
 
 .cell-value {
   display: block;
-  max-width: 82%;
+  max-width: 90%;
   margin: auto;
   font-size: min(
-    clamp(0.9rem, 2.7vw, 1.45rem),
-    calc((min(100vw - 40px, 680px) / var(--grid-cols, 12)) * 0.4)
+    clamp(1.05rem, 3.25vw, 1.82rem),
+    calc((min(100vw - 40px, 680px) / var(--grid-cols, 12)) * 0.54)
   );
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1;
   direction: rtl;
   text-align: center;
 }
@@ -594,10 +617,41 @@ select {
     padding: 10px;
   }
 
+  .app-header {
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 10px;
+  }
+
+  .app-header-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .app-header h1 {
+    font-size: clamp(1.1rem, 5.4vw, 1.45rem);
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .app-header p {
+    margin: 0;
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+
   .toolbar {
     flex-wrap: nowrap;
+    flex: 0 0 auto;
     gap: 6px;
-    width: 100%;
+    width: auto;
     justify-content: flex-start;
   }
 
@@ -615,6 +669,12 @@ select {
   .cell-number {
     top: 2px;
     left: 2px;
+  }
+
+  .active-clue-overlay {
+    max-width: calc(100vw - 20px);
+    padding: 9px 11px;
+    font-size: 0.95rem;
   }
 }
 
@@ -849,8 +909,8 @@ select {
 
   .cell-value {
     font-size: min(
-      clamp(0.82rem, 3.8vw, 1.15rem),
-      calc((100vw - 22px) / var(--grid-cols, 12) * 0.38)
+      clamp(0.94rem, 4.35vw, 1.36rem),
+      calc((100vw - 22px) / var(--grid-cols, 12) * 0.48)
     );
     line-height: 1.05;
   }

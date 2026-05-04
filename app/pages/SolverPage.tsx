@@ -1,6 +1,7 @@
 import { RotateCcw, ArrowRight, HelpCircle, Eye, EyeOff, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
+  cellKey,
   compilePuzzle,
   createState,
   splitPersianGraphemes,
@@ -20,6 +21,13 @@ import {
 } from "../crosswordUi";
 import { loadProgress, saveProgress } from "../progress";
 import { navigate } from "../router";
+import {
+  chooseOverlayCorner,
+  getOverlayViewportStyle,
+  unionRects,
+  type OverlayCorner,
+  type ViewportFrame,
+} from "../clueOverlay";
 import { BoardWithLabels } from "../components/BoardWithLabels";
 import { CrosswordBoard } from "../components/CrosswordBoard";
 import { ActiveClue, CluePanel } from "../components/CluePanel";
@@ -27,10 +35,14 @@ import { ActiveClue, CluePanel } from "../components/CluePanel";
 interface SolverPageProps {
   readonly id: string;
   readonly json: CrosswordJson;
-  readonly solutionImageUrl?: string;
+  readonly solutionImageUrl?: string | undefined;
 }
 
 export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
+  const CLUE_OVERLAY_HIDE_MS = 3000;
+  const CLUE_OVERLAY_MARGIN = 12;
+  const CLUE_OVERLAY_GAP = 16;
+  const CLUE_OVERLAY_MOBILE_QUERY = "(max-width: 860px)";
   const puzzle = useMemo(() => compilePuzzle(json), [json]);
   const [savedState, setSavedState] = useState(() => loadProgress(id));
   const [selection, setSelection] = useState<Selection | undefined>(() => {
@@ -40,11 +52,28 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
   const [clueTab, setClueTab] = useState<Direction>("across");
   const [showHelp, setShowHelp] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
+  const [showMobileClueOverlay, setShowMobileClueOverlay] = useState(() =>
+    typeof window.matchMedia === "function"
+      ? window.matchMedia(CLUE_OVERLAY_MOBILE_QUERY).matches
+      : false,
+  );
+  const [showClueOverlay, setShowClueOverlay] = useState(false);
+  const [clueOverlayCorner, setClueOverlayCorner] = useState<OverlayCorner>("top-right");
+  const [clueOverlayStyle, setClueOverlayStyle] = useState<CSSProperties>(() =>
+    getOverlayViewportStyle(
+      "top-right",
+      CLUE_OVERLAY_MARGIN,
+      { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight },
+      0,
+    ),
+  );
   const [solutionRevealed, setSolutionRevealed] = useState(false);
   const SOLUTION_AUTO_HIDE_SECONDS = 10;
   const [solutionCountdown, setSolutionCountdown] = useState(SOLUTION_AUTO_HIDE_SECONDS);
   const boardRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const clueOverlayRef = useRef<HTMLDivElement>(null);
+  const clueOverlayTimerRef = useRef<number | undefined>(undefined);
 
   function focusInput(): void {
     const el = inputRef.current;
@@ -59,6 +88,9 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
   const crosswordState = useMemo(() => createState(puzzle, savedState), [puzzle, savedState]);
   const activeSlot = getActiveSlot(puzzle, selection);
   const activeKeys = slotCellKeys(activeSlot);
+  const selectionSignature = selection
+    ? `${selection.coord.row}:${selection.coord.col}:${selection.direction}`
+    : "none";
 
   useEffect(() => {
     const restored = loadProgress(id);
@@ -70,6 +102,121 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
     setSolutionRevealed(false);
     setSolutionCountdown(SOLUTION_AUTO_HIDE_SECONDS);
   }, [id, puzzle]);
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") {
+      setShowMobileClueOverlay(false);
+      return;
+    }
+
+    const mediaQuery = window.matchMedia(CLUE_OVERLAY_MOBILE_QUERY);
+    const handleChange = (event: MediaQueryListEvent | MediaQueryList): void => {
+      setShowMobileClueOverlay(event.matches);
+    };
+
+    handleChange(mediaQuery);
+    mediaQuery.addEventListener?.("change", handleChange);
+
+    return () => {
+      mediaQuery.removeEventListener?.("change", handleChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (clueOverlayTimerRef.current !== undefined) {
+      window.clearTimeout(clueOverlayTimerRef.current);
+      clueOverlayTimerRef.current = undefined;
+    }
+
+    if (!showMobileClueOverlay || !activeSlot) {
+      setShowClueOverlay(false);
+      return;
+    }
+
+    setShowClueOverlay(true);
+    clueOverlayTimerRef.current = window.setTimeout(() => {
+      setShowClueOverlay(false);
+      clueOverlayTimerRef.current = undefined;
+    }, CLUE_OVERLAY_HIDE_MS);
+
+    return () => {
+      if (clueOverlayTimerRef.current !== undefined) {
+        window.clearTimeout(clueOverlayTimerRef.current);
+        clueOverlayTimerRef.current = undefined;
+      }
+    };
+  }, [activeSlot, id, selectionSignature, showMobileClueOverlay]);
+
+  useLayoutEffect(() => {
+    if (!showMobileClueOverlay || !showClueOverlay || !activeSlot) {
+      return;
+    }
+
+    const getViewportFrame = (): ViewportFrame => {
+      const viewport = window.visualViewport;
+      if (!viewport) {
+        return { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+      }
+
+      return {
+        left: viewport.offsetLeft,
+        top: viewport.offsetTop,
+        width: viewport.width,
+        height: viewport.height,
+      };
+    };
+
+    const updateClueOverlayPlacement = (): void => {
+      const boardEl = boardRef.current;
+      const overlayEl = clueOverlayRef.current;
+      if (!boardEl || !overlayEl) {
+        return;
+      }
+
+      const slotRects = activeSlot.cells
+        .map((coord) => {
+          const cell = boardEl.querySelector<HTMLElement>(`[data-cell-key="${cellKey(coord)}"]`);
+          return cell?.getBoundingClientRect();
+        })
+        .filter((rect): rect is DOMRect => rect !== undefined);
+      const slotRect = unionRects(slotRects);
+      if (!slotRect) {
+        return;
+      }
+
+      const viewportFrame = getViewportFrame();
+      const overlayRect = overlayEl.getBoundingClientRect();
+      const nextCorner = chooseOverlayCorner({
+        slotRect,
+        overlaySize: { width: overlayRect.width, height: overlayRect.height },
+        viewport: { width: viewportFrame.width, height: viewportFrame.height },
+        margin: CLUE_OVERLAY_MARGIN,
+        gap: CLUE_OVERLAY_GAP,
+      });
+      setClueOverlayCorner(nextCorner);
+      setClueOverlayStyle(
+        getOverlayViewportStyle(
+          nextCorner,
+          CLUE_OVERLAY_MARGIN,
+          viewportFrame,
+          overlayRect.width,
+        ),
+      );
+    };
+
+    updateClueOverlayPlacement();
+    window.addEventListener("resize", updateClueOverlayPlacement);
+    window.addEventListener("scroll", updateClueOverlayPlacement, true);
+    window.visualViewport?.addEventListener("resize", updateClueOverlayPlacement);
+    window.visualViewport?.addEventListener("scroll", updateClueOverlayPlacement);
+
+    return () => {
+      window.removeEventListener("resize", updateClueOverlayPlacement);
+      window.removeEventListener("scroll", updateClueOverlayPlacement, true);
+      window.visualViewport?.removeEventListener("resize", updateClueOverlayPlacement);
+      window.visualViewport?.removeEventListener("scroll", updateClueOverlayPlacement);
+    };
+  }, [activeSlot, showClueOverlay, selectionSignature, showMobileClueOverlay]);
 
   // Auto-hide the solution image after a countdown once it has been revealed.
   useEffect(() => {
@@ -138,7 +285,9 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
     if (!selection) return;
     const graphemes = splitPersianGraphemes(grapheme);
     if (graphemes.length !== 1) return;
-    updateCell(selection.coord, graphemes[0]);
+    const nextGrapheme = graphemes[0];
+    if (!nextGrapheme) return;
+    updateCell(selection.coord, nextGrapheme);
     const active = getActiveSlot(puzzle, selection);
     if (active) {
       const next = nextCoordInSlot(active, selection.coord, 1);
@@ -234,7 +383,7 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
   return (
     <main className="app-shell" dir="rtl">
       <header className="app-header">
-        <div>
+        <div className="app-header-meta">
           <h1>{title}</h1>
           {newspaper ? <p>{newspaper}</p> : null}
         </div>
@@ -363,6 +512,19 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
         </div>
       ) : null}
 
+      {showMobileClueOverlay && showClueOverlay && activeSlot ? (
+        <div
+          ref={clueOverlayRef}
+          className="active-clue-overlay"
+          data-testid="active-clue-overlay"
+          aria-live="polite"
+          data-corner={clueOverlayCorner}
+          style={clueOverlayStyle}
+        >
+          {activeSlot.clue}
+        </div>
+      ) : null}
+
       <section className="solver-layout">
         <div className="board-panel">
           <BoardWithLabels puzzle={puzzle}>
@@ -379,17 +541,19 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
               onInputChange={handleInputChange}
             />
           </BoardWithLabels>
-          <ActiveClue slot={activeSlot} />
         </div>
 
-        <CluePanel
-          acrossSlots={puzzle.acrossSlots}
-          downSlots={puzzle.downSlots}
-          activeSlot={activeSlot}
-          clueTab={clueTab}
-          onTabChange={setClueTab}
-          onClueClick={selectClue}
-        />
+        <div className="clue-sidebar">
+          <ActiveClue slot={activeSlot} />
+          <CluePanel
+            acrossSlots={puzzle.acrossSlots}
+            downSlots={puzzle.downSlots}
+            activeSlot={activeSlot}
+            clueTab={clueTab}
+            onTabChange={setClueTab}
+            onClueClick={selectClue}
+          />
+        </div>
       </section>
     </main>
   );
