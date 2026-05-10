@@ -70,13 +70,59 @@
     #preview-area { display: none; margin-top: 1.5rem; }
 
     .previews {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: minmax(0, 1.8fr) minmax(320px, 1fr);
       gap: 1.5rem;
       align-items: flex-start;
     }
-    .preview-col { display: flex; flex-direction: column; gap: 0.4rem; }
+    .preview-col {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      min-width: 0;
+    }
     .preview-label { font-size: 0.78rem; font-weight: 600; color: #555; text-align: center; }
+    .warped-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      width: fit-content;
+      max-width: 100%;
+      align-self: center;
+    }
+    .preview-tools {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+      justify-content: center;
+    }
+    .zoom-badge {
+      min-width: 4.5rem;
+      text-align: center;
+      padding: 0.42rem 0.7rem;
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-radius: 999px;
+      color: #374151;
+      font-size: 0.82rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .raw-stage {
+      width: min(100%, 1200px);
+      max-height: 78vh;
+      overflow: auto;
+      padding: 0.65rem;
+      border: 1px solid #d1d5db;
+      border-radius: 12px;
+      background:
+        linear-gradient(45deg, #eef2f7 25%, transparent 25%),
+        linear-gradient(-45deg, #eef2f7 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #eef2f7 75%),
+        linear-gradient(-45deg, transparent 75%, #eef2f7 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    }
 
     /* Image containers */
     .img-box {
@@ -89,9 +135,34 @@
     }
     .img-box img {
       display: block;
-      max-width: min(500px, calc(100vw - 4rem));
       height: auto;
     }
+    #raw-col .img-box {
+      display: block;
+      width: max-content;
+      max-width: none;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.16);
+    }
+    #raw-img {
+      width: auto;
+      max-width: none;
+    }
+    #warped-img {
+      max-width: min(560px, calc(100vw - 4rem));
+      max-height: 72vh;
+    }
+    #warped-col .img-box {
+      align-self: center;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+    }
+    .img-box canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+    #raw-overlay { pointer-events: none; }
+    #raw-overlay.manual { pointer-events: auto; cursor: crosshair; touch-action: none; }
 
     /* Grid overlay — must be LTR so column indices match image pixels */
     #grid-overlay {
@@ -150,6 +221,19 @@
       direction: ltr;
       text-align: left;
     }
+
+    @media (max-width: 1100px) {
+      .previews { grid-template-columns: 1fr; }
+      .raw-stage { max-height: 68vh; }
+      #warped-img { max-width: min(700px, calc(100vw - 4rem)); }
+    }
+
+    @media (max-width: 640px) {
+      body { padding: 1rem; }
+      .controls { gap: 0.75rem; }
+      .raw-stage { padding: 0.4rem; max-height: 60vh; }
+      #warped-img { max-width: calc(100vw - 2rem); }
+    }
   </style>
 </head>
 <body>
@@ -168,6 +252,9 @@
       <span class="hint">خالی = تشخیص خودکار</span>
     </div>
     <button class="primary" id="detect-btn">تشخیص جدول</button>
+    <button id="manual-btn" type="button" style="display:none">تنظیم گوشه‌ها</button>
+    <button id="confirm-corners-btn" type="button" style="display:none">تایید گوشه‌ها</button>
+    <button id="cancel-corners-btn" type="button" style="display:none">لغو</button>
   </div>
 
   <div class="status" id="status"></div>
@@ -176,25 +263,36 @@
     <div class="previews">
       <div class="preview-col" id="raw-col" style="display:none">
         <div class="preview-label">تصویر ورودی</div>
-        <div class="img-box">
-          <img id="raw-img" alt="تصویر اصلی">
+        <div class="preview-tools">
+          <button id="zoom-out-btn" type="button">-</button>
+          <div class="zoom-badge" id="zoom-level">100%</div>
+          <button id="zoom-in-btn" type="button">+</button>
+          <button id="zoom-reset-btn" type="button">اندازه مناسب</button>
+        </div>
+        <div class="raw-stage" id="raw-stage">
+          <div class="img-box">
+            <img id="raw-img" alt="تصویر اصلی">
+            <canvas id="raw-overlay" aria-hidden="true"></canvas>
+          </div>
         </div>
       </div>
-      <div class="preview-col">
-        <div class="preview-label">پس از پردازش — روی خانه‌ها کلیک کنید تا تغییر دهید</div>
-        <div class="img-box">
-          <img id="warped-img" alt="جدول تصحیح‌شده">
-          <div id="grid-overlay" role="grid" aria-label="ویرایش خانه‌های جدول"></div>
+      <div class="preview-col" id="warped-col" style="display:none">
+        <div class="warped-panel">
+          <div class="preview-label">پس از پردازش — روی خانه‌ها کلیک کنید تا تغییر دهید</div>
+          <div class="img-box">
+            <img id="warped-img" alt="جدول تصحیح‌شده">
+            <div id="grid-overlay" role="grid" aria-label="ویرایش خانه‌های جدول"></div>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="toolbar">
+    <div class="toolbar" id="edit-toolbar" style="display:none">
       <button id="copy-btn">Copy</button>
       <button id="reset-btn">بازنشانی</button>
     </div>
 
-    <pre id="output" dir="ltr"></pre>
+    <pre id="output" dir="ltr" style="display:none"></pre>
   </div>
 
   <script>
@@ -205,9 +303,20 @@
     const statusEl    = document.getElementById('status');
     const previewArea = document.getElementById('preview-area');
     const rawCol      = document.getElementById('raw-col');
+    const rawStage    = document.getElementById('raw-stage');
     const rawImg      = document.getElementById('raw-img');
+    const rawOverlay  = document.getElementById('raw-overlay');
+    const zoomOutBtn  = document.getElementById('zoom-out-btn');
+    const zoomInBtn   = document.getElementById('zoom-in-btn');
+    const zoomResetBtn = document.getElementById('zoom-reset-btn');
+    const zoomLevelEl = document.getElementById('zoom-level');
+    const manualBtn   = document.getElementById('manual-btn');
+    const confirmCornersBtn = document.getElementById('confirm-corners-btn');
+    const cancelCornersBtn  = document.getElementById('cancel-corners-btn');
+    const warpedCol   = document.getElementById('warped-col');
     const warpedImg   = document.getElementById('warped-img');
     const gridOverlay = document.getElementById('grid-overlay');
+    const editToolbar = document.getElementById('edit-toolbar');
     const outputEl    = document.getElementById('output');
     const copyBtn     = document.getElementById('copy-btn');
     const resetBtn    = document.getElementById('reset-btn');
@@ -216,6 +325,11 @@
     let detectedMatrix = null;  // pristine server result
     let currentMatrix  = null;  // user-edited copy
     let numRows = 0, numCols = 0;
+    let sourceBlob = null;
+    let manualMode = false;
+    let manualCorners = [];
+    let lastDetectedCorners = null;
+    let rawZoom = 1;
 
     // ----- Status -----
     function showStatus(msg, type = 'info') {
@@ -224,25 +338,219 @@
     }
     function clearStatus() { statusEl.className = 'status'; }
 
+    function fitRawScale() {
+      if (!rawImg.naturalWidth) return 1;
+      const availableWidth = Math.max(rawStage.clientWidth - 20, 280);
+      return Math.min(1, availableWidth / rawImg.naturalWidth);
+    }
+
+    function updateZoomControls() {
+      const disabled = !sourceBlob || detectBtn.disabled;
+      zoomOutBtn.disabled = disabled || rawZoom <= 1;
+      zoomInBtn.disabled = disabled || rawZoom >= 3;
+      zoomResetBtn.disabled = disabled || rawZoom === 1;
+      zoomLevelEl.textContent = `${Math.round(rawZoom * 100)}%`;
+    }
+
+    function applyRawZoom() {
+      if (!rawImg.naturalWidth) {
+        updateZoomControls();
+        return;
+      }
+
+      const displayWidth = Math.max(240, Math.round(rawImg.naturalWidth * fitRawScale() * rawZoom));
+      rawImg.style.width = `${displayWidth}px`;
+
+      requestAnimationFrame(() => {
+        syncRawOverlaySize();
+        updateZoomControls();
+      });
+    }
+
+    function setRawZoom(nextZoom) {
+      const clampedZoom = Math.min(3, Math.max(1, nextZoom));
+      if (clampedZoom === rawZoom && rawImg.naturalWidth) {
+        updateZoomControls();
+        return;
+      }
+      rawZoom = clampedZoom;
+      applyRawZoom();
+    }
+
+    function setBusy(isBusy) {
+      detectBtn.disabled = isBusy;
+      fileInput.disabled = isBusy;
+      nInput.disabled = isBusy;
+      updateCornerControls();
+      updateZoomControls();
+    }
+
+    function clearDetectedState() {
+      detectedMatrix = null;
+      currentMatrix = null;
+      numRows = 0;
+      numCols = 0;
+      gridOverlay.innerHTML = '';
+      warpedImg.removeAttribute('src');
+      warpedCol.style.display = 'none';
+      editToolbar.style.display = 'none';
+      outputEl.style.display = 'none';
+      outputEl.textContent = '';
+    }
+
+    function updateCornerControls() {
+      const hasSource = Boolean(sourceBlob);
+      manualBtn.style.display = hasSource && !manualMode ? '' : 'none';
+      confirmCornersBtn.style.display = manualMode ? '' : 'none';
+      cancelCornersBtn.style.display = manualMode ? '' : 'none';
+      manualBtn.disabled = !hasSource || detectBtn.disabled;
+      confirmCornersBtn.disabled = detectBtn.disabled || manualCorners.length !== 4;
+      cancelCornersBtn.disabled = detectBtn.disabled;
+      rawOverlay.classList.toggle('manual', manualMode);
+    }
+
     // ----- Raw-image preview -----
     function showRawPreview(blob) {
+      sourceBlob = blob;
+      rawZoom = 1;
       if (rawImg._objectUrl) URL.revokeObjectURL(rawImg._objectUrl);
       rawImg._objectUrl = URL.createObjectURL(blob);
       rawImg.src = rawImg._objectUrl;
       rawCol.style.display = '';
+      previewArea.style.display = 'block';
+      updateCornerControls();
+      updateZoomControls();
+    }
+
+    function syncRawOverlaySize() {
+      const width = rawImg.clientWidth;
+      const height = rawImg.clientHeight;
+      if (!width || !height) return;
+
+      const ratio = window.devicePixelRatio || 1;
+      rawOverlay.width = Math.round(width * ratio);
+      rawOverlay.height = Math.round(height * ratio);
+      rawOverlay.style.width = width + 'px';
+      rawOverlay.style.height = height + 'px';
+
+      const ctx = rawOverlay.getContext('2d');
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      renderRawOverlay();
+    }
+
+    function imagePointToDisplay(point) {
+      return {
+        x: (point[0] / rawImg.naturalWidth) * rawImg.clientWidth,
+        y: (point[1] / rawImg.naturalHeight) * rawImg.clientHeight,
+      };
+    }
+
+    function displayPointToImage(clientX, clientY) {
+      const rect = rawOverlay.getBoundingClientRect();
+      const x = ((clientX - rect.left) / rect.width) * rawImg.naturalWidth;
+      const y = ((clientY - rect.top) / rect.height) * rawImg.naturalHeight;
+      return [
+        Math.min(Math.max(x, 0), rawImg.naturalWidth - 1),
+        Math.min(Math.max(y, 0), rawImg.naturalHeight - 1),
+      ];
+    }
+
+    function drawCorners(ctx, corners, strokeStyle, pointStyle, dashed = false) {
+      if (!corners || !corners.length) return;
+
+      const points = corners.map(imagePointToDisplay);
+      ctx.save();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = strokeStyle;
+      ctx.fillStyle = pointStyle;
+      if (dashed) ctx.setLineDash([8, 6]);
+
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+      }
+      if (points.length === 4) ctx.closePath();
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      points.forEach((point, index) => {
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(index + 1), point.x, point.y);
+        ctx.fillStyle = pointStyle;
+      });
+      ctx.restore();
+    }
+
+    function renderRawOverlay() {
+      const ctx = rawOverlay.getContext('2d');
+      if (!ctx) return;
+
+      ctx.clearRect(0, 0, rawOverlay.width, rawOverlay.height);
+      if (!sourceBlob || !rawImg.naturalWidth || !rawImg.clientWidth) return;
+
+      if (lastDetectedCorners) {
+        drawCorners(ctx, lastDetectedCorners, 'rgba(26, 115, 232, 0.95)', 'rgba(26, 115, 232, 0.95)', true);
+      }
+
+      if (manualCorners.length) {
+        drawCorners(ctx, manualCorners, 'rgba(220, 38, 38, 0.95)', 'rgba(220, 38, 38, 0.95)');
+      }
+    }
+
+    function enterManualMode() {
+      if (!sourceBlob) return;
+      manualMode = true;
+      manualCorners = [];
+      updateCornerControls();
+      renderRawOverlay();
+      showStatus('چهار گوشه جدول را روی تصویر اصلی انتخاب کنید. ترتیب کلیک مهم نیست.', 'info');
+    }
+
+    function exitManualMode(clearMessage = false) {
+      manualMode = false;
+      manualCorners = [];
+      updateCornerControls();
+      renderRawOverlay();
+      if (clearMessage) clearStatus();
+    }
+
+    function handleRawOverlayPointerDown(event) {
+      if (!manualMode || !rawImg.naturalWidth) return;
+
+      if (manualCorners.length === 4) {
+        manualCorners = [];
+      }
+
+      manualCorners.push(displayPointToImage(event.clientX, event.clientY));
+      renderRawOverlay();
+      updateCornerControls();
+
+      if (manualCorners.length === 4) {
+        showStatus('چهار گوشه انتخاب شد. برای پردازش، روی تایید گوشه‌ها بزنید.', 'info');
+      } else {
+        showStatus(`گوشه ${manualCorners.length} ثبت شد. ${4 - manualCorners.length} گوشه دیگر باقی مانده است.`, 'info');
+      }
     }
 
     // ----- API call -----
-    async function detect(blob) {
-      showRawPreview(blob);
+    async function detect(corners = null) {
+      if (!sourceBlob) return;
 
       const fd = new FormData();
-      fd.append('image', blob, 'image.png');
+      fd.append('image', sourceBlob, 'image.png');
       const nVal = nInput.value.trim();
       if (nVal !== '') fd.append('n', nVal);
+      if (corners) fd.append('corners', JSON.stringify(corners));
 
-      detectBtn.disabled = true;
-      showStatus('در حال پردازش تصویر…');
+      setBusy(true);
+      showStatus(corners ? 'در حال پردازش تصویر با گوشه‌های دستی…' : 'در حال پردازش تصویر…');
 
       try {
         const resp = await fetch('/api/detect', { method: 'POST', body: fd });
@@ -258,16 +566,31 @@
         numCols = data.cols;
         detectedMatrix = data.matrix.map(r => [...r]);
         currentMatrix  = data.matrix.map(r => [...r]);
+        lastDetectedCorners = Array.isArray(data.corners) ? data.corners : null;
 
         warpedImg.src = 'data:image/png;base64,' + data.warped_png_b64;
         previewArea.style.display = 'block';
+        warpedCol.style.display = '';
+        editToolbar.style.display = '';
+        outputEl.style.display = 'block';
         buildOverlay();
         updateOutput();
+        exitManualMode(true);
+        applyRawZoom();
       } catch (err) {
         showStatus('خطای شبکه: ' + err.message, 'error');
       } finally {
-        detectBtn.disabled = false;
+        setBusy(false);
       }
+    }
+
+    function loadSource(blob) {
+      clearStatus();
+      clearDetectedState();
+      lastDetectedCorners = null;
+      showRawPreview(blob);
+      exitManualMode();
+      renderRawOverlay();
     }
 
     // ----- Input sources -----
@@ -276,7 +599,8 @@
         showStatus('لطفاً ابتدا یک تصویر انتخاب کنید.', 'error');
         return;
       }
-      detect(fileInput.files[0]);
+      loadSource(fileInput.files[0]);
+      detect();
     });
 
     document.addEventListener('paste', (e) => {
@@ -286,8 +610,22 @@
         return;
       }
       e.preventDefault();
-      detect(item.getAsFile());
+      loadSource(item.getAsFile());
+      detect();
     });
+
+    rawImg.addEventListener('load', applyRawZoom);
+    rawOverlay.addEventListener('pointerdown', handleRawOverlayPointerDown);
+    window.addEventListener('resize', applyRawZoom);
+    manualBtn.addEventListener('click', enterManualMode);
+    confirmCornersBtn.addEventListener('click', () => {
+      if (manualCorners.length !== 4) return;
+      detect(manualCorners);
+    });
+    cancelCornersBtn.addEventListener('click', () => exitManualMode(true));
+    zoomOutBtn.addEventListener('click', () => setRawZoom(rawZoom - 0.25));
+    zoomInBtn.addEventListener('click', () => setRawZoom(rawZoom + 0.25));
+    zoomResetBtn.addEventListener('click', () => setRawZoom(1));
 
     // ----- Grid overlay -----
     function buildOverlay() {
@@ -347,6 +685,7 @@
 
     // ----- Output -----
     function formatMatrix() {
+      if (!currentMatrix) return '';
       return '[\n' + currentMatrix.map(row => '    [' + row.join(', ') + ']').join(',\n') + '\n  ]';
     }
 
@@ -363,6 +702,9 @@
       buildOverlay();
       updateOutput();
     });
+
+    updateCornerControls();
+    updateZoomControls();
   </script>
 
 </body>

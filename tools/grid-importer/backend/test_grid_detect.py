@@ -67,6 +67,25 @@ def make_synthetic_grid(
     return buf.tobytes(), expected
 
 
+def synthetic_corners(
+    rows: int = 15,
+    cols: int = 15,
+    cell_size: int = 30,
+    border: int = 3,
+    margin: int = 12,
+) -> list[list[float]]:
+    grid_h = rows * cell_size + (rows + 1) * border
+    grid_w = cols * cell_size + (cols + 1) * border
+    right = margin + grid_w - 1
+    bottom = margin + grid_h - 1
+    return [
+        [float(margin), float(margin)],
+        [float(right), float(margin)],
+        [float(right), float(bottom)],
+        [float(margin), float(bottom)],
+    ]
+
+
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
@@ -115,6 +134,25 @@ class TestSyntheticGrid:
             assert result["rows"] == size
             assert result["cols"] == size
 
+    def test_manual_corners_preserve_shape_and_matrix(self):
+        data, expected = make_synthetic_grid(black_cells=self.BLACK_CELLS)
+        corners = synthetic_corners()
+        result = image_bytes_to_matrix(data, n=15, corners=corners)
+
+        assert result["rows"] == 15
+        assert result["cols"] == 15
+        assert result["matrix"] == expected
+        assert result["corners"] == pytest.approx(corners)
+
+    def test_manual_corners_are_ordered_before_warp(self):
+        data, expected = make_synthetic_grid(black_cells=[(1, 1), (13, 13)])
+        corners = synthetic_corners()
+        permuted = [corners[2], corners[0], corners[3], corners[1]]
+        result = image_bytes_to_matrix(data, n=15, corners=permuted)
+
+        assert result["matrix"] == expected
+        assert result["corners"] == pytest.approx(corners)
+
 
 class TestInvalidInput:
     def test_garbage_bytes_raise_value_error(self):
@@ -124,3 +162,19 @@ class TestInvalidInput:
     def test_empty_bytes_raise_value_error(self):
         with pytest.raises(ValueError, match="Could not decode image"):
             image_bytes_to_matrix(b"")
+
+    def test_out_of_bounds_manual_corners_raise_value_error(self):
+        data, _ = make_synthetic_grid()
+        corners = synthetic_corners()
+        corners[0][0] = -1.0
+
+        with pytest.raises(ValueError, match="inside the uploaded image"):
+            image_bytes_to_matrix(data, n=15, corners=corners)
+
+    def test_degenerate_manual_corners_raise_value_error(self):
+        data, _ = make_synthetic_grid()
+        corners = synthetic_corners()
+        corners[1] = corners[0][:]
+
+        with pytest.raises(ValueError, match="valid quadrilateral"):
+            image_bytes_to_matrix(data, n=15, corners=corners)

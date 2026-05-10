@@ -10,6 +10,8 @@ Endpoints:
 """
 from __future__ import annotations
 
+import json
+from json import JSONDecodeError
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
@@ -76,6 +78,13 @@ async def detect(
         le=50,
         description="Known grid size (e.g. 15 for 15×15). Omit to auto-detect.",
     ),
+    corners: str | None = Form(
+        default=None,
+        description=(
+            "Optional JSON array of 4 [x, y] points in original-image pixels. "
+            "Example: [[10, 20], [210, 22], [208, 220], [12, 218]]."
+        ),
+    ),
 ) -> dict:
     # Validate MIME type (content_type may be None for some clients)
     if image.content_type and not any(
@@ -100,8 +109,18 @@ async def detect(
     if len(data) == 0:
         raise HTTPException(status_code=400, detail="Uploaded file is empty.")
 
+    parsed_corners = None
+    if corners is not None:
+        try:
+            parsed_corners = json.loads(corners)
+        except JSONDecodeError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail="Manual corners must be valid JSON with 4 [x, y] points.",
+            ) from exc
+
     try:
-        result = image_bytes_to_matrix(data, n=n)
+        result = image_bytes_to_matrix(data, n=n, corners=parsed_corners)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except RuntimeError as exc:

@@ -20,6 +20,7 @@ class DetectResult(TypedDict):
     cols: int
     matrix: list[list[int]]
     warped_png_b64: str
+    corners: list[list[float]]
 
 
 # ---------------------------------------------------------------------------
@@ -38,6 +39,37 @@ def order_points(points: np.ndarray) -> np.ndarray:
     rect[1] = points[np.argmin(diff)]  # top-right
     rect[3] = points[np.argmax(diff)]  # bottom-left
     return rect
+
+
+def normalize_quad(points: np.ndarray, image_shape: tuple[int, int]) -> np.ndarray:
+    """Validate and order 4 points in original-image coordinates."""
+    arr = np.asarray(points, dtype=np.float32)
+    if arr.shape != (4, 2):
+        raise ValueError("Manual corners must contain exactly 4 [x, y] points.")
+
+    ordered = order_points(arr)
+    height, width = image_shape[:2]
+
+    if not np.isfinite(ordered).all():
+        raise ValueError("Manual corners must be finite numbers.")
+
+    if (
+        np.any(ordered[:, 0] < 0)
+        or np.any(ordered[:, 0] > width - 1)
+        or np.any(ordered[:, 1] < 0)
+        or np.any(ordered[:, 1] > height - 1)
+    ):
+        raise ValueError("Manual corners must lie inside the uploaded image.")
+
+    edge_lengths = np.linalg.norm(ordered - np.roll(ordered, -1, axis=0), axis=1)
+    if np.any(edge_lengths < 2.0):
+        raise ValueError("Manual corners must form a valid quadrilateral.")
+
+    area = float(cv2.contourArea(ordered.reshape(-1, 1, 2)))
+    if area < 4.0:
+        raise ValueError("Manual corners must form a non-degenerate quadrilateral.")
+
+    return ordered
 
 
 def four_point_transform(gray: np.ndarray, points: np.ndarray) -> np.ndarray:
@@ -230,7 +262,11 @@ def classify_cells(
 # Public API
 # ---------------------------------------------------------------------------
 
-def image_bytes_to_matrix(data: bytes, n: int | None = None) -> DetectResult:
+def image_bytes_to_matrix(
+    data: bytes,
+    n: int | None = None,
+    corners: list[list[float]] | np.ndarray | None = None,
+) -> DetectResult:
     """
     Convert raw image bytes (JPEG / PNG / BMP / WebP) into a DetectResult.
 
@@ -241,6 +277,10 @@ def image_bytes_to_matrix(data: bytes, n: int | None = None) -> DetectResult:
     n:
         Known grid size (e.g. 15 for a 15×15 crossword).  Leave as None to
         auto-detect grid lines.
+    corners:
+        Optional 4 [x, y] points in original-image pixel coordinates. If
+        provided, these corners are used instead of automatic outer-grid
+        detection.
 
     Returns
     -------
@@ -268,7 +308,11 @@ def image_bytes_to_matrix(data: bytes, n: int | None = None) -> DetectResult:
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
     dilated = cv2.dilate(binary_inv, kernel, iterations=2)
 
-    quad = find_grid_quad(dilated)
+    if corners is None:
+        quad = order_points(find_grid_quad(dilated))
+    else:
+        quad = normalize_quad(corners, gray.shape)
+
     warped = four_point_transform(gray, quad)
 
     x_edges, y_edges = detect_grid_edges(warped, n=n)
@@ -285,4 +329,5 @@ def image_bytes_to_matrix(data: bytes, n: int | None = None) -> DetectResult:
         cols=c,
         matrix=matrix.tolist(),
         warped_png_b64=warped_b64,
+        corners=quad.tolist(),
     )
