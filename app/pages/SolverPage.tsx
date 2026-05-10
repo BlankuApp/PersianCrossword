@@ -1,5 +1,23 @@
-import { RotateCcw, ArrowRight, HelpCircle, Eye, EyeOff, X } from "lucide-react";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import {
+  RotateCcw,
+  ArrowRight,
+  HelpCircle,
+  Eye,
+  EyeOff,
+  X,
+  Newspaper,
+  Gauge,
+  Hash,
+} from "lucide-react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import {
   cellKey,
   compilePuzzle,
@@ -379,13 +397,58 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
 
   const title = json.meta?.title ?? id;
   const newspaper = json.meta?.newspaper;
+  const difficulty = json.meta?.difficulty;
+  const puzzleIdentifier = json.meta?.id ?? id;
+  const puzzleMetaItems: Array<{
+    key: string;
+    label: string;
+    value: string;
+    icon: ReactNode;
+  }> = [];
+
+  if (newspaper) {
+    puzzleMetaItems.push({
+      key: "newspaper",
+      label: "روزنامه",
+      value: newspaper,
+      icon: <Newspaper size={14} aria-hidden="true" />,
+    });
+  }
+
+  if (difficulty) {
+    puzzleMetaItems.push({
+      key: "difficulty",
+      label: "درجه",
+      value: difficulty,
+      icon: <Gauge size={14} aria-hidden="true" />,
+    });
+  }
+
+  if (puzzleIdentifier) {
+    puzzleMetaItems.push({
+      key: "id",
+      label: "شناسه",
+      value: puzzleIdentifier,
+      icon: <Hash size={14} aria-hidden="true" />,
+    });
+  }
 
   return (
     <main className="app-shell" dir="rtl">
       <header className="app-header">
         <div className="app-header-meta">
           <h1>{title}</h1>
-          {newspaper ? <p>{newspaper}</p> : null}
+          {puzzleMetaItems.length ? (
+            <div className="puzzle-meta" aria-label="اطلاعات جدول">
+              {puzzleMetaItems.map((item) => (
+                <span key={item.key} className="puzzle-meta-item">
+                  <span className="puzzle-meta-icon">{item.icon}</span>
+                  <span className="puzzle-meta-label">{item.label}</span>
+                  <span className="puzzle-meta-value">{item.value}</span>
+                </span>
+              ))}
+            </div>
+          ) : null}
         </div>
         <div className="toolbar">
           <button

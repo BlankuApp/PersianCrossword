@@ -626,8 +626,9 @@ select {
 
   .app-header-meta {
     display: flex;
-    align-items: baseline;
-    gap: 8px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
     flex: 1 1 auto;
     min-width: 0;
   }
@@ -640,11 +641,14 @@ select {
     text-overflow: ellipsis;
   }
 
-  .app-header p {
-    margin: 0;
-    flex-shrink: 0;
-    font-size: 0.8rem;
-    white-space: nowrap;
+  .puzzle-meta {
+    margin-top: 0;
+    gap: 4px 10px;
+    font-size: 0.78rem;
+  }
+
+  .puzzle-meta-item {
+    gap: 4px;
   }
 
   .toolbar {
@@ -685,6 +689,11 @@ select {
 }
 
 .home-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
   margin-bottom: 24px;
 }
 
@@ -694,10 +703,67 @@ select {
   line-height: 1.2;
 }
 
+.puzzle-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 10px;
+  color: #6b746e;
+  font-size: 0.92rem;
+  font-weight: 300;
+}
+
+.puzzle-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.puzzle-meta-icon {
+  display: inline-flex;
+  align-items: center;
+  color: #8a948d;
+}
+
+.puzzle-meta-label {
+  color: #7b847e;
+}
+
+.puzzle-meta-value {
+  color: #566059;
+  font-weight: 400;
+}
 .home-header p {
   margin: 0;
   color: #5a645d;
   font-size: 1rem;
+}
+
+.home-repo-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #17201b;
+  text-decoration: none;
+}
+
+.home-repo-link svg {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.home-repo-link:hover {
+  color: #1e5c38;
+}
+
+.home-repo-link:focus-visible {
+  outline: 2px solid #4c9f70;
+  outline-offset: 2px;
 }
 
 .empty-state {
@@ -824,7 +890,6 @@ select {
   white-space: nowrap;
 }
 
-.td-author,
 .td-newspaper,
 .td-date {
   color: #6a766e;
@@ -895,16 +960,73 @@ select {
   font-size: 0.85rem;
 }
 
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pagination-button {
+  min-width: 42px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #d3d8d2;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #2d3b32;
+  cursor: pointer;
+}
+
+.pagination-button:hover:not(:disabled) {
+  background: #f4f8f5;
+}
+
+.pagination-button:disabled {
+  color: #95a29a;
+  cursor: not-allowed;
+  background: #f6f7f6;
+}
+
+.pagination-page.is-active {
+  border-color: #4c9f70;
+  background: #edf6f0;
+  color: #1e5c38;
+  font-weight: 700;
+}
+
+.pagination-button:focus-visible {
+  outline: 2px solid #4c9f70;
+  outline-offset: 2px;
+}
+
 @media (max-width: 640px) {
+  .home-repo-link {
+    width: 100%;
+    justify-content: center;
+  }
+
   .puzzle-table th,
   .puzzle-table td {
     padding: 8px 10px;
   }
 
-  .td-author,
   .td-newspaper,
   .td-date {
     display: none;
+  }
+
+  .pagination {
+    justify-content: center;
   }
 
   .cell-value {
