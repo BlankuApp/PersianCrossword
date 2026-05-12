@@ -85,9 +85,7 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
       0,
     ),
   );
-  const [solutionRevealed, setSolutionRevealed] = useState(false);
-  const SOLUTION_AUTO_HIDE_SECONDS = 10;
-  const [solutionCountdown, setSolutionCountdown] = useState(SOLUTION_AUTO_HIDE_SECONDS);
+
   const boardRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const clueOverlayRef = useRef<HTMLDivElement>(null);
@@ -117,8 +115,6 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
     setSelection(firstSlot ? selectSlot(firstSlot) : undefined);
     setClueTab("across");
     setShowSolution(false);
-    setSolutionRevealed(false);
-    setSolutionCountdown(SOLUTION_AUTO_HIDE_SECONDS);
   }, [id, puzzle]);
 
   useEffect(() => {
@@ -236,29 +232,12 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
     };
   }, [activeSlot, showClueOverlay, selectionSignature, showMobileClueOverlay]);
 
-  // Auto-hide the solution image after a countdown once it has been revealed.
-  useEffect(() => {
-    if (!showSolution || !solutionRevealed) return;
-    if (solutionCountdown <= 0) {
-      setShowSolution(false);
-      setSolutionRevealed(false);
-      setSolutionCountdown(SOLUTION_AUTO_HIDE_SECONDS);
-      return;
-    }
-    const timer = window.setTimeout(() => {
-      setSolutionCountdown((c) => c - 1);
-    }, 1000);
-    return () => window.clearTimeout(timer);
-  }, [showSolution, solutionRevealed, solutionCountdown]);
-
   // Close the solution overlay with the Escape key.
   useEffect(() => {
     if (!showSolution) return;
     function onKey(e: KeyboardEvent): void {
       if (e.key === "Escape") {
         setShowSolution(false);
-        setSolutionRevealed(false);
-        setSolutionCountdown(SOLUTION_AUTO_HIDE_SECONDS);
       }
     }
     window.addEventListener("keydown", onKey);
@@ -267,13 +246,6 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
 
   function closeSolution(): void {
     setShowSolution(false);
-    setSolutionRevealed(false);
-    setSolutionCountdown(SOLUTION_AUTO_HIDE_SECONDS);
-  }
-
-  function revealSolution(): void {
-    setSolutionRevealed(true);
-    setSolutionCountdown(SOLUTION_AUTO_HIDE_SECONDS);
   }
 
   useEffect(() => {
@@ -540,11 +512,6 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
             <div className="solution-modal-header">
               <h2>پاسخ جدول</h2>
               <div className="solution-modal-actions">
-                {solutionRevealed ? (
-                  <span className="solution-countdown" aria-live="polite">
-                    بسته شدن خودکار در {solutionCountdown} ثانیه
-                  </span>
-                ) : null}
                 <button
                   type="button"
                   className="solution-close-button"
@@ -556,20 +523,8 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
                 </button>
               </div>
             </div>
-            <div
-              className={`solution-image ${solutionRevealed ? "is-revealed" : "is-blurred"}`}
-            >
+            <div className="solution-image">
               <img src={solutionImageUrl} alt="تصویر پاسخ جدول" />
-              {!solutionRevealed ? (
-                <button
-                  type="button"
-                  className="solution-reveal-overlay"
-                  onClick={revealSolution}
-                >
-                  <Eye size={24} aria-hidden="true" />
-                  <span>برای نمایش پاسخ کلیک کنید</span>
-                </button>
-              ) : null}
             </div>
           </div>
         </div>

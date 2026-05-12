@@ -1,6 +1,14 @@
 import type { Direction, Slot } from "../../src/index";
 
 export function ActiveClue({ slot }: { readonly slot: Slot | undefined }) {
+  const handleGoogleSearch = () => {
+    if (slot?.clue) {
+      const searchQuery = `${slot.clue} در جدول`;
+      const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
+      window.open(googleUrl, "_blank");
+    }
+  };
+
   return (
     <section className="active-clue" aria-label="پرسش فعال" aria-live="polite">
       {slot ? (
@@ -8,6 +16,15 @@ export function ActiveClue({ slot }: { readonly slot: Slot | undefined }) {
           <div className="clue-kicker">
             {slot.direction === "across" ? "ردیف" : "ستون"} {slot.groupNum}، کلمه {slot.wordIndexInGroup}
             <span>{slot.length} حرف</span>
+            <button
+              type="button"
+              onClick={handleGoogleSearch}
+              className="clue-search-link"
+              title="جستجو در گوگل"
+              aria-label="جستجو در گوگل برای این پرسش"
+            >
+              🔍 جستجو در گوگل
+            </button>
           </div>
           <p>{slot.clue}</p>
         </>
