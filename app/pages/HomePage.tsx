@@ -140,7 +140,7 @@ export function HomePage() {
           <p className="empty-hint">
             فایل‌های JSON جدول را در پوشه{" "}
             <code>puzzles/</code>{" "}
-            قرار دهید.
+            یا زیرپوشه‌های آن قرار دهید.
           </p>
         </div>
       ) : (

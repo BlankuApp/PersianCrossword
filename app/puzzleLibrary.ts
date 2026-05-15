@@ -13,14 +13,14 @@ export interface PuzzleSummary {
   readonly solutionImageUrl: string | undefined;
 }
 
-// Vite eager glob – at build time every *.json under /puzzles/ is bundled.
-const modules = import.meta.glob<CrosswordJson>("../puzzles/*.json", {
+// Vite eager glob – at build time every puzzle JSON under /puzzles/ is bundled.
+const modules = import.meta.glob<CrosswordJson>("../puzzles/**/*.json", {
   eager: true,
   import: "default",
 });
 
 // Eager glob for solution images, returned as bundled URLs.
-const imageModules = import.meta.glob<string>("../puzzles/*.png", {
+const imageModules = import.meta.glob<string>("../puzzles/**/*.png", {
   eager: true,
   query: "?url",
   import: "default",

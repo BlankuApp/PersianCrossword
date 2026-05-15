@@ -37,7 +37,7 @@
         "cwd": "${workspaceFolder}/tools/grid-importer/backend"
       },
       "windows": {
-        "command": "${workspaceFolder}\\tools\\grid-importer\\backend\\.venv\\Scripts\\uvicorn.exe"
+        "command": "${workspaceFolder}\\.venv\\Scripts\\uvicorn.exe"
       },
       "presentation": {
         "panel": "dedicated",
