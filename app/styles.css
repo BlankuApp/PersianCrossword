@@ -393,8 +393,8 @@ select {
   max-width: 90%;
   margin: auto;
   font-size: min(
-    clamp(1.05rem, 3.25vw, 1.82rem),
-    calc((min(100vw - 40px, 680px) / var(--grid-cols, 12)) * 0.54)
+    clamp(1.25rem, 5.25vw, 2.5rem),
+    calc((min(100vw - 40px, 680px) / var(--grid-cols, 12)) * 2)
   );
   font-weight: 700;
   line-height: 1;
@@ -1100,9 +1100,9 @@ select {
 
   .cell-value {
     font-size: min(
-      clamp(0.94rem, 4.35vw, 1.36rem),
-      calc((100vw - 22px) / var(--grid-cols, 12) * 0.48)
-    );
+    clamp(1.25rem, 5.25vw, 2.5rem),
+    calc((min(100vw - 40px, 680px) / var(--grid-cols, 12)) * 2)
+  );
     line-height: 1.05;
   }
 }
