@@ -38,6 +38,8 @@ import {
   type Selection,
 } from "../crosswordUi";
 import { loadProgress, saveProgress } from "../progress";
+import { saveCloudProgress } from "../cloudProgress";
+import { useAuth } from "../AuthContext";
 import { navigate } from "../router";
 import {
   chooseOverlayCorner,
@@ -57,6 +59,7 @@ interface SolverPageProps {
 }
 
 export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
+  const { user } = useAuth();
   const CLUE_OVERLAY_HIDE_MS = 3000;
   const CLUE_OVERLAY_MARGIN = 12;
   const CLUE_OVERLAY_GAP = 16;
@@ -250,7 +253,10 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
 
   useEffect(() => {
     saveProgress(id, savedState);
-  }, [id, savedState]);
+    if (user) {
+      void saveCloudProgress(user.uid, id, savedState);
+    }
+  }, [id, savedState, user]);
 
   function commitState(nextState: ReturnType<typeof createState>): void {
     setSavedState(nextState.toJSON());

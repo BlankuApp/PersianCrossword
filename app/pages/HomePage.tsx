@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { listPuzzles, type PuzzleSummary } from "../puzzleLibrary";
 import { loadProgress, computeProgress, type ProgressInfo } from "../progress";
 import { navigate } from "../router";
+import { useAuth } from "../AuthContext";
+import { AuthButton } from "../components/AuthButton";
 
 type SortKey = "id" | "title" | "difficulty" | "author" | "newspaper" | "publishedAt" | "progress";
 type SortDir = "asc" | "desc";
@@ -29,12 +31,13 @@ function GitHubIcon(props: React.SVGProps<SVGSVGElement>) {
 
 export function HomePage() {
   const puzzles = useMemo(() => listPuzzles(), []);
+  const { syncVersion } = useAuth();
   const [sortKey, setSortKey] = useState<SortKey>("id");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const [progressMap, setProgressMap] = useState<Record<string, ProgressInfo>>({});
 
-  // Load progress for all puzzles once on mount
+  // Reload progress whenever puzzles change or cloud sync completes
   useEffect(() => {
     const map: Record<string, ProgressInfo> = {};
     for (const p of puzzles) {
@@ -42,7 +45,7 @@ export function HomePage() {
       map[p.id] = computeProgress(p.json, saved);
     }
     setProgressMap(map);
-  }, [puzzles]);
+  }, [puzzles, syncVersion]);
 
   function handleSort(key: SortKey): void {
     if (key === sortKey) {
@@ -123,15 +126,18 @@ export function HomePage() {
         <div>
           <h1>جدول کلمات فارسی</h1>
         </div>
-        <a
-          className="home-repo-link"
-          href="https://github.com/BlankuApp/PersianCrossword"
-          target="_blank"
-          rel="noreferrer"
-          aria-label="مشاهده مخزن گیت‌هاب پروژه"
-        >
-          <GitHubIcon width={30} height={30} />
-        </a>
+        <div className="home-header-actions">
+          <AuthButton />
+          <a
+            className="home-repo-link"
+            href="https://github.com/BlankuApp/PersianCrossword"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="مشاهده مخزن گیت‌هاب پروژه"
+          >
+            <GitHubIcon width={30} height={30} />
+          </a>
+        </div>
       </header>
 
       {puzzles.length === 0 ? (

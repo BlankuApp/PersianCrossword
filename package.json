@@ -33,6 +33,8 @@
     "vitest": "^4.1.5"
   },
   "dependencies": {
+    "firebase": "^10.14.1",
+    "firebaseui": "^6.1.0",
     "lucide-react": "^1.11.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
