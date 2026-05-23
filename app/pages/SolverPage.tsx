@@ -23,7 +23,9 @@ import {
   compilePuzzle,
   createState,
   splitPersianGraphemes,
+  CrosswordValidationError,
   type Coord,
+  type CrosswordPuzzle,
   type Direction,
   type Slot,
 } from "../../src/index";
@@ -64,11 +66,21 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
   const CLUE_OVERLAY_MARGIN = 12;
   const CLUE_OVERLAY_GAP = 16;
   const CLUE_OVERLAY_MOBILE_QUERY = "(max-width: 860px)";
-  const puzzle = useMemo(() => compilePuzzle(json), [json]);
+  const [puzzle, compileError] = useMemo((): [CrosswordPuzzle | null, Error | null] => {
+    try {
+      return [compilePuzzle(json), null];
+    } catch (e) {
+      return [null, e instanceof Error ? e : new Error(String(e))];
+    }
+  }, [json]);
   const [savedState, setSavedState] = useState(() => loadProgress(id));
   const [selection, setSelection] = useState<Selection | undefined>(() => {
-    const firstSlot = compilePuzzle(json).slots[0];
-    return firstSlot ? selectSlot(firstSlot) : undefined;
+    try {
+      const firstSlot = compilePuzzle(json).slots[0];
+      return firstSlot ? selectSlot(firstSlot) : undefined;
+    } catch {
+      return undefined;
+    }
   });
   const [clueTab, setClueTab] = useState<Direction>("across");
   const [showHelp, setShowHelp] = useState(false);
@@ -104,8 +116,11 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
     }
   }
 
-  const crosswordState = useMemo(() => createState(puzzle, savedState), [puzzle, savedState]);
-  const activeSlot = getActiveSlot(puzzle, selection);
+  const crosswordState = useMemo(
+    () => (puzzle ? createState(puzzle, savedState) : null),
+    [puzzle, savedState],
+  );
+  const activeSlot = puzzle ? getActiveSlot(puzzle, selection) : undefined;
   const activeKeys = slotCellKeys(activeSlot);
   const selectionSignature = selection
     ? `${selection.coord.row}:${selection.coord.col}:${selection.direction}`
@@ -114,7 +129,7 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
   useEffect(() => {
     const restored = loadProgress(id);
     setSavedState(restored);
-    const firstSlot = puzzle.slots[0];
+    const firstSlot = puzzle?.slots[0];
     setSelection(firstSlot ? selectSlot(firstSlot) : undefined);
     setClueTab("across");
     setShowSolution(false);
@@ -263,6 +278,7 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
   }
 
   function selectCell(coord: Coord): void {
+    if (!puzzle) return;
     setSelection((current) => {
       const next = handleCellSelection(puzzle, coord, current);
       if (next) setClueTab(next.direction);
@@ -278,7 +294,7 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
   }
 
   function commitGrapheme(grapheme: string): void {
-    if (!selection) return;
+    if (!puzzle || !selection) return;
     const graphemes = splitPersianGraphemes(grapheme);
     if (graphemes.length !== 1) return;
     const nextGrapheme = graphemes[0];
@@ -309,19 +325,20 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
   }
 
   function updateCell(coord: Coord, value: string | null): void {
+    if (!puzzle) return;
     const nextState = createState(puzzle, savedState);
     nextState.setCell(coord, value);
     commitState(nextState);
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLElement>): void {
-    if (!selection) return;
+    if (!puzzle || !selection) return;
 
     const active = getActiveSlot(puzzle, selection);
 
     if (event.key === "Backspace") {
       event.preventDefault();
-      const currentValue = crosswordState.getCell(selection.coord);
+      const currentValue = crosswordState?.getCell(selection.coord);
       if (currentValue) {
         updateCell(selection.coord, null);
         return;
@@ -369,7 +386,7 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
     const empty = { cells: {} };
     setSavedState(empty);
     saveProgress(id, empty);
-    const firstSlot = puzzle.slots[0];
+    const firstSlot = puzzle?.slots[0];
     setSelection(firstSlot ? selectSlot(firstSlot) : undefined);
   }
 
@@ -536,49 +553,70 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
         </div>
       ) : null}
 
-      {showMobileClueOverlay && showClueOverlay && activeSlot ? (
-        <div
-          ref={clueOverlayRef}
-          className="active-clue-overlay"
-          data-testid="active-clue-overlay"
-          aria-live="polite"
-          data-corner={clueOverlayCorner}
-          style={clueOverlayStyle}
-        >
-          {activeSlot.clue}
-        </div>
-      ) : null}
+      {compileError ? (
+        <section className="puzzle-error-panel" role="alert" aria-label="خطا در بارگذاری جدول">
+          <h2>خطا در بارگذاری جدول</h2>
+          <p>این جدول به دلیل مشکل در فایل داده قابل نمایش نیست.</p>
+          {compileError instanceof CrosswordValidationError ? (
+            <ul className="puzzle-error-list">
+              {compileError.issues.map((issue, i) => (
+                <li key={i}>
+                  <code className="puzzle-error-path">{issue.path}</code>
+                  {issue.message}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="puzzle-error-message">{compileError.message}</p>
+          )}
+        </section>
+      ) : (
+        <>
+          {showMobileClueOverlay && showClueOverlay && activeSlot ? (
+            <div
+              ref={clueOverlayRef}
+              className="active-clue-overlay"
+              data-testid="active-clue-overlay"
+              aria-live="polite"
+              data-corner={clueOverlayCorner}
+              style={clueOverlayStyle}
+            >
+              {activeSlot.clue}
+            </div>
+          ) : null}
 
-      <section className="solver-layout">
-        <div className="board-panel">
-          <BoardWithLabels puzzle={puzzle}>
-            <CrosswordBoard
-              boardRef={boardRef}
-              inputRef={inputRef}
-              puzzle={puzzle}
-              state={crosswordState}
-              selection={selection}
-              activeKeys={activeKeys}
-              onCellClick={selectCell}
-              onKeyDown={handleKeyDown}
-              onInputBeforeInput={handleInputBeforeInput}
-              onInputChange={handleInputChange}
-            />
-          </BoardWithLabels>
-        </div>
+          <section className="solver-layout">
+            <div className="board-panel">
+              <BoardWithLabels puzzle={puzzle!}>
+                <CrosswordBoard
+                  boardRef={boardRef}
+                  inputRef={inputRef}
+                  puzzle={puzzle!}
+                  state={crosswordState!}
+                  selection={selection}
+                  activeKeys={activeKeys}
+                  onCellClick={selectCell}
+                  onKeyDown={handleKeyDown}
+                  onInputBeforeInput={handleInputBeforeInput}
+                  onInputChange={handleInputChange}
+                />
+              </BoardWithLabels>
+            </div>
 
-        <div className="clue-sidebar">
-          <ActiveClue slot={activeSlot} />
-          <CluePanel
-            acrossSlots={puzzle.acrossSlots}
-            downSlots={puzzle.downSlots}
-            activeSlot={activeSlot}
-            clueTab={clueTab}
-            onTabChange={setClueTab}
-            onClueClick={selectClue}
-          />
-        </div>
-      </section>
+            <div className="clue-sidebar">
+              <ActiveClue slot={activeSlot} />
+              <CluePanel
+                acrossSlots={puzzle!.acrossSlots}
+                downSlots={puzzle!.downSlots}
+                activeSlot={activeSlot}
+                clueTab={clueTab}
+                onTabChange={setClueTab}
+                onClueClick={selectClue}
+              />
+            </div>
+          </section>
+        </>
+      )}
     </main>
   );
 }

@@ -1,3 +1,4 @@
+import { validatePuzzleJson } from "../src/index";
 import type { CrosswordJson } from "../src/index";
 
 export interface PuzzleSummary {
@@ -11,6 +12,7 @@ export interface PuzzleSummary {
   readonly cols: number;
   readonly json: CrosswordJson;
   readonly solutionImageUrl: string | undefined;
+  readonly error?: string;
 }
 
 // Vite eager glob – at build time every puzzle JSON under /puzzles/ is bundled.
@@ -61,12 +63,36 @@ function deriveSummary(path: string, json: CrosswordJson): PuzzleSummary {
     );
   }
 
-  return { id, title, newspaper, difficulty, author, publishedAt, rows, cols, json, solutionImageUrl };
+  const validation = validatePuzzleJson(json);
+  const error = validation.valid
+    ? undefined
+    : validation.issues.map((i) => i.message).join("\n");
+
+  return { id, title, newspaper, difficulty, author, publishedAt, rows, cols, json, solutionImageUrl, error };
 }
 
-const _all: PuzzleSummary[] = Object.entries(modules).map(([path, json]) =>
-  deriveSummary(path, json as CrosswordJson),
-);
+const _all: PuzzleSummary[] = Object.entries(modules).map(([path, json]) => {
+  try {
+    return deriveSummary(path, json as CrosswordJson);
+  } catch (e) {
+    const slug = slugFromPath(path);
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`[puzzleLibrary] Failed to load puzzle "${slug}":`, e);
+    return {
+      id: slug,
+      title: slug,
+      newspaper: "",
+      difficulty: undefined,
+      author: "",
+      publishedAt: "",
+      rows: 0,
+      cols: 0,
+      json: json as CrosswordJson,
+      solutionImageUrl: undefined,
+      error: message,
+    };
+  }
+});
 
 export function listPuzzles(): readonly PuzzleSummary[] {
   return _all;

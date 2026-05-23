@@ -122,6 +122,52 @@ select {
   color: #17201b;
 }
 
+.puzzle-error-panel {
+  margin-bottom: 18px;
+  padding: 14px 18px;
+  border: 1px solid #f5c0c0;
+  border-radius: 10px;
+  background: #fff8f8;
+  color: #17201b;
+  line-height: 1.8;
+}
+
+.puzzle-error-panel h2 {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  color: #8b1a1a;
+}
+
+.puzzle-error-panel p {
+  margin: 0 0 8px;
+}
+
+.puzzle-error-list {
+  margin: 8px 0 0;
+  padding-inline-start: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.puzzle-error-path {
+  display: inline-block;
+  margin-inline-end: 6px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #fde8e8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82em;
+  color: #6b1010;
+}
+
+.puzzle-error-message {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85em;
+  color: #6b1010;
+  word-break: break-word;
+}
+
 .solution-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -928,6 +974,14 @@ select {
   background: #e6f5ec;
 }
 
+.puzzle-row-error {
+  opacity: 0.75;
+}
+
+.puzzle-row-error:hover {
+  background: #fdf4f4;
+}
+
 .td-title {
   min-width: 140px;
 }
@@ -999,6 +1053,11 @@ select {
 .badge-done {
   background: #d0f0de;
   color: #145c35;
+}
+
+.badge-error {
+  background: #fde8e8;
+  color: #8b1a1a;
 }
 
 /* Progress bar */

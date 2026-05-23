@@ -234,10 +234,11 @@ function PuzzleRow({
 }) {
   const pct = progress?.percent ?? 0;
   const done = progress?.completed ?? false;
+  const hasError = Boolean(puzzle.error);
 
   return (
     <tr
-      className={`puzzle-row${done ? " puzzle-row-done" : ""}`}
+      className={`puzzle-row${done ? " puzzle-row-done" : ""}${hasError ? " puzzle-row-error" : ""}`}
       onClick={onClick}
       tabIndex={0}
       role="button"
@@ -256,7 +257,9 @@ function PuzzleRow({
       <td className="td-newspaper">{puzzle.newspaper || "—"}</td>
       <td className="td-date">{formatDate(puzzle.publishedAt)}</td>
       <td className="td-progress">
-        {done ? (
+        {hasError ? (
+          <span className="badge badge-error" title={puzzle.error}>خطا در داده</span>
+        ) : done ? (
           <span className="badge badge-done">تکمیل شد</span>
         ) : pct > 0 ? (
           <div className="progress-bar-wrap" title={`${pct}٪`}>

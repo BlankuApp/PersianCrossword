@@ -27,7 +27,12 @@ export interface ProgressInfo {
 }
 
 export function computeProgress(json: CrosswordJson, saved: SavedCrosswordState): ProgressInfo {
-  const puzzle = compilePuzzle(json);
+  let puzzle;
+  try {
+    puzzle = compilePuzzle(json);
+  } catch {
+    return { filled: 0, total: 0, percent: 0, completed: false };
+  }
   const state = createState(puzzle, saved);
 
   let filled = 0;
