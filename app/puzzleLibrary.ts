@@ -44,7 +44,7 @@ function deriveSummary(path: string, json: CrosswordJson): PuzzleSummary {
   const slug = slugFromPath(path);
   const meta = json.meta ?? {};
 
-  const id = meta.id ?? slug;
+  const id = String(meta.id ?? slug);
   const title = meta.title ?? slug;
   const newspaper = meta.newspaper ?? "";
   const difficulty = meta.difficulty;
