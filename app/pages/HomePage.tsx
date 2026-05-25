@@ -62,7 +62,7 @@ export function HomePage() {
       let cmp = 0;
       switch (sortKey) {
         case "id":
-          cmp = a.id.localeCompare(b.id, "fa", { numeric: true });
+          cmp = String(a.id).localeCompare(String(b.id), "fa", { numeric: true });
           break;
         case "title":
           cmp = a.title.localeCompare(b.title, "fa", { numeric: true });
