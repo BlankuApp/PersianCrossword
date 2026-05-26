@@ -25,6 +25,7 @@ function AppRoutes() {
           id={puzzle.id}
           json={puzzle.json}
           solutionImageUrl={puzzle.solutionImageUrl}
+          sourceImageUrl={puzzle.sourceImageUrl}
         />
       );
     }

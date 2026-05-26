@@ -12,6 +12,7 @@ export interface PuzzleSummary {
   readonly cols: number;
   readonly json: CrosswordJson;
   readonly solutionImageUrl: string | undefined;
+  readonly sourceImageUrl: string | undefined;
   readonly error?: string;
 }
 
@@ -21,18 +22,20 @@ const modules = import.meta.glob<CrosswordJson>("../puzzles/**/*.json", {
   import: "default",
 });
 
-// Eager glob for solution images, returned as bundled URLs.
-const imageModules = import.meta.glob<string>("../puzzles/**/*.png", {
-  eager: true,
-  query: "?url",
-  import: "default",
-});
+// Eager glob for all images (solution PNGs and source images), returned as bundled URLs.
+const imageModules = import.meta.glob<string>(
+  "../puzzles/**/*.{png,jpg,jpeg,webp}",
+  {
+    eager: true,
+    query: "?url",
+    import: "default",
+  },
+);
 
-const _imagesBySlug: Record<string, string> = {};
+// Map from full path (e.g., "../puzzles/51-100/91.png") to URL
+const _imagesByPath: Record<string, string> = {};
 for (const [path, url] of Object.entries(imageModules)) {
-  const filename = path.split("/").pop() ?? path;
-  const slug = filename.replace(/\.png$/i, "");
-  _imagesBySlug[slug] = url;
+  _imagesByPath[path] = url;
 }
 
 function slugFromPath(path: string): string {
@@ -54,7 +57,15 @@ function deriveSummary(path: string, json: CrosswordJson): PuzzleSummary {
   const rows = meta.size?.rows ?? json.grid.length;
   const cols = meta.size?.cols ?? (json.grid[0]?.length ?? 0);
 
-  const solutionImageUrl = _imagesBySlug[slug];
+  // Resolve solution and source image URLs from the path
+  const puzzleFolder = path.substring(0, path.lastIndexOf("/"));
+  const solutionImageUrl = _imagesByPath[`${puzzleFolder}/${slug}.png`];
+
+  // Source image: referenced by meta.sourceFile filename (optional)
+  const sourceFile = meta.sourceFile;
+  const sourceImageUrl = sourceFile
+    ? _imagesByPath[`${puzzleFolder}/${sourceFile}`]
+    : undefined;
 
   if (!meta.id) {
     console.warn(
@@ -68,7 +79,7 @@ function deriveSummary(path: string, json: CrosswordJson): PuzzleSummary {
     ? undefined
     : validation.issues.map((i) => i.message).join("\n");
 
-  return { id, title, newspaper, difficulty, author, publishedAt, rows, cols, json, solutionImageUrl, error };
+  return { id, title, newspaper, difficulty, author, publishedAt, rows, cols, json, solutionImageUrl, sourceImageUrl, error };
 }
 
 const _all: PuzzleSummary[] = Object.entries(modules).map(([path, json]) => {
@@ -89,6 +100,7 @@ const _all: PuzzleSummary[] = Object.entries(modules).map(([path, json]) => {
       cols: 0,
       json: json as CrosswordJson,
       solutionImageUrl: undefined,
+      sourceImageUrl: undefined,
       error: message,
     };
   }

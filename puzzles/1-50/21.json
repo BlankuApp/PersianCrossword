@@ -9,7 +9,8 @@
     "publishedAt": "2026-04-27",
     "size": { "rows": 15, "cols": 15 },
     "language": "fa",
-    "direction": "rtl"
+    "direction": "rtl",
+    "sourceFile": "9007.webp"
   },
   "grid": [
     [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],

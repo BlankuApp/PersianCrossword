@@ -8,6 +8,8 @@ import {
   Newspaper,
   Gauge,
   Hash,
+  Image,
+  ChevronDown,
 } from "lucide-react";
 import {
   useEffect,
@@ -58,9 +60,10 @@ interface SolverPageProps {
   readonly id: string;
   readonly json: CrosswordJson;
   readonly solutionImageUrl?: string | undefined;
+  readonly sourceImageUrl?: string | undefined;
 }
 
-export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
+export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl }: SolverPageProps) {
   const { user } = useAuth();
   const CLUE_OVERLAY_HIDE_MS = 3000;
   const CLUE_OVERLAY_MARGIN = 12;
@@ -85,6 +88,7 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
   const [clueTab, setClueTab] = useState<Direction>("across");
   const [showHelp, setShowHelp] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
+  const [sourceCollapsed, setSourceCollapsed] = useState(true);
   const [showMobileClueOverlay, setShowMobileClueOverlay] = useState(() =>
     typeof window.matchMedia === "function"
       ? window.matchMedia(CLUE_OVERLAY_MOBILE_QUERY).matches
@@ -586,21 +590,23 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
           ) : null}
 
           <section className="solver-layout">
-            <div className="board-panel">
-              <BoardWithLabels puzzle={puzzle!}>
-                <CrosswordBoard
-                  boardRef={boardRef}
-                  inputRef={inputRef}
-                  puzzle={puzzle!}
-                  state={crosswordState!}
-                  selection={selection}
-                  activeKeys={activeKeys}
-                  onCellClick={selectCell}
-                  onKeyDown={handleKeyDown}
-                  onInputBeforeInput={handleInputBeforeInput}
-                  onInputChange={handleInputChange}
-                />
-              </BoardWithLabels>
+            <div className="board-column">
+              <div className="board-panel">
+                <BoardWithLabels puzzle={puzzle!}>
+                  <CrosswordBoard
+                    boardRef={boardRef}
+                    inputRef={inputRef}
+                    puzzle={puzzle!}
+                    state={crosswordState!}
+                    selection={selection}
+                    activeKeys={activeKeys}
+                    onCellClick={selectCell}
+                    onKeyDown={handleKeyDown}
+                    onInputBeforeInput={handleInputBeforeInput}
+                    onInputChange={handleInputChange}
+                  />
+                </BoardWithLabels>
+              </div>
             </div>
 
             <div className="clue-sidebar">
@@ -615,6 +621,30 @@ export function SolverPage({ id, json, solutionImageUrl }: SolverPageProps) {
               />
             </div>
           </section>
+
+          {sourceImageUrl && (
+            <div className="source-panel-container">
+              <button
+                type="button"
+                className="source-panel-toggle"
+                onClick={() => setSourceCollapsed((v) => !v)}
+                aria-expanded={!sourceCollapsed}
+              >
+                <Image size={16} aria-hidden="true" />
+                <span>منبع جدول</span>
+                <ChevronDown
+                  size={14}
+                  className={sourceCollapsed ? "chevron-collapsed" : ""}
+                  aria-hidden="true"
+                />
+              </button>
+              {!sourceCollapsed && (
+                <div className="source-panel-body">
+                  <img src={sourceImageUrl} alt="تصویر منبع جدول" />
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
     </main>

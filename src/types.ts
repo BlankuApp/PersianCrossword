@@ -43,6 +43,7 @@ export interface CrosswordMeta {
   readonly size?: { readonly rows: number; readonly cols: number };
   readonly language?: string;
   readonly direction?: string;
+  readonly sourceFile?: string;
 }
 
 export interface CrosswordJson {

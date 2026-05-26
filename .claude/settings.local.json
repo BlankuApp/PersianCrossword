@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(npm run *)",
-      "Bash(curl -s \"http://127.0.0.1:5174/#/puzzle/98\")"
+      "Bash(curl -s \"http://127.0.0.1:5174/#/puzzle/98\")",
+      "Bash(copy \"c:\\\\Users\\\\eskan\\\\OneDrive\\\\Documents\\\\PCrossWord\\\\puzzles\\\\51-100\\\\99.png\" \"c:\\\\Users\\\\eskan\\\\OneDrive\\\\Documents\\\\PCrossWord\\\\puzzles\\\\51-100\\\\test-source-99.png\")",
+      "Bash(curl -s http://127.0.0.1:5173/)"
     ]
   }
 }

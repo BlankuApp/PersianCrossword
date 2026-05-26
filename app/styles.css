@@ -283,9 +283,65 @@ select {
   align-items: start;
 }
 
+.board-column {
+  display: grid;
+  gap: 12px;
+}
+
 .board-panel {
   display: grid;
   gap: 12px;
+}
+
+.source-panel-container {
+  margin-top: 18px;
+  border: 1px solid #bac3bc;
+  border-radius: 10px;
+  background: #f7faf8;
+  overflow: hidden;
+}
+
+.source-panel-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 12px 14px;
+  border: none;
+  border-bottom: 1px solid #bac3bc;
+  background: #ffffff;
+  color: #17201b;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: background 0.15s ease;
+}
+
+.source-panel-toggle:hover {
+  background: #f0f4f2;
+}
+
+.source-panel-toggle > span {
+  flex: 1;
+  text-align: right;
+}
+
+.source-panel-toggle .chevron-collapsed {
+  transform: rotate(-90deg);
+  transition: transform 0.2s ease;
+}
+
+.source-panel-body {
+  padding: 12px;
+  overflow: auto;
+}
+
+.source-panel-body img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 6px;
 }
 
 .clue-sidebar {
