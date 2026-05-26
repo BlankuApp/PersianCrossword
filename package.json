@@ -24,6 +24,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
+    "@types/canvas-confetti": "^1.9.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
@@ -33,6 +34,7 @@
     "vitest": "^4.1.5"
   },
   "dependencies": {
+    "canvas-confetti": "^1.9.4",
     "firebase": "^10.14.1",
     "firebaseui": "^6.1.0",
     "lucide-react": "^1.11.0",

@@ -1,3 +1,4 @@
+import confetti from "canvas-confetti";
 import {
   RotateCcw,
   ArrowRight,
@@ -276,6 +277,24 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl }: Solve
       void saveCloudProgress(user.uid, id, savedState);
     }
   }, [id, savedState, user]);
+
+  const isPuzzleSolved = useMemo(() => {
+    if (!puzzle || !crosswordState) return false;
+    return puzzle.slots.every((slot) => crosswordState.checkSlot(slot.id) === "correct");
+  }, [puzzle, crosswordState]);
+
+  const prevSolvedRef = useRef(false);
+  useEffect(() => {
+    if (isPuzzleSolved && !prevSolvedRef.current) {
+      void confetti({
+        particleCount: 180,
+        spread: 90,
+        origin: { y: 0.6 },
+        colors: ["#4f46e5", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"],
+      });
+    }
+    prevSolvedRef.current = isPuzzleSolved;
+  }, [isPuzzleSolved]);
 
   function commitState(nextState: ReturnType<typeof createState>): void {
     setSavedState(nextState.toJSON());

@@ -466,6 +466,15 @@ select {
   background: #1e2a23;
 }
 
+.cell-block-icon {
+  width: 40%;
+  aspect-ratio: 1;
+  fill: white;
+  opacity: 0.4;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
 .cell-active-word {
   background: #d7eadf;
 }
