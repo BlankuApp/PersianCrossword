@@ -22,7 +22,16 @@
       "Bash(findstr -i confetti)",
       "Bash(npm install *)",
       "Bash(npx tsc *)",
-      "Bash(findstr SolverPage)"
+      "Bash(findstr SolverPage)",
+      "Bash(rtk grep *)",
+      "Bash(rtk ls *)",
+      "Bash(rtk find *)",
+      "Bash(rtk tree *)",
+      "Bash(rtk read *)",
+      "Bash(rtk tsc *)",
+      "Bash(node /home/hamed/PersianCrossword/tools/grid-importer/frontend/node_modules/.bin/tsc -p /home/hamed/PersianCrossword/tools/grid-importer/frontend/tsconfig.json --noEmit)",
+      "Bash(node /home/hamed/PersianCrossword/tools/grid-importer/frontend/node_modules/.bin/vite build --config /home/hamed/PersianCrossword/tools/grid-importer/frontend/vite.config.ts --root /home/hamed/PersianCrossword/tools/grid-importer/frontend)",
+      "Bash(node_modules/.bin/vite build *)"
     ]
   }
 }

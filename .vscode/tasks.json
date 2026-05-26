@@ -29,7 +29,7 @@
       }
     },
     {
-      "label": "Run Grid Importer",
+      "label": "Grid Importer: Backend",
       "type": "shell",
       "command": "${workspaceFolder}/tools/grid-importer/backend/.venv/bin/uvicorn",
       "args": ["app:app", "--reload"],
@@ -40,6 +40,7 @@
         "command": "${workspaceFolder}\\.venv\\Scripts\\uvicorn.exe"
       },
       "presentation": {
+        "group": "grid-importer",
         "panel": "dedicated",
         "reveal": "always",
         "focus": false
@@ -57,6 +58,44 @@
           "endsPattern": "Application startup complete"
         }
       }
+    },
+    {
+      "label": "Grid Importer: Frontend",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "dev"],
+      "options": {
+        "cwd": "${workspaceFolder}/tools/grid-importer/frontend"
+      },
+      "presentation": {
+        "group": "grid-importer",
+        "panel": "dedicated",
+        "reveal": "always",
+        "focus": false
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "vite-importer",
+        "pattern": {
+          "regexp": "^ERROR.*$",
+          "message": 0
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*vite.*$",
+          "endsPattern": "^.*ready in .*ms.*$"
+        }
+      }
+    },
+    {
+      "label": "Grid Importer: Run All",
+      "dependsOn": ["Grid Importer: Backend", "Grid Importer: Frontend"],
+      "dependsOrder": "parallel",
+      "group": "build",
+      "presentation": {
+        "reveal": "silent"
+      },
+      "problemMatcher": []
     }
   ]
 }

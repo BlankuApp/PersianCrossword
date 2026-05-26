@@ -1,0 +1,582 @@
+/* ---- Reset ---- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ---- Tokens ---- */
+:root {
+  --blue:        #1a73e8;
+  --blue-hover:  #1558b0;
+  --blue-light:  #e8f0fe;
+  --red:         #dc2626;
+  --green:       #16a34a;
+  --bg:          #f3f4f6;
+  --surface:     #ffffff;
+  --border:      #d1d5db;
+  --text:        #111827;
+  --text-muted:  #6b7280;
+  --shadow-sm:   0 1px 3px rgba(0,0,0,.08);
+  --shadow-md:   0 4px 16px rgba(15,23,42,.12);
+  --shadow-lg:   0 10px 32px rgba(15,23,42,.16);
+  --radius:      10px;
+  --radius-sm:   6px;
+}
+
+/* ---- Base ---- */
+html, body, #root {
+  height: 100%;
+}
+body {
+  font-family: system-ui, Tahoma, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* ---- App shell ---- */
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0.875rem 2rem;
+  box-shadow: var(--shadow-sm);
+}
+.app-header h1 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 2rem;
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* ---- Step indicator ---- */
+.step-indicator {
+  display: flex;
+  align-items: center;
+  padding: 1.25rem 2rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  gap: 0;
+  overflow-x: auto;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.step-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.step-circle.active {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: #fff;
+}
+.step-circle.done {
+  border-color: var(--green);
+  background: var(--green);
+  color: #fff;
+}
+
+.step-label {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.step-label.active { color: var(--blue); font-weight: 600; }
+.step-label.done   { color: var(--green); }
+
+.step-connector {
+  width: 2.5rem;
+  height: 2px;
+  background: var(--border);
+  margin: 0 0.25rem;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.step-connector.done { background: var(--green); }
+
+/* ---- Generic step panel ---- */
+.step-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* ---- Buttons ---- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1.1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.btn:hover:not(:disabled) { background: #f0f0f0; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btn-primary {
+  background: var(--blue);
+  color: #fff;
+  border-color: var(--blue);
+}
+.btn-primary:hover:not(:disabled) { background: var(--blue-hover); border-color: var(--blue-hover); }
+.btn-primary.copied { background: var(--green); border-color: var(--green); }
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-muted);
+}
+.btn-ghost:hover:not(:disabled) { background: #eee; color: var(--text); }
+
+.btn-sm { padding: 0.3rem 0.75rem; font-size: 0.8rem; }
+
+.hidden-input { display: none; }
+
+/* ---- Status banners ---- */
+.status-banner {
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+}
+.status-banner.error {
+  background: #fdecea;
+  border: 1px solid #f5a5a0;
+  color: #900;
+}
+.status-banner.info {
+  background: var(--blue-light);
+  border: 1px solid #aac4f5;
+  color: #174ea6;
+}
+
+/* ---- Field ---- */
+.field { display: flex; flex-direction: column; gap: 0.3rem; }
+.field-label { font-size: 0.82rem; font-weight: 600; color: #333; }
+.field-hint  { font-size: 0.76rem; color: var(--text-muted); }
+.field-input {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.65rem;
+  font-size: 0.875rem;
+  background: var(--surface);
+  width: 8rem;
+  outline: none;
+}
+.field-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(26,115,232,.12); }
+
+/* ============================================================
+   UPLOAD STEP
+   ============================================================ */
+.upload-step { align-items: center; padding-top: 2rem; }
+
+.drop-zone {
+  width: 100%;
+  max-width: 560px;
+  min-height: 280px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, background 0.15s;
+  overflow: hidden;
+}
+.drop-zone:hover, .drop-zone.dragging {
+  border-color: var(--blue);
+  background: var(--blue-light);
+}
+.drop-zone-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2rem;
+  text-align: center;
+}
+.drop-icon { color: var(--text-muted); }
+.drop-zone-title { font-size: 1rem; font-weight: 600; color: var(--text); }
+.drop-zone-hint  { font-size: 0.82rem; color: var(--text-muted); }
+
+.drop-zone-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  width: 100%;
+}
+.preview-thumb {
+  max-width: 100%;
+  max-height: 240px;
+  border-radius: var(--radius-sm);
+  object-fit: contain;
+  box-shadow: var(--shadow-md);
+}
+
+.paste-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.paste-hint kbd {
+  background: #eee;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.75rem;
+}
+
+.upload-actions { margin-top: 0.5rem; }
+
+/* ============================================================
+   DETECT STEP
+   ============================================================ */
+.detect-step { flex: 1; }
+.detect-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 1.5rem;
+  align-items: flex-start;
+  height: 100%;
+}
+
+.detect-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.panel-title {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.corner-status { }
+.corner-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  background: #f3f4f6;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+.corner-badge.set {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #15803d;
+}
+
+.detect-image-area {
+  flex: 1;
+  min-height: 400px;
+  max-height: calc(100vh - 220px);
+}
+
+/* ============================================================
+   CORNER SELECTOR
+   ============================================================ */
+.corner-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Wrapper sized by the <img> — canvas overlays it exactly */
+.corner-image-wrap {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+  overflow: visible;
+  max-width: 100%;
+  direction: ltr;
+}
+
+/* The real image — drives the aspect ratio */
+.corner-source-img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - 260px);
+  width: auto;
+  height: auto;
+  user-select: none;
+  -webkit-user-drag: none;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+}
+
+/* Transparent overlay canvas — pointer events only, no image drawing */
+.corner-overlay-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.canvas-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  background: #f3f4f6;
+}
+
+.corner-selector-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  min-height: 1.75rem;
+}
+
+/* ============================================================
+   EDIT STEP
+   ============================================================ */
+.edit-step { flex: 1; }
+.edit-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.edit-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.grid-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+}
+.stat { display: flex; justify-content: space-between; align-items: center; }
+.stat-value { font-weight: 700; font-size: 0.95rem; }
+.stat-label { font-size: 0.78rem; color: var(--text-muted); }
+
+.edit-instructions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.75rem;
+}
+
+.edit-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.edit-main {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.warped-container {
+  position: relative;
+  display: inline-block;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  line-height: 0;
+}
+
+.warped-image {
+  display: block;
+  max-width: min(700px, calc(100vw - 320px));
+  max-height: calc(100vh - 200px);
+  width: auto;
+  height: auto;
+}
+
+/* ---- Cell grid — direct overlay, mirrors original vanilla structure ---- */
+.cell-grid {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  direction: ltr;
+  user-select: none;
+}
+
+.cell {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  outline: none;
+  position: relative;
+  transition: background 0.06s;
+  touch-action: none;
+}
+.cell:hover { background: rgba(26,115,232,.15); }
+.cell:focus-visible { box-shadow: inset 0 0 0 2px var(--blue); z-index: 1; }
+
+.cell.black {
+  background: rgba(220, 38, 38, 0.08);
+}
+.cell.black:hover {
+  background: rgba(220, 38, 38, 0.18);
+}
+.cell.black::after {
+  content: '';
+  position: absolute;
+  inset: 20%;
+  border-radius: 50%;
+  background: rgba(220, 38, 38, 0.82);
+  pointer-events: none;
+}
+
+/* ============================================================
+   EXPORT STEP
+   ============================================================ */
+.export-step { align-items: center; padding-top: 1rem; }
+.export-layout {
+  width: 100%;
+  max-width: 700px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.export-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.export-meta {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.export-meta span::before { content: '·'; margin-left: 0.75rem; }
+.export-meta span:first-child::before { content: ''; margin-left: 0; }
+
+.output-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.matrix-output {
+  padding: 1rem 1.2rem;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.78rem;
+  direction: ltr;
+  text-align: left;
+  max-height: 22rem;
+  overflow: auto;
+  white-space: pre;
+  color: var(--text);
+}
+
+.export-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.export-nav {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ============================================================
+   SPIN ANIMATION
+   ============================================================ */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spin { animation: spin 0.8s linear infinite; }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 900px) {
+  .app-main { padding: 1rem; }
+  .detect-layout,
+  .edit-layout   { grid-template-columns: 1fr; }
+  .detect-image-area { min-height: 280px; max-height: 60vh; }
+  .warped-image { max-width: calc(100vw - 2rem); max-height: 70vw; }
+}
+
+@media (max-width: 640px) {
+  .step-indicator { padding: 0.75rem 1rem; }
+  .step-connector { width: 1.25rem; }
+  .step-label { display: none; }
+  .app-main { padding: 0.75rem; }
+}

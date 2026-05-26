@@ -5,8 +5,11 @@ Run from this directory:
     uvicorn app:app --reload
 
 Endpoints:
-    GET  /             — serves frontend/index.html
+    GET  /             — serves frontend/dist/index.html (production build)
     POST /api/detect   — detect grid in uploaded image; returns JSON
+
+Development: run the Vite dev server in frontend/ and it proxies /api here.
+Production:  cd frontend && npm run build, then this endpoint serves dist/.
 """
 from __future__ import annotations
 
@@ -24,7 +27,7 @@ from grid_detect import image_bytes_to_matrix
 # Config
 # ---------------------------------------------------------------------------
 
-FRONTEND_INDEX = Path(__file__).parent.parent / "frontend" / "index.html"
+FRONTEND_INDEX = Path(__file__).parent.parent / "frontend" / "dist" / "index.html"
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 
 ALLOWED_MIME_PREFIXES = (
