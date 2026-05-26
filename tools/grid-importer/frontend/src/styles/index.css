@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap');
+
 /* ---- Reset ---- */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -25,7 +27,7 @@ html, body, #root {
   height: 100%;
 }
 body {
-  font-family: system-ui, Tahoma, Arial, sans-serif;
+  font-family: 'Vazirmatn', Tahoma, Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
   font-size: 15px;
@@ -46,39 +48,63 @@ body {
   box-shadow: var(--shadow-sm);
   display: flex;
   align-items: center;
-  gap: 2rem;
-  min-height: 52px;
+  direction: rtl;
+  min-height: 56px;
 }
 .app-header h1 {
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--text);
   white-space: nowrap;
+  padding-left: 1.75rem;
+  border-left: 1px solid var(--border);
 }
 
 /* ---- Tab bar ---- */
 .tab-bar {
   display: flex;
   gap: 0;
-  margin-right: auto;
   height: 100%;
   align-items: stretch;
 }
 .tab-btn {
-  padding: 0 1.1rem;
+  padding: 0 1.25rem;
   border: none;
   background: transparent;
   color: var(--text-muted);
-  font-size: 0.875rem;
+  font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
   border-bottom: 2px solid transparent;
   height: 100%;
   transition: color 0.12s, border-color 0.12s;
   white-space: nowrap;
+  font-family: inherit;
 }
 .tab-btn:hover { color: var(--text); }
 .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+.change-image-btn {
+  margin-right: auto;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.change-image-btn:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+  background: var(--blue-light);
+}
 
 .app-main {
   flex: 1;

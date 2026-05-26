@@ -2,12 +2,11 @@ import { Check } from 'lucide-react';
 import type { ColStep } from '../types';
 
 const STEPS: { id: ColStep; label: string }[] = [
-  { id: 'upload', label: 'آپلود تصویر' },
   { id: 'select', label: 'انتخاب ناحیه‌ها' },
   { id: 'export', label: 'خروجی' },
 ];
 
-const ORDER: ColStep[] = ['upload', 'select', 'export'];
+const ORDER: ColStep[] = ['select', 'export'];
 
 interface Props {
   current: ColStep;

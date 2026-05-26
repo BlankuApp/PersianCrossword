@@ -1,25 +1,20 @@
 import { useState, useCallback } from 'react';
 import type { Step, DetectResult, Corner } from '../types';
 import StepIndicator from '../components/StepIndicator';
-import UploadStep from '../components/UploadStep';
 import DetectStep from '../components/DetectStep';
 import EditStep from '../components/EditStep';
 import ExportStep from '../components/ExportStep';
 
-export default function GridImporterApp() {
-  const [step, setStep] = useState<Step>('upload');
-  const [sourceBlob, setSourceBlob] = useState<Blob | null>(null);
+interface Props {
+  sourceBlob: Blob;
+  onChangeImage: () => void;
+}
+
+export default function GridImporterApp({ sourceBlob, onChangeImage }: Props) {
+  const [step, setStep] = useState<Step>('detect');
   const [detectResult, setDetectResult] = useState<DetectResult | null>(null);
   const [currentMatrix, setCurrentMatrix] = useState<number[][] | null>(null);
   const [corners, setCorners] = useState<Corner[] | null>(null);
-
-  const handleSourceLoaded = useCallback((blob: Blob) => {
-    setSourceBlob(blob);
-    setDetectResult(null);
-    setCurrentMatrix(null);
-    setCorners(null);
-    setStep('detect');
-  }, []);
 
   const handleDetected = useCallback((result: DetectResult) => {
     setDetectResult(result);
@@ -41,8 +36,7 @@ export default function GridImporterApp() {
   }, []);
 
   const handleReset = useCallback(() => {
-    setStep('upload');
-    setSourceBlob(null);
+    setStep('detect');
     setDetectResult(null);
     setCurrentMatrix(null);
     setCorners(null);
@@ -52,15 +46,12 @@ export default function GridImporterApp() {
     <>
       <StepIndicator current={step} />
       <main className="app-main">
-        {step === 'upload' && (
-          <UploadStep onSourceLoaded={handleSourceLoaded} />
-        )}
-        {step === 'detect' && sourceBlob && (
+        {step === 'detect' && (
           <DetectStep
             sourceBlob={sourceBlob}
             initialCorners={corners}
             onDetected={handleDetected}
-            onBack={() => setStep('upload')}
+            onBack={onChangeImage}
             onCornersChange={handleCornersChange}
           />
         )}

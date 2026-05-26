@@ -8,5 +8,5 @@ export interface DetectResult {
   corners: Corner[];
 }
 
-export type Step = 'upload' | 'detect' | 'edit' | 'export';
-export type ColStep = 'upload' | 'select' | 'export';
+export type Step = 'detect' | 'edit' | 'export';
+export type ColStep = 'select' | 'export';

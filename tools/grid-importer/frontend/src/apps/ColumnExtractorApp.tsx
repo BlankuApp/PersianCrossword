@@ -3,33 +3,29 @@ import type { ColStep } from '../types';
 import type { Rect } from '../components/RectangleSelector';
 import { extractColumns } from '../api';
 import ColStepIndicator from '../components/ColStepIndicator';
-import UploadStep from '../components/UploadStep';
 import RectSelectStep from '../components/RectSelectStep';
 import ColExportStep from '../components/ColExportStep';
 
-export default function ColumnExtractorApp() {
-  const [step, setStep] = useState<ColStep>('upload');
-  const [sourceBlob, setSourceBlob] = useState<Blob | null>(null);
-  const [sourceUrl, setSourceUrl] = useState<string | null>(null);
+interface Props {
+  sourceBlob: Blob;
+  onChangeImage: () => void;
+}
+
+export default function ColumnExtractorApp({ sourceBlob, onChangeImage }: Props) {
+  const [step, setStep] = useState<ColStep>('select');
+  const [sourceUrl, setSourceUrl] = useState('');
   const [rects, setRects] = useState<Rect[]>([]);
   const [stitchedB64, setStitchedB64] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Revoke the object URL when the source changes to avoid memory leaks
+  // Create the object URL in an effect so React Strict Mode's simulated
+  // unmount/remount doesn't revoke the URL before the image ever loads.
   useEffect(() => {
-    return () => { if (sourceUrl) URL.revokeObjectURL(sourceUrl); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    const url = URL.createObjectURL(sourceBlob);
+    setSourceUrl(url);
+    return () => URL.revokeObjectURL(url);
   }, [sourceBlob]);
-
-  const handleSourceLoaded = useCallback((blob: Blob) => {
-    setSourceBlob(blob);
-    setSourceUrl(URL.createObjectURL(blob));
-    setRects([]);
-    setStitchedB64(null);
-    setError(null);
-    setStep('select');
-  }, []);
 
   const handleExtract = useCallback(async () => {
     if (!sourceBlob || rects.length === 0) return;
@@ -48,9 +44,7 @@ export default function ColumnExtractorApp() {
   }, [sourceBlob, rects]);
 
   const handleReset = useCallback(() => {
-    setStep('upload');
-    setSourceBlob(null);
-    setSourceUrl(null);
+    setStep('select');
     setRects([]);
     setStitchedB64(null);
     setError(null);
@@ -60,19 +54,13 @@ export default function ColumnExtractorApp() {
     <>
       <ColStepIndicator current={step} />
       <main className="app-main">
-        {step === 'upload' && (
-          <UploadStep
-            onSourceLoaded={handleSourceLoaded}
-            continueLabel="ادامه به انتخاب ناحیه‌ها ←"
-          />
-        )}
         {step === 'select' && sourceUrl && (
           <RectSelectStep
             sourceUrl={sourceUrl}
             rects={rects}
             onRectsChange={setRects}
             onExtract={handleExtract}
-            onBack={() => setStep('upload')}
+            onBack={onChangeImage}
             loading={loading}
             error={error}
           />

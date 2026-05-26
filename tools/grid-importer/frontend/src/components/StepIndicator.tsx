@@ -2,13 +2,12 @@ import { Check } from 'lucide-react';
 import type { Step } from '../types';
 
 const STEPS: { id: Step; label: string }[] = [
-  { id: 'upload', label: 'آپلود تصویر' },
   { id: 'detect', label: 'تشخیص جدول' },
   { id: 'edit', label: 'ویرایش خانه‌ها' },
   { id: 'export', label: 'خروجی' },
 ];
 
-const ORDER: Step[] = ['upload', 'detect', 'edit', 'export'];
+const ORDER: Step[] = ['detect', 'edit', 'export'];
 
 interface Props {
   current: Step;
