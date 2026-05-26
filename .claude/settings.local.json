@@ -31,7 +31,12 @@
       "Bash(rtk tsc *)",
       "Bash(node /home/hamed/PersianCrossword/tools/grid-importer/frontend/node_modules/.bin/tsc -p /home/hamed/PersianCrossword/tools/grid-importer/frontend/tsconfig.json --noEmit)",
       "Bash(node /home/hamed/PersianCrossword/tools/grid-importer/frontend/node_modules/.bin/vite build --config /home/hamed/PersianCrossword/tools/grid-importer/frontend/vite.config.ts --root /home/hamed/PersianCrossword/tools/grid-importer/frontend)",
-      "Bash(node_modules/.bin/vite build *)"
+      "Bash(node_modules/.bin/vite build *)",
+      "Bash(grep -E \"\\\\.\\(tsx?|jsx?|py\\)$\")",
+      "Bash(rtk wc *)",
+      "Bash(rtk npm *)",
+      "Bash(python -c \"from column_extract import extract_columns; from app import app; print\\('OK'\\)\")",
+      "Bash(python3 -c \"from column_extract import extract_columns; from app import app; print\\('OK'\\)\")"
     ]
   }
 }

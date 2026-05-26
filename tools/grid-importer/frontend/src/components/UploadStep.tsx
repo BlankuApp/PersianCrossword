@@ -3,9 +3,10 @@ import { ImagePlus, Clipboard } from 'lucide-react';
 
 interface Props {
   onSourceLoaded: (blob: Blob) => void;
+  continueLabel?: string;
 }
 
-export default function UploadStep({ onSourceLoaded }: Props) {
+export default function UploadStep({ onSourceLoaded, continueLabel = 'ادامه به مرحله تشخیص ←' }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
@@ -89,7 +90,7 @@ export default function UploadStep({ onSourceLoaded }: Props) {
             className="btn btn-primary"
             onClick={() => onSourceLoaded(pendingBlob)}
           >
-            ادامه به مرحله تشخیص ←
+            {continueLabel}
           </button>
         </div>
       )}

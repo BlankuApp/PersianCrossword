@@ -21,6 +21,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
+from column_extract import extract_columns
 from grid_detect import image_bytes_to_matrix
 
 # ---------------------------------------------------------------------------
@@ -124,6 +125,64 @@ async def detect(
 
     try:
         result = image_bytes_to_matrix(data, n=n, corners=parsed_corners)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    return result
+
+
+@app.post(
+    "/api/extract-columns",
+    summary="Extract and stack image regions",
+    response_description="Base64-encoded PNG of vertically stacked cropped regions.",
+)
+async def extract_columns_endpoint(
+    image: UploadFile = File(..., description="Source image (JPEG, PNG, BMP, WebP)."),
+    rects: str = Form(
+        ...,
+        description=(
+            'JSON array of rectangle objects, e.g. [{"x":10,"y":20,"w":100,"h":50}]. '
+            "Coordinates are in natural image pixels."
+        ),
+    ),
+) -> dict:
+    if image.content_type and not any(
+        image.content_type.startswith(p) for p in ALLOWED_MIME_PREFIXES
+    ):
+        raise HTTPException(
+            status_code=415,
+            detail=(
+                f"Unsupported media type '{image.content_type}'. "
+                "Upload a JPEG, PNG, BMP, or WebP image."
+            ),
+        )
+
+    data = await image.read()
+
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Image too large ({len(data) // 1024} KB). Maximum is 10 MB.",
+        )
+
+    if len(data) == 0:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+    try:
+        parsed_rects = json.loads(rects)
+    except JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail="rects must be a valid JSON array of {x, y, w, h} objects.",
+        ) from exc
+
+    if not isinstance(parsed_rects, list) or len(parsed_rects) == 0:
+        raise HTTPException(status_code=422, detail="rects must be a non-empty JSON array.")
+
+    try:
+        result = extract_columns(data, parsed_rects)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except RuntimeError as exc:

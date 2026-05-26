@@ -42,14 +42,43 @@ body {
 .app-header {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  padding: 0.875rem 2rem;
+  padding: 0 2rem;
   box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  min-height: 52px;
 }
 .app-header h1 {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--text);
+  white-space: nowrap;
 }
+
+/* ---- Tab bar ---- */
+.tab-bar {
+  display: flex;
+  gap: 0;
+  margin-right: auto;
+  height: 100%;
+  align-items: stretch;
+}
+.tab-btn {
+  padding: 0 1.1rem;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  height: 100%;
+  transition: color 0.12s, border-color 0.12s;
+  white-space: nowrap;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
 
 .app-main {
   flex: 1;
@@ -579,4 +608,64 @@ body {
   .step-connector { width: 1.25rem; }
   .step-label { display: none; }
   .app-main { padding: 0.75rem; }
+}
+
+/* ============================================================
+   RECT SELECT STEP
+   ============================================================ */
+.rect-select-step { flex: 1; }
+
+.rect-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.rect-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8rem;
+}
+.rect-item-num {
+  font-weight: 700;
+  min-width: 1.2rem;
+  color: var(--blue);
+  font-size: 0.85rem;
+}
+.rect-item-dims {
+  flex: 1;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+}
+.rect-item-actions {
+  display: flex;
+  gap: 0.1rem;
+}
+
+/* ============================================================
+   COL EXPORT STEP
+   ============================================================ */
+.col-export-step { align-items: center; padding-top: 1rem; }
+
+.col-export-image-wrap {
+  display: flex;
+  justify-content: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 1rem;
+  overflow: auto;
+  max-height: 60vh;
+}
+.col-export-image {
+  max-width: 100%;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
 }
