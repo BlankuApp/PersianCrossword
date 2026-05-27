@@ -39,7 +39,14 @@
       "Bash(python3 -c \"from column_extract import extract_columns; from app import app; print\\('OK'\\)\")",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\eskan\\\\OneDrive\\\\Documents\\\\PCrossWord\" -Recurse -Force)",
       "Bash(Select-Object -First 100)",
-      "Bash(Format-Table FullName)"
+      "Bash(Format-Table FullName)",
+      "Bash(dir \"c:\\\\Users\\\\eskan\\\\OneDrive\\\\Documents\\\\PCrossWord\\\\tools\\\\grid-importer\" -Recurse)",
+      "Bash(pip show *)",
+      "Bash(pip index *)",
+      "Bash(/c/Users/eskan/OneDrive/Documents/PCrossWord/.venv/Scripts/pip install *)",
+      "Bash(/c/Users/eskan/OneDrive/Documents/PCrossWord/.venv/Scripts/python -c ' *)",
+      "Bash(/c/Users/eskan/OneDrive/Documents/PCrossWord/.venv/Scripts/python -c \"import llama_parse_client; print\\('OK'\\)\")",
+      "Bash(/c/Users/eskan/OneDrive/Documents/PCrossWord/.venv/Scripts/python -c \"import app; print\\('OK'\\)\")"
     ]
   }
 }

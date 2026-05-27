@@ -6,3 +6,4 @@ numpy>=1.26.0
 pillow>=10.3.0
 pytest>=8.0.0
 httpx>=0.27.0
+llama-cloud>=2.7.0

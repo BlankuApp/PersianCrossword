@@ -23,6 +23,7 @@ from fastapi.responses import FileResponse
 
 from column_extract import extract_columns
 from grid_detect import image_bytes_to_matrix
+from llama_parse_client import parse_image
 
 # ---------------------------------------------------------------------------
 # Config
@@ -186,6 +187,45 @@ async def extract_columns_endpoint(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    return result
+
+
+@app.post(
+    "/api/parse-llamacloud",
+    summary="Parse image text via LlamaCloud",
+    response_description="Parsed markdown and plain text from LlamaCloud.",
+)
+async def parse_llamacloud_endpoint(
+    image: UploadFile = File(..., description="Stitched columns image (PNG)."),
+    api_key: str = Form(..., description="LlamaCloud API key (llx-...)."),
+) -> dict:
+    if image.content_type and not any(
+        image.content_type.startswith(p) for p in ALLOWED_MIME_PREFIXES
+    ):
+        raise HTTPException(
+            status_code=415,
+            detail=f"Unsupported media type '{image.content_type}'.",
+        )
+
+    data = await image.read()
+
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Image too large ({len(data) // 1024} KB). Maximum is 10 MB.",
+        )
+
+    if len(data) == 0:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+    if not api_key.strip():
+        raise HTTPException(status_code=422, detail="api_key is required.")
+
+    try:
+        result = await parse_image(data, api_key.strip())
+    except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     return result

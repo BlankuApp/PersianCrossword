@@ -4,9 +4,10 @@ import type { ColStep } from '../types';
 const STEPS: { id: ColStep; label: string }[] = [
   { id: 'select', label: 'انتخاب ناحیه‌ها' },
   { id: 'export', label: 'خروجی' },
+  { id: 'parse', label: 'تجزیه متن' },
 ];
 
-const ORDER: ColStep[] = ['select', 'export'];
+const ORDER: ColStep[] = ['select', 'export', 'parse'];
 
 interface Props {
   current: ColStep;

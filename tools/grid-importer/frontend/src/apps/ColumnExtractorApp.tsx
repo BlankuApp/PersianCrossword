@@ -2,9 +2,11 @@ import { useState, useCallback, useEffect } from 'react';
 import type { ColStep } from '../types';
 import type { Rect } from '../components/RectangleSelector';
 import { extractColumns } from '../api';
+import type { ParseResult } from '../api';
 import ColStepIndicator from '../components/ColStepIndicator';
 import RectSelectStep from '../components/RectSelectStep';
 import ColExportStep from '../components/ColExportStep';
+import ColParseStep from '../components/ColParseStep';
 
 interface Props {
   sourceBlob: Blob;
@@ -16,6 +18,7 @@ export default function ColumnExtractorApp({ sourceBlob, onChangeImage }: Props)
   const [sourceUrl, setSourceUrl] = useState('');
   const [rects, setRects] = useState<Rect[]>([]);
   const [stitchedB64, setStitchedB64] = useState<string | null>(null);
+  const [parseResult, setParseResult] = useState<ParseResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,6 +50,7 @@ export default function ColumnExtractorApp({ sourceBlob, onChangeImage }: Props)
     setStep('select');
     setRects([]);
     setStitchedB64(null);
+    setParseResult(null);
     setError(null);
   }, []);
 
@@ -70,6 +74,16 @@ export default function ColumnExtractorApp({ sourceBlob, onChangeImage }: Props)
             stitchedB64={stitchedB64}
             onReset={handleReset}
             onBack={() => setStep('select')}
+            onParse={() => setStep('parse')}
+          />
+        )}
+        {step === 'parse' && stitchedB64 && (
+          <ColParseStep
+            stitchedB64={stitchedB64}
+            parseResult={parseResult}
+            onParseResult={setParseResult}
+            onBack={() => setStep('export')}
+            onReset={handleReset}
           />
         )}
       </main>

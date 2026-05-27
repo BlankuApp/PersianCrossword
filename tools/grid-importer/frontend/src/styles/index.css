@@ -219,6 +219,9 @@ body {
 }
 .btn-ghost:hover:not(:disabled) { background: #eee; color: var(--text); }
 
+.btn-secondary { background: transparent; color: var(--blue); border-color: var(--blue); }
+.btn-secondary:hover:not(:disabled) { background: var(--blue-light); }
+
 .btn-sm { padding: 0.3rem 0.75rem; font-size: 0.8rem; }
 
 .hidden-input { display: none; }
@@ -625,7 +628,8 @@ body {
   .app-main { padding: 1rem; }
   .detect-layout,
   .edit-layout   { grid-template-columns: 1fr; }
-  .detect-image-area { min-height: 280px; max-height: 60vh; }
+  .detect-image-area,
+  .parse-result-area { min-height: 280px; max-height: 60vh; }
   .warped-image { max-width: calc(100vw - 2rem); max-height: 70vw; }
 }
 
@@ -634,6 +638,77 @@ body {
   .step-connector { width: 1.25rem; }
   .step-label { display: none; }
   .app-main { padding: 0.75rem; }
+}
+
+/* ============================================================
+   PARSE STEP
+   ============================================================ */
+.col-parse-step { flex: 1; }
+
+.parse-api-input {
+  width: 100%;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-family: monospace;
+  direction: ltr;
+  background: var(--bg);
+  color: var(--text);
+  box-sizing: border-box;
+}
+.parse-api-input:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.15);
+}
+
+.parse-result-area {
+  flex: 1;
+  min-height: 400px;
+  max-height: calc(100vh - 220px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.parse-placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.parse-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  background: #f9f9f9;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.parse-result-body {
+  padding: 1rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: monospace;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  direction: rtl;
+  text-align: right;
+  color: var(--text);
+  flex: 1;
 }
 
 /* ============================================================
@@ -677,18 +752,20 @@ body {
 /* ============================================================
    COL EXPORT STEP
    ============================================================ */
-.col-export-step { align-items: center; padding-top: 1rem; }
+.col-export-step { flex: 1; }
 
 .col-export-image-wrap {
   display: flex;
   justify-content: center;
+  align-items: flex-start;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
   padding: 1rem;
   overflow: auto;
-  max-height: 60vh;
+  min-height: 400px;
+  max-height: calc(100vh - 220px);
 }
 .col-export-image {
   max-width: 100%;

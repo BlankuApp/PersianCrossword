@@ -9,4 +9,4 @@ export interface DetectResult {
 }
 
 export type Step = 'detect' | 'edit' | 'export';
-export type ColStep = 'select' | 'export';
+export type ColStep = 'select' | 'export' | 'parse';
