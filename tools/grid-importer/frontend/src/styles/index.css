@@ -10,8 +10,10 @@
   --blue-light:  #e8f0fe;
   --red:         #dc2626;
   --green:       #16a34a;
+  --amber:       #d97706;
   --bg:          #f3f4f6;
   --surface:     #ffffff;
+  --surface-2:   #f9fafb;
   --border:      #d1d5db;
   --text:        #111827;
   --text-muted:  #6b7280;
@@ -57,7 +59,7 @@ body {
   color: var(--text);
   white-space: nowrap;
   padding-left: 1.75rem;
-  border-left: 1px solid var(--border);
+  border-left: 2px solid var(--blue);
 }
 
 /* ---- Tab bar ---- */
@@ -168,7 +170,8 @@ body {
 .step-label.done   { color: var(--green); }
 
 .step-connector {
-  width: 2.5rem;
+  flex: 1;
+  max-width: 5rem;
   height: 2px;
   background: var(--border);
   margin: 0 0.25rem;
@@ -241,6 +244,11 @@ body {
   background: var(--blue-light);
   border: 1px solid #aac4f5;
   color: #174ea6;
+}
+.status-banner.warning {
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  color: #92400e;
 }
 
 /* ---- Field ---- */
@@ -347,6 +355,9 @@ body {
   border-radius: var(--radius);
   padding: 1.25rem;
   box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 1.5rem;
+  align-self: start;
 }
 
 .panel-title {
@@ -447,7 +458,7 @@ body {
 .edit-step { flex: 1; }
 .edit-layout {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 240px 1fr;
   gap: 1.5rem;
   align-items: flex-start;
 }
@@ -461,6 +472,9 @@ body {
   border-radius: var(--radius);
   padding: 1.25rem;
   box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 1.5rem;
+  align-self: start;
 }
 
 .grid-stats {
@@ -647,20 +661,20 @@ body {
 
 .parse-api-input {
   width: 100%;
-  padding: 0.45rem 0.75rem;
+  padding: 0.45rem 0.65rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  font-size: 0.8rem;
-  font-family: monospace;
+  font-size: 0.875rem;
+  font-family: 'Consolas', 'Courier New', monospace;
   direction: ltr;
-  background: var(--bg);
+  background: var(--surface);
   color: var(--text);
   box-sizing: border-box;
+  outline: none;
 }
 .parse-api-input:focus {
-  outline: none;
   border-color: var(--blue);
-  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.15);
+  box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.12);
 }
 
 .parse-result-area {
@@ -692,7 +706,7 @@ body {
   justify-content: space-between;
   padding: 0.6rem 0.9rem;
   border-bottom: 1px solid var(--border);
-  background: #f9f9f9;
+  background: var(--surface-2);
   position: sticky;
   top: 0;
   z-index: 1;
@@ -746,7 +760,7 @@ body {
 }
 .rect-item-actions {
   display: flex;
-  gap: 0.1rem;
+  gap: 0.4rem;
 }
 
 /* ============================================================

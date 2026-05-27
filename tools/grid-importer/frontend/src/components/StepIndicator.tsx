@@ -1,24 +1,22 @@
 import { Check } from 'lucide-react';
-import type { Step } from '../types';
 
-const STEPS: { id: Step; label: string }[] = [
-  { id: 'detect', label: 'تشخیص جدول' },
-  { id: 'edit', label: 'ویرایش خانه‌ها' },
-  { id: 'export', label: 'خروجی' },
-];
-
-const ORDER: Step[] = ['detect', 'edit', 'export'];
-
-interface Props {
-  current: Step;
+interface StepDef<T extends string> {
+  id: T;
+  label: string;
 }
 
-export default function StepIndicator({ current }: Props) {
-  const currentIndex = ORDER.indexOf(current);
+interface Props<T extends string> {
+  steps: StepDef<T>[];
+  current: T;
+  order: T[];
+}
+
+export default function StepIndicator<T extends string>({ steps, current, order }: Props<T>) {
+  const currentIndex = order.indexOf(current);
 
   return (
     <nav className="step-indicator" aria-label="مراحل">
-      {STEPS.map((step, i) => {
+      {steps.map((step, i) => {
         const done = i < currentIndex;
         const active = i === currentIndex;
         return (
@@ -41,7 +39,7 @@ export default function StepIndicator({ current }: Props) {
             >
               {step.label}
             </span>
-            {i < STEPS.length - 1 && (
+            {i < steps.length - 1 && (
               <div className={'step-connector' + (done ? ' done' : '')} />
             )}
           </div>

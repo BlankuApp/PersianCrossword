@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Loader, Copy, Check } from 'lucide-react';
+import { Loader, Copy, Check, ArrowLeft, RefreshCw } from 'lucide-react';
 import { parseLlamaCloud } from '../api';
 import type { ParseResult } from '../api';
 
@@ -82,7 +82,7 @@ export default function ColParseStep({ stitchedB64, parseResult, onParseResult, 
               className={`btn btn-sm ${copied ? 'btn-primary copied' : 'btn-ghost'}`}
               onClick={handleCopy}
             >
-              {copied ? <Check size={13} /> : <Copy size={13} />}
+              {copied ? <Check size={14} /> : <Copy size={14} />}
               {copied ? 'کپی شد' : 'کپی مارکداون'}
             </button>
           )}
@@ -93,14 +93,14 @@ export default function ColParseStep({ stitchedB64, parseResult, onParseResult, 
               onClick={handleParse}
               disabled={loading || !apiKey.trim()}
             >
-              {loading ? <Loader size={15} className="spin" /> : null}
+              {loading ? <Loader size={16} className="spin" /> : null}
               تجزیه
             </button>
             <button className="btn btn-ghost" onClick={onBack}>
-              ← برگشت به خروجی
+              <ArrowLeft size={16} /> بازگشت به خروجی
             </button>
             <button className="btn btn-ghost" onClick={onReset}>
-              شروع مجدد
+              <RefreshCw size={16} /> شروع مجدد
             </button>
           </div>
         </aside>

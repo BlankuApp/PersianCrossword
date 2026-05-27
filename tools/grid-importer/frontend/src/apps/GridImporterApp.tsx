@@ -1,6 +1,13 @@
 import { useState, useCallback } from 'react';
 import type { Step, DetectResult, Corner } from '../types';
 import StepIndicator from '../components/StepIndicator';
+
+const GRID_STEPS: { id: Step; label: string }[] = [
+  { id: 'detect', label: 'تشخیص جدول' },
+  { id: 'edit', label: 'ویرایش خانه‌ها' },
+  { id: 'export', label: 'خروجی' },
+];
+const GRID_ORDER: Step[] = ['detect', 'edit', 'export'];
 import DetectStep from '../components/DetectStep';
 import EditStep from '../components/EditStep';
 import ExportStep from '../components/ExportStep';
@@ -44,7 +51,7 @@ export default function GridImporterApp({ sourceBlob, onChangeImage }: Props) {
 
   return (
     <>
-      <StepIndicator current={step} />
+      <StepIndicator steps={GRID_STEPS} current={step} order={GRID_ORDER} />
       <main className="app-main">
         {step === 'detect' && (
           <DetectStep

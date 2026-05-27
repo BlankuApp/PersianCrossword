@@ -1,4 +1,4 @@
-import { Download } from 'lucide-react';
+import { Download, ArrowLeft, ArrowRight, RefreshCw } from 'lucide-react';
 
 interface Props {
   stitchedB64: string;
@@ -23,17 +23,17 @@ export default function ColExportStep({ stitchedB64, onReset, onBack, onParse }:
               download="columns.png"
               className="btn btn-primary"
             >
-              <Download size={15} />
+              <Download size={16} />
               دانلود PNG
             </a>
             <button className="btn btn-secondary" onClick={onParse}>
-              تجزیه متن ←
+              تجزیه متن <ArrowRight size={16} />
             </button>
             <button className="btn btn-ghost" onClick={onBack}>
-              ← برگشت به انتخاب
+              <ArrowLeft size={16} /> بازگشت به انتخاب
             </button>
             <button className="btn btn-ghost" onClick={onReset}>
-              شروع مجدد
+              <RefreshCw size={16} /> شروع مجدد
             </button>
           </div>
         </aside>

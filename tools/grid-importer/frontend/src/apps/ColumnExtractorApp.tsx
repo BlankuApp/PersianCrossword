@@ -3,7 +3,14 @@ import type { ColStep } from '../types';
 import type { Rect } from '../components/RectangleSelector';
 import { extractColumns } from '../api';
 import type { ParseResult } from '../api';
-import ColStepIndicator from '../components/ColStepIndicator';
+import StepIndicator from '../components/StepIndicator';
+
+const COL_STEPS: { id: ColStep; label: string }[] = [
+  { id: 'select', label: 'انتخاب ناحیه‌ها' },
+  { id: 'export', label: 'خروجی' },
+  { id: 'parse', label: 'تجزیه متن' },
+];
+const COL_ORDER: ColStep[] = ['select', 'export', 'parse'];
 import RectSelectStep from '../components/RectSelectStep';
 import ColExportStep from '../components/ColExportStep';
 import ColParseStep from '../components/ColParseStep';
@@ -56,7 +63,7 @@ export default function ColumnExtractorApp({ sourceBlob, onChangeImage }: Props)
 
   return (
     <>
-      <ColStepIndicator current={step} />
+      <StepIndicator steps={COL_STEPS} current={step} order={COL_ORDER} />
       <main className="app-main">
         {step === 'select' && sourceUrl && (
           <RectSelectStep

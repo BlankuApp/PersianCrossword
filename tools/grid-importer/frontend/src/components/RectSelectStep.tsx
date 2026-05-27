@@ -1,4 +1,4 @@
-import { ChevronUp, ChevronDown, Trash2, Loader } from 'lucide-react';
+import { ChevronUp, ChevronDown, Trash2, Loader, ArrowLeft, ArrowRight } from 'lucide-react';
 import RectangleSelector, { type Rect } from './RectangleSelector';
 
 interface Props {
@@ -95,11 +95,11 @@ export default function RectSelectStep({
               disabled={rects.length === 0 || loading}
               onClick={onExtract}
             >
-              {loading ? <Loader size={15} className="spin" /> : null}
-              استخراج ستون‌ها ←
+              {loading ? <Loader size={16} className="spin" /> : null}
+              استخراج ستون‌ها <ArrowRight size={16} />
             </button>
             <button className="btn btn-ghost" onClick={onBack}>
-              ← برگشت
+              <ArrowLeft size={16} /> بازگشت
             </button>
           </div>
         </aside>
