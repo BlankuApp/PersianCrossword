@@ -122,16 +122,16 @@ export default function ImageCornerSelector({ imageSrc, corners, onChange }: Pro
 
   // Align canvas exactly over the image (position + size) so pointer events cover the full image
   // before the first draw() call.
+  // Re-draw whenever the image's layout size changes (covers initial load + tab switch from display:none)
   useEffect(() => {
     if (!imgLoaded) return;
-    const canvas = canvasRef.current;
     const img = imgRef.current;
-    if (!canvas || !img) return;
-    canvas.style.top    = img.offsetTop    + 'px';
-    canvas.style.left   = img.offsetLeft   + 'px';
-    canvas.style.width  = img.offsetWidth  + 'px';
-    canvas.style.height = img.offsetHeight + 'px';
-  }, [imgLoaded]);
+    if (!img) return;
+    draw();
+    const ro = new ResizeObserver(() => draw());
+    ro.observe(img);
+    return () => ro.disconnect();
+  }, [imgLoaded, draw]);
 
   useEffect(() => {
     if (imgLoaded) draw();

@@ -137,17 +137,16 @@ export default function RectangleSelector({ imageSrc, rects, onChange }: Props) 
     }
   }, []);
 
-  // Sync canvas position when image loads
+  // Re-draw whenever the image's layout size changes (covers initial load + tab switch from display:none)
   useEffect(() => {
     if (!imgLoaded) return;
-    const canvas = canvasRef.current;
     const img = imgRef.current;
-    if (!canvas || !img) return;
-    canvas.style.top    = img.offsetTop    + 'px';
-    canvas.style.left   = img.offsetLeft   + 'px';
-    canvas.style.width  = img.offsetWidth  + 'px';
-    canvas.style.height = img.offsetHeight + 'px';
-  }, [imgLoaded]);
+    if (!img) return;
+    draw();
+    const ro = new ResizeObserver(() => draw());
+    ro.observe(img);
+    return () => ro.disconnect();
+  }, [imgLoaded, draw]);
 
   useEffect(() => {
     if (imgLoaded) draw();
