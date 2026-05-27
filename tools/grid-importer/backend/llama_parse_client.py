@@ -8,12 +8,10 @@ from llama_cloud import LlamaCloud
 
 CUSTOM_PROMPT = (
     "The text direction is RTL\n"
-    "Text belongs to a persian crossword\n"
-    "The page has multi column layout in RTL direction the first column is in the "
-    "rightmost side, the second is on its immediate left and so on. The text in each "
-    "column is naturally top to bottom.\n"
-    "pay more attention on hyphens - and numbers\n"
-    "ignore the images or shapes or crossword tables\n\n"
+    "Text belongs to a persian crossword clues.\n"
+    "It might contain 2 puzzles, one normal and one special.\n"
+    "The page has single column layout in RTL direction.\n"
+    "Each clue starts with a number, then the clues are separated by hyphens -\n"
     "The final output is like\n"
     "جدول عادی\n"
     "افقی\n"
