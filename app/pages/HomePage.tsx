@@ -102,15 +102,17 @@ export function HomePage() {
   function SortHeader({
     colKey,
     children,
+    className,
   }: {
     colKey: SortKey;
     children: React.ReactNode;
+    className?: string;
   }) {
     const active = sortKey === colKey;
     const indicator = active ? (sortDir === "asc" ? " ▲" : " ▼") : "";
     return (
       <th
-        className={`th-sortable${active ? " th-active" : ""}`}
+        className={`th-sortable${active ? " th-active" : ""}${className ? ` ${className}` : ""}`}
         onClick={() => handleSort(colKey)}
         aria-sort={active ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
       >
@@ -155,11 +157,11 @@ export function HomePage() {
             <table className="puzzle-table" aria-label="فهرست جدول‌ها">
               <thead>
                 <tr>
-                  <SortHeader colKey="id">شناسه</SortHeader>
+                  <SortHeader colKey="id" className="th-id">شناسه</SortHeader>
                   <SortHeader colKey="title">عنوان</SortHeader>
                   <SortHeader colKey="difficulty">سطح</SortHeader>
-                  <SortHeader colKey="newspaper">روزنامه</SortHeader>
-                  <SortHeader colKey="publishedAt">تاریخ</SortHeader>
+                  <SortHeader colKey="newspaper" className="th-newspaper">روزنامه</SortHeader>
+                  <SortHeader colKey="publishedAt" className="th-date">تاریخ</SortHeader>
                   <SortHeader colKey="progress">پیشرفت</SortHeader>
                 </tr>
               </thead>

@@ -1213,9 +1213,15 @@ select {
     padding: 8px 10px;
   }
 
-  .td-newspaper,
+  .th-id,
+  .td-id,
+  .th-date,
   .td-date {
     display: none;
+  }
+
+  .td-progress {
+    min-width: 0;
   }
 
   .pagination {
