@@ -28,12 +28,14 @@ export interface ProgressInfo {
 
 export function computeProgress(json: CrosswordJson, saved: SavedCrosswordState): ProgressInfo {
   let puzzle;
+  let state;
   try {
     puzzle = compilePuzzle(json);
+    state = createState(puzzle, saved);
   } catch {
+    // ponytail: stale/mismatched saved progress (e.g. puzzle edited after save) shouldn't crash the homepage
     return { filled: 0, total: 0, percent: 0, completed: false };
   }
-  const state = createState(puzzle, saved);
 
   let filled = 0;
   let total = 0;
