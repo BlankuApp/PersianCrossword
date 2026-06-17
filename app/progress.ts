@@ -3,6 +3,13 @@ import type { CrosswordJson, SavedCrosswordState } from "../src/index";
 
 const STORAGE_PREFIX = "persian-crossword:";
 
+// v3 grid rows are LTR (index 0 = leftmost), v2 are RTL (index 0 = rightmost).
+// Reverse v3 rows so col=0 stays rightmost throughout the coord system.
+export function normalizeGridDirection(json: CrosswordJson): CrosswordJson {
+  if (json.version !== 3) return json;
+  return { ...json, grid: json.grid.map((row) => [...row].reverse()) };
+}
+
 export function loadProgress(id: string): SavedCrosswordState {
   if (typeof window === "undefined") return { cells: {} };
   const raw = window.localStorage.getItem(STORAGE_PREFIX + id);
@@ -28,12 +35,16 @@ export interface ProgressInfo {
 
 export function computeProgress(json: CrosswordJson, saved: SavedCrosswordState): ProgressInfo {
   let puzzle;
+  try {
+    puzzle = compilePuzzle(normalizeGridDirection(json));
+  } catch {
+    return { filled: 0, total: 0, percent: 0, completed: false };
+  }
+
   let state;
   try {
-    puzzle = compilePuzzle(json);
     state = createState(puzzle, saved);
   } catch {
-    // ponytail: stale/mismatched saved progress (e.g. puzzle edited after save) shouldn't crash the homepage
     return { filled: 0, total: 0, percent: 0, completed: false };
   }
 

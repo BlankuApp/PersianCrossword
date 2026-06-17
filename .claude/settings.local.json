@@ -21,7 +21,8 @@
       "Bash(Get-ChildItem *)",
       "Bash(playwright *)",
       "Read(//c/tmp/**)",
-      "Read(//c/Users/eskan/**)"
+      "Read(//c/Users/eskan/**)",
+      "Bash(xargs -I {} sh -c 'echo \"File: {}\"; head -3 \"{}\"')"
     ]
   }
 }

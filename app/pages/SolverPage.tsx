@@ -32,15 +32,8 @@ import {
   type CrosswordPuzzle,
   type Direction,
   type Slot,
+  type CrosswordJson,
 } from "../../src/index";
-import type { CrosswordJson } from "../../src/index";
-
-// ponytail: v3 grid rows are LTR (index 0 = leftmost), v2 are RTL (index 0 = rightmost).
-// Reverse v3 rows so col=0 stays rightmost throughout the coord system.
-function normalizeGridDirection(json: CrosswordJson): CrosswordJson {
-  if (json.version !== 3) return json;
-  return { ...json, grid: json.grid.map((row) => [...row].reverse()) };
-}
 import {
   getActiveSlot,
   handleCellSelection,
@@ -50,7 +43,7 @@ import {
   slotCellKeys,
   type Selection,
 } from "../crosswordUi";
-import { loadProgress, saveProgress } from "../progress";
+import { loadProgress, saveProgress, normalizeGridDirection } from "../progress";
 import { saveCloudProgress } from "../cloudProgress";
 import { useAuth } from "../AuthContext";
 import { navigate } from "../router";
@@ -169,10 +162,14 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     }
   }
 
-  const crosswordState = useMemo(
-    () => (puzzle ? createState(puzzle, savedState) : null),
-    [puzzle, savedState],
-  );
+  const crosswordState = useMemo(() => {
+    if (!puzzle) return null;
+    try {
+      return createState(puzzle, savedState);
+    } catch {
+      return null;
+    }
+  }, [puzzle, savedState]);
 
   const solutionState = useMemo(() => {
     const puz = isDebugMode ? debugPuzzle : puzzle;
