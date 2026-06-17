@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { compilePuzzle, CrosswordValidationError, validatePuzzleJson } from "../src/index.js";
-import { basicPuzzle } from "./fixtures.js";
+import { basicPuzzle, basicPuzzleV3 } from "./fixtures.js";
 
 describe("puzzle validation", () => {
   it("accepts a valid puzzle", () => {
@@ -24,13 +24,38 @@ describe("puzzle validation", () => {
     expect(result.issues[0]?.message).toMatch(/migrate-v1-to-v2/);
   });
 
-  it("requires version 2", () => {
+  it("requires version 2 or 3", () => {
     const result = validatePuzzleJson({
       grid: [[0, 0]],
       clues: { horizontal: { "1": ["clue"] }, vertical: {} },
     });
 
     expect(result.issues.map((i) => i.code)).toContain("unsupported_version");
+  });
+
+  it("accepts a valid v3 puzzle", () => {
+    const result = validatePuzzleJson(basicPuzzleV3);
+
+    expect(result.valid).toBe(true);
+    expect(result.issues).toEqual([]);
+    expect(result.derivedSlots).toHaveLength(6);
+  });
+
+  it("rejects v3 grid cells that are not strings", () => {
+    const result = validatePuzzleJson({
+      version: 3,
+      grid: [["ا", 0]],
+      clues: { horizontal: { "1": ["clue"] }, vertical: {} },
+    });
+
+    expect(result.issues.map((i) => i.code)).toContain("invalid_grid_cell");
+  });
+
+  it("derives slot answers from the v3 grid", () => {
+    const puzzle = compilePuzzle(basicPuzzleV3);
+    const across = puzzle.acrossSlots.find((s) => s.groupNum === 1);
+
+    expect(across?.answer).toBe("سلام");
   });
 
   it("rejects a non-rectangular grid", () => {

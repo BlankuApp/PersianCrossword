@@ -26,6 +26,7 @@ import {
   compilePuzzle,
   createState,
   splitPersianGraphemes,
+  validatePuzzleJson,
   CrosswordValidationError,
   type Coord,
   type CrosswordPuzzle,
@@ -33,6 +34,13 @@ import {
   type Slot,
 } from "../../src/index";
 import type { CrosswordJson } from "../../src/index";
+
+// ponytail: v3 grid rows are LTR (index 0 = leftmost), v2 are RTL (index 0 = rightmost).
+// Reverse v3 rows so col=0 stays rightmost throughout the coord system.
+function normalizeGridDirection(json: CrosswordJson): CrosswordJson {
+  if (json.version !== 3) return json;
+  return { ...json, grid: json.grid.map((row) => [...row].reverse()) };
+}
 import {
   getActiveSlot,
   handleCellSelection,
@@ -62,25 +70,64 @@ interface SolverPageProps {
   readonly json: CrosswordJson;
   readonly solutionImageUrl?: string | undefined;
   readonly sourceImageUrl?: string | undefined;
+  readonly filePath?: string | undefined;
 }
 
-export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl }: SolverPageProps) {
+export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePath }: SolverPageProps) {
   const { user } = useAuth();
   const CLUE_OVERLAY_HIDE_MS = 3000;
   const CLUE_OVERLAY_MARGIN = 12;
   const CLUE_OVERLAY_GAP = 16;
   const CLUE_OVERLAY_MOBILE_QUERY = "(max-width: 860px)";
+  const normalizedJson = useMemo(() => normalizeGridDirection(json), [json]);
+  const isDebugMode = import.meta.env.DEV && json.version === 3 && !!filePath;
+
+  // Debug-only: mutable copy of the source grid (unreversed, matches disk format).
+  const [debugEditGrid, setDebugEditGrid] = useState<string[][]>(() =>
+    json.version === 3 ? json.grid.map((row) => [...row]) : [],
+  );
+  useEffect(() => {
+    if (json.version === 3) setDebugEditGrid(json.grid.map((row) => [...row]));
+  }, [json]);
+  const [debugCell, setDebugCell] = useState<Coord | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
   const [puzzle, compileError] = useMemo((): [CrosswordPuzzle | null, Error | null] => {
     try {
-      return [compilePuzzle(json), null];
+      return [compilePuzzle(normalizedJson), null];
     } catch (e) {
       return [null, e instanceof Error ? e : new Error(String(e))];
     }
-  }, [json]);
+  }, [normalizedJson]);
+
+  // Debug-only: recompile from the editable grid (reversed rows) with stub clues so the
+  // board renders even when clues don't match the grid, and updates when blocks change.
+  const debugPuzzle = useMemo((): CrosswordPuzzle | null => {
+    if (!isDebugMode || normalizedJson.version !== 3) return null;
+    const debugGrid = debugEditGrid.map((row) => [...row].reverse());
+    const debugJson = { ...normalizedJson, grid: debugGrid };
+    const { derivedSlots } = validatePuzzleJson(debugJson);
+    if (!derivedSlots.length) return null;
+    const h: Record<string, string[]> = {};
+    const v: Record<string, string[]> = {};
+    for (const slot of derivedSlots) {
+      const key = String(slot.groupNum);
+      if (slot.direction === "across") { (h[key] ??= []).push("?"); }
+      else { (v[key] ??= []).push("?"); }
+    }
+    try {
+      return compilePuzzle({ ...debugJson, clues: { horizontal: h, vertical: v } });
+    } catch {
+      return null;
+    }
+  }, [isDebugMode, debugEditGrid, normalizedJson]);
+
+  // In debug mode always use the puzzle compiled from the live edit grid.
+  const activePuzzle = isDebugMode ? debugPuzzle : puzzle;
   const [savedState, setSavedState] = useState(() => loadProgress(id));
   const [selection, setSelection] = useState<Selection | undefined>(() => {
     try {
-      const firstSlot = compilePuzzle(json).slots[0];
+      const firstSlot = compilePuzzle(normalizeGridDirection(json)).slots[0];
       return firstSlot ? selectSlot(firstSlot) : undefined;
     } catch {
       return undefined;
@@ -107,6 +154,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl }: Solve
   );
 
   const boardRef = useRef<HTMLDivElement>(null);
+  const solutionBoardRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const clueOverlayRef = useRef<HTMLDivElement>(null);
   const clueOverlayTimerRef = useRef<number | undefined>(undefined);
@@ -125,6 +173,28 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl }: Solve
     () => (puzzle ? createState(puzzle, savedState) : null),
     [puzzle, savedState],
   );
+
+  const solutionState = useMemo(() => {
+    const puz = isDebugMode ? debugPuzzle : puzzle;
+    if (!puz || normalizedJson.version !== 3) return null;
+    const cells: Record<string, string> = {};
+    if (isDebugMode) {
+      // debugEditGrid is source-format (LTR for v3); reverse each row to get normalized cols.
+      // Skip space placeholders (open cell with no letter yet).
+      debugEditGrid.forEach((row, r) => {
+        [...row].reverse().forEach((letter, c) => {
+          if (letter && letter.trim()) cells[cellKey({ row: r, col: c })] = letter;
+        });
+      });
+    } else {
+      normalizedJson.grid.forEach((row, r) => {
+        row.forEach((letter, c) => {
+          if (letter) cells[cellKey({ row: r, col: c })] = letter;
+        });
+      });
+    }
+    return createState(puz, { cells });
+  }, [puzzle, debugPuzzle, normalizedJson, isDebugMode, debugEditGrid]);
   const activeSlot = puzzle ? getActiveSlot(puzzle, selection) : undefined;
   const activeKeys = slotCellKeys(activeSlot);
   const selectionSignature = selection
@@ -413,6 +483,64 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl }: Solve
     setSelection(firstSlot ? selectSlot(firstSlot) : undefined);
   }
 
+  function debugUpdateCell(coord: Coord, letter: string): void {
+    const cols = debugEditGrid[0]?.length ?? 0;
+    if (!cols) return;
+    const sourceCol = cols - 1 - coord.col;
+    setDebugEditGrid((prev) => {
+      const next = prev.map((r) => [...r]);
+      if (next[coord.row]?.[sourceCol] !== undefined) {
+        next[coord.row]![sourceCol] = letter;
+      }
+      return next;
+    });
+  }
+
+  function debugToggleBlock(coord: Coord): void {
+    const cols = debugEditGrid[0]?.length ?? 0;
+    if (!cols) return;
+    const sourceCol = cols - 1 - coord.col;
+    setDebugEditGrid((prev) => {
+      const next = prev.map((r) => [...r]);
+      const current = next[coord.row]?.[sourceCol];
+      if (current !== undefined) {
+        next[coord.row]![sourceCol] = current === "" ? " " : "";
+      }
+      return next;
+    });
+  }
+
+  function handleSolutionKeyDown(event: React.KeyboardEvent): void {
+    if (!debugCell) return;
+    const graphemes = splitPersianGraphemes(event.key);
+    if (graphemes.length === 1) {
+      event.preventDefault();
+      debugUpdateCell(debugCell, graphemes[0]!);
+    } else if (event.key === "Backspace") {
+      event.preventDefault();
+      debugUpdateCell(debugCell, " ");
+    } else if (event.key === "Delete") {
+      event.preventDefault();
+      debugToggleBlock(debugCell);
+    }
+  }
+
+  async function handleDebugSave(): Promise<void> {
+    if (!filePath) return;
+    setIsSaving(true);
+    try {
+      await fetch("/dev/save-puzzle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filePath, json: { ...json, grid: debugEditGrid } }),
+      });
+    } catch (e) {
+      console.error("[debug] save failed", e);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   const title = json.meta?.title ?? id;
   const newspaper = json.meta?.newspaper;
   const difficulty = json.meta?.difficulty;
@@ -498,7 +626,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl }: Solve
             <HelpCircle size={18} aria-hidden="true" />
             <span>راهنما</span>
           </button>
-          {solutionImageUrl ? (
+          {(solutionImageUrl || solutionState) ? (
             <button
               type="button"
               onClick={() => setShowSolution((v) => !v)}
@@ -546,7 +674,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl }: Solve
         </section>
       ) : null}
 
-      {showSolution && solutionImageUrl ? (
+      {showSolution && (solutionImageUrl || solutionState) ? (
         <div
           className="solution-modal-backdrop"
           role="dialog"
@@ -569,9 +697,39 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl }: Solve
                 </button>
               </div>
             </div>
-            <div className="solution-image">
-              <img src={solutionImageUrl} alt="تصویر پاسخ جدول" />
-            </div>
+            {solutionState ? (
+              <div
+                className="solution-board"
+                tabIndex={isDebugMode ? 0 : -1}
+                onKeyDown={isDebugMode ? handleSolutionKeyDown : undefined}
+              >
+                <CrosswordBoard
+                  boardRef={solutionBoardRef}
+                  puzzle={activePuzzle!}
+                  state={solutionState}
+                  selection={isDebugMode && debugCell ? { coord: debugCell, direction: "across" } : undefined}
+                  activeKeys={new Set()}
+                  clickableBlocks={isDebugMode}
+                  onCellClick={isDebugMode ? (coord) => setDebugCell(coord) : () => {}}
+                  onKeyDown={() => {}}
+                />
+                {isDebugMode && (
+                  <div className="debug-toolbar">
+                    <button
+                      type="button"
+                      onClick={() => { void handleDebugSave(); }}
+                      disabled={isSaving}
+                    >
+                      {isSaving ? "در حال ذخیره..." : "ذخیره"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="solution-image">
+                <img src={solutionImageUrl} alt="تصویر پاسخ جدول" />
+              </div>
+            )}
           </div>
         </div>
       ) : null}

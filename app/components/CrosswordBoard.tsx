@@ -31,6 +31,7 @@ interface CrosswordBoardProps {
   readonly onKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => void;
   readonly onInputBeforeInput?: (event: React.FormEvent<HTMLInputElement>) => void;
   readonly onInputChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  readonly clickableBlocks?: boolean;
 }
 
 export function CrosswordBoard({
@@ -44,6 +45,7 @@ export function CrosswordBoard({
   onKeyDown,
   onInputBeforeInput,
   onInputChange,
+  clickableBlocks,
 }: CrosswordBoardProps) {
   return (
     <div
@@ -99,7 +101,7 @@ export function CrosswordBoard({
                 isSelected ? "cell-selected" : "",
               ].join(" ")}
               aria-label={`ردیف ${row + 1} ستون ${col + 1}`}
-              disabled={isBlock}
+              disabled={isBlock && !clickableBlocks}
               onClick={() => onCellClick(coord)}
             >
               {isBlock ? (

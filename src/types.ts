@@ -46,13 +46,23 @@ export interface CrosswordMeta {
   readonly sourceFile?: string;
 }
 
-export interface CrosswordJson {
+export interface CrosswordJsonV2 {
   readonly version: 2;
   readonly grid: readonly (readonly number[])[];
   readonly clues: CrosswordClues;
   readonly answers?: CrosswordAnswers;
   readonly meta?: CrosswordMeta;
 }
+
+/** Version 3: grid cells are strings; "" = black cell, any other string = open cell with solution letter. */
+export interface CrosswordJsonV3 {
+  readonly version: 3;
+  readonly grid: readonly (readonly string[])[];
+  readonly clues: CrosswordClues;
+  readonly meta?: CrosswordMeta;
+}
+
+export type CrosswordJson = CrosswordJsonV2 | CrosswordJsonV3;
 
 export interface DerivedSlot {
   readonly id: SlotId;

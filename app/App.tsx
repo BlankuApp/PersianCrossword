@@ -26,6 +26,7 @@ function AppRoutes() {
           json={puzzle.json}
           solutionImageUrl={puzzle.solutionImageUrl}
           sourceImageUrl={puzzle.sourceImageUrl}
+          filePath={puzzle.filePath}
         />
       );
     }

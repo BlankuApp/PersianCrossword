@@ -57,15 +57,15 @@ export function validatePuzzleJson(input: unknown): ValidationResult {
     };
   }
 
-  if (input.version !== 2) {
+  if (input.version !== 2 && input.version !== 3) {
     issues.push({
       code: "unsupported_version",
-      message: 'Puzzle JSON must declare "version": 2.',
+      message: 'Puzzle JSON must declare "version": 2 or 3.',
       path: "version",
     });
   }
 
-  const gridResult = readGrid(input.grid, issues);
+  const gridResult = readGrid(input.grid, input.version, issues);
 
   let derivedSlots: DerivedSlot[] = [];
   if (gridResult) {
@@ -73,7 +73,9 @@ export function validatePuzzleJson(input: unknown): ValidationResult {
   }
 
   validateClues(input.clues, derivedSlots, issues, gridResult !== undefined);
-  validateAnswers(input.answers, derivedSlots, issues);
+  if (input.version !== 3) {
+    validateAnswers(input.answers, derivedSlots, issues);
+  }
 
   return {
     valid: issues.length === 0,
@@ -82,7 +84,7 @@ export function validatePuzzleJson(input: unknown): ValidationResult {
   };
 }
 
-function readGrid(value: unknown, issues: ValidationIssue[]): GridReadResult | undefined {
+function readGrid(value: unknown, version: unknown, issues: ValidationIssue[]): GridReadResult | undefined {
   if (!Array.isArray(value) || value.length === 0) {
     issues.push({
       code: "invalid_grid",
@@ -92,6 +94,7 @@ function readGrid(value: unknown, issues: ValidationIssue[]): GridReadResult | u
     return undefined;
   }
 
+  const isV3 = version === 3;
   const rows = value.length;
   let cols: number | undefined;
   const blocks: Coord[] = [];
@@ -104,7 +107,9 @@ function readGrid(value: unknown, issues: ValidationIssue[]): GridReadResult | u
     if (!Array.isArray(rowValue)) {
       issues.push({
         code: "invalid_grid_row",
-        message: "Each grid row must be an array of 0/1 integers.",
+        message: isV3
+          ? 'Each grid row must be an array of strings ("" for black, letter for open).'
+          : "Each grid row must be an array of 0/1 integers.",
         path: rowPath,
       });
       hasError = true;
@@ -134,15 +139,28 @@ function readGrid(value: unknown, issues: ValidationIssue[]): GridReadResult | u
 
     for (let col = 0; col < rowValue.length; col += 1) {
       const cell = rowValue[col];
-      if (cell === 1) {
-        blocks.push({ row, col });
-      } else if (cell !== 0) {
-        issues.push({
-          code: "invalid_grid_cell",
-          message: "Grid cells must be 0 (open) or 1 (black).",
-          path: `${rowPath}[${col}]`,
-        });
-        hasError = true;
+      if (isV3) {
+        if (cell === "") {
+          blocks.push({ row, col });
+        } else if (typeof cell !== "string") {
+          issues.push({
+            code: "invalid_grid_cell",
+            message: 'Grid cells must be strings ("" for black, letter for open).',
+            path: `${rowPath}[${col}]`,
+          });
+          hasError = true;
+        }
+      } else {
+        if (cell === 1) {
+          blocks.push({ row, col });
+        } else if (cell !== 0) {
+          issues.push({
+            code: "invalid_grid_cell",
+            message: "Grid cells must be 0 (open) or 1 (black).",
+            path: `${rowPath}[${col}]`,
+          });
+          hasError = true;
+        }
       }
     }
   }

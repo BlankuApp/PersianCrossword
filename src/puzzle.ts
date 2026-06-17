@@ -23,7 +23,8 @@ export function compilePuzzle(input: CrosswordJson): CrosswordPuzzle {
   for (let row = 0; row < input.grid.length; row += 1) {
     const rowValues = input.grid[row]!;
     for (let col = 0; col < rowValues.length; col += 1) {
-      if (rowValues[col] === 1) {
+      const cell = rowValues[col];
+      if (input.version === 3 ? cell === "" : cell === 1) {
         blocks.add(cellKey({ row, col }));
       }
     }
@@ -31,13 +32,19 @@ export function compilePuzzle(input: CrosswordJson): CrosswordPuzzle {
 
   const slots = validation.derivedSlots.map<Slot>((slot) => {
     const clue = lookupGroupEntry(input.clues, slot.direction, slot.groupNum, slot.wordIndexInGroup);
-    const rawAnswer = lookupGroupEntry(
-      input.answers,
-      slot.direction,
-      slot.groupNum,
-      slot.wordIndexInGroup,
-    );
-    const answer = typeof rawAnswer === "string" ? rawAnswer : null;
+    let answer: string | null;
+
+    if (input.version === 3) {
+      answer = slot.cells.map((c) => input.grid[c.row]![c.col]!).join("");
+    } else {
+      const rawAnswer = lookupGroupEntry(
+        input.answers,
+        slot.direction,
+        slot.groupNum,
+        slot.wordIndexInGroup,
+      );
+      answer = typeof rawAnswer === "string" ? rawAnswer : null;
+    }
 
     return {
       ...slot,

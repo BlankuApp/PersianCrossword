@@ -11,6 +11,7 @@ export interface PuzzleSummary {
   readonly rows: number;
   readonly cols: number;
   readonly json: CrosswordJson;
+  readonly filePath: string;
   readonly solutionImageUrl: string | undefined;
   readonly sourceImageUrl: string | undefined;
   readonly error?: string;
@@ -79,7 +80,7 @@ function deriveSummary(path: string, json: CrosswordJson): PuzzleSummary {
     ? undefined
     : validation.issues.map((i) => i.message).join("\n");
 
-  return { id, title, newspaper, difficulty, author, publishedAt, rows, cols, json, solutionImageUrl, sourceImageUrl, error };
+  return { id, title, newspaper, difficulty, author, publishedAt, rows, cols, json, filePath: path, solutionImageUrl, sourceImageUrl, error };
 }
 
 const _all: PuzzleSummary[] = Object.entries(modules).map(([path, json]) => {
@@ -99,6 +100,7 @@ const _all: PuzzleSummary[] = Object.entries(modules).map(([path, json]) => {
       rows: 0,
       cols: 0,
       json: json as CrosswordJson,
+      filePath: path,
       solutionImageUrl: undefined,
       sourceImageUrl: undefined,
       error: message,
