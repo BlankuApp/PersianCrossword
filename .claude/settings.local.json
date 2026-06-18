@@ -22,7 +22,31 @@
       "Bash(playwright *)",
       "Read(//c/tmp/**)",
       "Read(//c/Users/eskan/**)",
-      "Bash(xargs -I {} sh -c 'echo \"File: {}\"; head -3 \"{}\"')"
+      "Bash(xargs -I {} sh -c 'echo \"File: {}\"; head -3 \"{}\"')",
+      "Bash(git apply *)",
+      "Bash(echo \"started with pid $!\")",
+      "Bash(netstat -ltnp)",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__new_page",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__take_snapshot",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__click",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__take_screenshot",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__evaluate_script",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__press_key",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__list_console_messages",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__fill",
+      "Bash(git -C /home/hamed/PersianCrossword apply --check /home/hamed/.claude/jobs/b8b61961/tmp/nav-feature.patch)",
+      "Bash(cp /home/hamed/PersianCrossword/.claude/worktrees/sprightly-dreaming-lynx/app/components/CluePanel.tsx /home/hamed/PersianCrossword/app/components/CluePanel.tsx)",
+      "Bash(cp /home/hamed/PersianCrossword/.claude/worktrees/sprightly-dreaming-lynx/app/pages/SolverPage.tsx /home/hamed/PersianCrossword/app/pages/SolverPage.tsx)",
+      "Bash(cp /home/hamed/PersianCrossword/.claude/worktrees/sprightly-dreaming-lynx/app/styles.css /home/hamed/PersianCrossword/app/styles.css)",
+      "Bash(break)",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__navigate_page",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__resize_page",
+      "Bash(git -C /home/hamed/PersianCrossword status --short -- app/)",
+      "Bash(cp /home/hamed/PersianCrossword/app/components/CluePanel.tsx /home/hamed/PersianCrossword/.claude/worktrees/clear-button-fix/app/components/CluePanel.tsx)",
+      "Bash(cp /home/hamed/PersianCrossword/app/pages/SolverPage.tsx /home/hamed/PersianCrossword/.claude/worktrees/clear-button-fix/app/pages/SolverPage.tsx)",
+      "Bash(cp /home/hamed/PersianCrossword/app/styles.css /home/hamed/PersianCrossword/.claude/worktrees/clear-button-fix/app/styles.css)",
+      "Bash(/usr/bin/diff *)",
+      "Bash(/usr/bin/grep *)"
     ]
   }
 }

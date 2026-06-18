@@ -263,19 +263,6 @@ select {
   object-fit: contain;
 }
 
-.active-clue-overlay {
-  max-width: min(360px, calc(100vw - 24px));
-  padding: 10px 12px;
-  border: 1px solid #cfd7cf;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.98);
-  color: #17201b;
-  line-height: 1.6;
-  box-shadow:
-    0 12px 28px rgba(24, 36, 30, 0.2),
-    0 2px 8px rgba(24, 36, 30, 0.08);
-}
-
 .solver-layout {
   display: grid;
   grid-template-columns: minmax(320px, 680px) minmax(280px, 1fr);
@@ -606,6 +593,44 @@ select {
   z-index: 50;
 }
 
+.clue-nav {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.clue-nav button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid #d3d8d2;
+  border-radius: 6px;
+  background: #fffdf7;
+  color: #17201b;
+  cursor: pointer;
+}
+
+.clue-nav button:hover {
+  background: #f0f4f2;
+}
+
+.clue-nav-rotate {
+  transform: rotate(-90deg);
+}
+
+.clue-nav button.clue-nav-danger {
+  margin-right: auto;
+  border-color: #e0a3a3;
+  color: #b3261e;
+}
+
+.clue-nav button.clue-nav-danger:hover {
+  background: #fbeaea;
+}
+
 .clue-panel {
   overflow: hidden;
 }
@@ -815,10 +840,16 @@ select {
     left: 2px;
   }
 
-  .active-clue-overlay {
-    max-width: calc(100vw - 20px);
-    padding: 9px 11px;
-    font-size: 0.95rem;
+  /* Drop the row/column index labels and let the grid bleed into the
+     shell's padding so it gets the most space on small screens. */
+  .board-top-row,
+  .row-numbers {
+    display: none;
+  }
+
+  .board-with-labels {
+    width: calc(100% + 20px);
+    margin-inline: -10px;
   }
 }
 

@@ -14,11 +14,9 @@ import {
 } from "lucide-react";
 import {
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  type CSSProperties,
   type ReactNode,
 } from "react";
 import {
@@ -26,7 +24,6 @@ import {
   compilePuzzle,
   createState,
   normalizePersianText,
-  parseCellKey,
   splitPersianGraphemes,
   validatePuzzleJson,
   CrosswordValidationError,
@@ -43,7 +40,6 @@ import {
   isTouchDevice,
   moveByArrow,
   nextCoordInSlot,
-  sameCoord,
   selectSlot,
   slotCellKeys,
   type Selection,
@@ -53,13 +49,6 @@ import { loadProgress, saveProgress, normalizeGridDirection } from "../progress"
 import { saveCloudProgress } from "../cloudProgress";
 import { useAuth } from "../AuthContext";
 import { navigate } from "../router";
-import {
-  chooseOverlayCorner,
-  getOverlayViewportStyle,
-  unionRects,
-  type OverlayCorner,
-  type ViewportFrame,
-} from "../clueOverlay";
 import { BoardWithLabels } from "../components/BoardWithLabels";
 import { CrosswordBoard } from "../components/CrosswordBoard";
 import { ActiveClue, CluePanel } from "../components/CluePanel";
@@ -75,23 +64,13 @@ function listenPointer(onMove: (e: PointerEvent) => void, onUp: (e: PointerEvent
   };
 }
 
-type DragState =
-  | {
-      readonly kind: "tray";
-      readonly letter: string;
-      readonly slotId: string;
-      readonly pointerId: number;
-      readonly x: number;
-      readonly y: number;
-    }
-  | {
-      readonly kind: "cell";
-      readonly coord: Coord;
-      readonly letter: string;
-      readonly pointerId: number;
-      readonly x: number;
-      readonly y: number;
-    };
+interface CellDragState {
+  readonly coord: Coord;
+  readonly letter: string;
+  readonly pointerId: number;
+  readonly x: number;
+  readonly y: number;
+}
 
 interface SolverPageProps {
   readonly id: string;
@@ -103,10 +82,6 @@ interface SolverPageProps {
 
 export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePath }: SolverPageProps) {
   const { user } = useAuth();
-  const CLUE_OVERLAY_HIDE_MS = 3000;
-  const CLUE_OVERLAY_MARGIN = 12;
-  const CLUE_OVERLAY_GAP = 16;
-  const CLUE_OVERLAY_MOBILE_QUERY = "(max-width: 860px)";
   const normalizedJson = useMemo(() => normalizeGridDirection(json), [json]);
   const isDebugMode = import.meta.env.DEV && json.version === 3 && !!filePath;
   const isTouch = useMemo(() => isTouchDevice(), []);
@@ -164,7 +139,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
   });
   const [clueTab, setClueTab] = useState<Direction>("across");
   const [trayTiles, setTrayTiles] = useState<readonly TrayTile[]>([]);
-  const [dragState, setDragState] = useState<DragState | null>(null);
+  const [dragState, setDragState] = useState<CellDragState | null>(null);
   const cellDragCandidateRef = useRef<{
     readonly coord: Coord;
     readonly letter: string;
@@ -175,27 +150,10 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
   const [showHelp, setShowHelp] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
   const [sourceCollapsed, setSourceCollapsed] = useState(true);
-  const [showMobileClueOverlay, setShowMobileClueOverlay] = useState(() =>
-    typeof window.matchMedia === "function"
-      ? window.matchMedia(CLUE_OVERLAY_MOBILE_QUERY).matches
-      : false,
-  );
-  const [showClueOverlay, setShowClueOverlay] = useState(false);
-  const [clueOverlayCorner, setClueOverlayCorner] = useState<OverlayCorner>("top-right");
-  const [clueOverlayStyle, setClueOverlayStyle] = useState<CSSProperties>(() =>
-    getOverlayViewportStyle(
-      "top-right",
-      CLUE_OVERLAY_MARGIN,
-      { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight },
-      0,
-    ),
-  );
 
   const boardRef = useRef<HTMLDivElement>(null);
   const solutionBoardRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const clueOverlayRef = useRef<HTMLDivElement>(null);
-  const clueOverlayTimerRef = useRef<number | undefined>(undefined);
 
   function focusInput(): void {
     const el = inputRef.current;
@@ -251,9 +209,6 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     }
     return claimed;
   }, [trayTiles, activeSlot, crosswordState]);
-  const selectionSignature = selection
-    ? `${selection.coord.row}:${selection.coord.col}:${selection.direction}`
-    : "none";
 
   useEffect(() => {
     if (normalizedJson.version !== 3 || !activeSlot) {
@@ -278,26 +233,14 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
       if (e.pointerId !== pointerId) return;
       setDragState((current) => {
         if (!current) return null;
-        if (current.kind === "tray") {
-          if (puzzle) {
-            const targetCoord = hitTestCell(e.clientX, e.clientY);
-            const dragSlot = puzzle.getSlot(current.slotId);
-            const inSlot =
-              targetCoord && dragSlot ? dragSlot.cells.some((c) => sameCoord(c, targetCoord)) : false;
-            if (targetCoord && inSlot) {
-              updateCell(targetCoord, current.letter);
-            }
-          }
-        } else {
-          const boardRect = boardRef.current?.getBoundingClientRect();
-          const droppedOutside =
-            !boardRect ||
-            e.clientX < boardRect.left ||
-            e.clientX > boardRect.right ||
-            e.clientY < boardRect.top ||
-            e.clientY > boardRect.bottom;
-          if (droppedOutside) updateCell(current.coord, null);
-        }
+        const boardRect = boardRef.current?.getBoundingClientRect();
+        const droppedOutside =
+          !boardRect ||
+          e.clientX < boardRect.left ||
+          e.clientX > boardRect.right ||
+          e.clientY < boardRect.top ||
+          e.clientY > boardRect.bottom;
+        if (droppedOutside) updateCell(current.coord, null);
         return null;
       });
     }
@@ -322,7 +265,6 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
       if (dx * dx + dy * dy < THRESHOLD * THRESHOLD) return;
       cellDragCandidateRef.current = null;
       setDragState({
-        kind: "cell",
         coord: candidate.coord,
         letter: candidate.letter,
         pointerId: candidate.pointerId,
@@ -348,121 +290,6 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     setClueTab("across");
     setShowSolution(false);
   }, [id, puzzle]);
-
-  useEffect(() => {
-    if (typeof window.matchMedia !== "function") {
-      setShowMobileClueOverlay(false);
-      return;
-    }
-
-    const mediaQuery = window.matchMedia(CLUE_OVERLAY_MOBILE_QUERY);
-    const handleChange = (event: MediaQueryListEvent | MediaQueryList): void => {
-      setShowMobileClueOverlay(event.matches);
-    };
-
-    handleChange(mediaQuery);
-    mediaQuery.addEventListener?.("change", handleChange);
-
-    return () => {
-      mediaQuery.removeEventListener?.("change", handleChange);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (clueOverlayTimerRef.current !== undefined) {
-      window.clearTimeout(clueOverlayTimerRef.current);
-      clueOverlayTimerRef.current = undefined;
-    }
-
-    if (!showMobileClueOverlay || !activeSlot) {
-      setShowClueOverlay(false);
-      return;
-    }
-
-    setShowClueOverlay(true);
-    clueOverlayTimerRef.current = window.setTimeout(() => {
-      setShowClueOverlay(false);
-      clueOverlayTimerRef.current = undefined;
-    }, CLUE_OVERLAY_HIDE_MS);
-
-    return () => {
-      if (clueOverlayTimerRef.current !== undefined) {
-        window.clearTimeout(clueOverlayTimerRef.current);
-        clueOverlayTimerRef.current = undefined;
-      }
-    };
-  }, [activeSlot, id, selectionSignature, showMobileClueOverlay]);
-
-  useLayoutEffect(() => {
-    if (!showMobileClueOverlay || !showClueOverlay || !activeSlot) {
-      return;
-    }
-
-    const getViewportFrame = (): ViewportFrame => {
-      const viewport = window.visualViewport;
-      if (!viewport) {
-        return { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
-      }
-
-      return {
-        left: viewport.offsetLeft,
-        top: viewport.offsetTop,
-        width: viewport.width,
-        height: viewport.height,
-      };
-    };
-
-    const updateClueOverlayPlacement = (): void => {
-      const boardEl = boardRef.current;
-      const overlayEl = clueOverlayRef.current;
-      if (!boardEl || !overlayEl) {
-        return;
-      }
-
-      const slotRects = activeSlot.cells
-        .map((coord) => {
-          const cell = boardEl.querySelector<HTMLElement>(`[data-cell-key="${cellKey(coord)}"]`);
-          return cell?.getBoundingClientRect();
-        })
-        .filter((rect): rect is DOMRect => rect !== undefined);
-      const slotRect = unionRects(slotRects);
-      if (!slotRect) {
-        return;
-      }
-
-      const viewportFrame = getViewportFrame();
-      const overlayRect = overlayEl.getBoundingClientRect();
-      const nextCorner = chooseOverlayCorner({
-        slotRect,
-        overlaySize: { width: overlayRect.width, height: overlayRect.height },
-        viewport: { width: viewportFrame.width, height: viewportFrame.height },
-        margin: CLUE_OVERLAY_MARGIN,
-        gap: CLUE_OVERLAY_GAP,
-      });
-      setClueOverlayCorner(nextCorner);
-      setClueOverlayStyle(
-        getOverlayViewportStyle(
-          nextCorner,
-          CLUE_OVERLAY_MARGIN,
-          viewportFrame,
-          overlayRect.width,
-        ),
-      );
-    };
-
-    updateClueOverlayPlacement();
-    window.addEventListener("resize", updateClueOverlayPlacement);
-    window.addEventListener("scroll", updateClueOverlayPlacement, true);
-    window.visualViewport?.addEventListener("resize", updateClueOverlayPlacement);
-    window.visualViewport?.addEventListener("scroll", updateClueOverlayPlacement);
-
-    return () => {
-      window.removeEventListener("resize", updateClueOverlayPlacement);
-      window.removeEventListener("scroll", updateClueOverlayPlacement, true);
-      window.visualViewport?.removeEventListener("resize", updateClueOverlayPlacement);
-      window.visualViewport?.removeEventListener("scroll", updateClueOverlayPlacement);
-    };
-  }, [activeSlot, showClueOverlay, selectionSignature, showMobileClueOverlay]);
 
   // Close the solution overlay with the Escape key.
   useEffect(() => {
@@ -526,30 +353,37 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     if (!isTouch) focusInput();
   }
 
-  function hitTestCell(x: number, y: number): Coord | undefined {
-    const el = document.elementFromPoint(x, y);
-    const cellEl = el?.closest<HTMLElement>("[data-cell-key]");
-    const key = cellEl?.dataset.cellKey;
-    return key ? parseCellKey(key) : undefined;
+  function handleTrayTileTap(tile: TrayTile): void {
+    commitGrapheme(tile.letter);
   }
 
-  function handleTrayTileDragStart(tile: TrayTile, event: React.PointerEvent<HTMLButtonElement>): void {
-    if (!activeSlot) return;
-    event.preventDefault();
-    try {
-      event.currentTarget.setPointerCapture?.(event.pointerId);
-    } catch {
-      // Pointer capture is a tracking nicety, not required (drop is hit-tested via
-      // elementFromPoint); some browsers/synthetic pointers can reject it.
-    }
-    setDragState({
-      kind: "tray",
-      letter: tile.letter,
-      slotId: activeSlot.id,
-      pointerId: event.pointerId,
-      x: event.clientX,
-      y: event.clientY,
-    });
+  function navigateToFirst(): void {
+    if (!selection || !activeSlot) return;
+    setSelection({ ...selection, coord: activeSlot.start });
+    if (!isTouch) focusInput();
+  }
+
+  function navigateStep(offset: 1 | -1): void {
+    if (!selection || !activeSlot) return;
+    setSelection({ ...selection, coord: nextCoordInSlot(activeSlot, selection.coord, offset) });
+    if (!isTouch) focusInput();
+  }
+
+  function clearActiveSlot(): void {
+    if (!puzzle || !selection || !activeSlot) return;
+    const nextState = createState(puzzle, savedState);
+    for (const coord of activeSlot.cells) nextState.setCell(coord, null);
+    commitState(nextState);
+    setSelection({ ...selection, coord: activeSlot.start });
+    if (!isTouch) focusInput();
+  }
+
+  function toggleDirection(): void {
+    if (!puzzle || !selection) return;
+    const slots = puzzle.getSlotsForCell(selection.coord);
+    if (!slots.across || !slots.down) return;
+    setSelection({ ...selection, direction: selection.direction === "across" ? "down" : "across" });
+    if (!isTouch) focusInput();
   }
 
   function handleCellPointerDown(coord: Coord, event: React.PointerEvent<HTMLButtonElement>): void {
@@ -631,13 +465,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
 
     if (event.key === " " || event.code === "Space") {
       event.preventDefault();
-      const slots = puzzle.getSlotsForCell(selection.coord);
-      if (slots.across && slots.down) {
-        setSelection({
-          ...selection,
-          direction: selection.direction === "across" ? "down" : "across",
-        });
-      }
+      toggleDirection();
       return;
     }
 
@@ -931,19 +759,6 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
         </section>
       ) : (
         <>
-          {showMobileClueOverlay && showClueOverlay && activeSlot ? (
-            <div
-              ref={clueOverlayRef}
-              className="active-clue-overlay"
-              data-testid="active-clue-overlay"
-              aria-live="polite"
-              data-corner={clueOverlayCorner}
-              style={clueOverlayStyle}
-            >
-              {activeSlot.clue}
-            </div>
-          ) : null}
-
           <section className="solver-layout">
             <div className="board-column">
               <div className="board-panel">
@@ -971,7 +786,12 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
                 showTray={normalizedJson.version === 3}
                 trayTiles={trayTiles}
                 trayUsedTileIds={trayUsedTileIds}
-                onTrayTileDragStart={handleTrayTileDragStart}
+                onTrayTileTap={handleTrayTileTap}
+                onNavFirst={navigateToFirst}
+                onNavPrev={() => navigateStep(-1)}
+                onNavClear={clearActiveSlot}
+                onNavNext={() => navigateStep(1)}
+                onToggleDirection={toggleDirection}
               />
               <CluePanel
                 acrossSlots={puzzle!.acrossSlots}

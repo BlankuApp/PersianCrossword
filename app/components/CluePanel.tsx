@@ -1,3 +1,4 @@
+import { ChevronLast, ChevronLeft, ChevronRight, Eraser, RotateCw } from "lucide-react";
 import type { Direction, Slot } from "../../src/index";
 import type { TrayTile } from "../crosswordUi";
 
@@ -6,7 +7,12 @@ interface ActiveClueProps {
   readonly showTray?: boolean;
   readonly trayTiles?: readonly TrayTile[];
   readonly trayUsedTileIds?: ReadonlySet<string>;
-  readonly onTrayTileDragStart?: (tile: TrayTile, event: React.PointerEvent<HTMLButtonElement>) => void;
+  readonly onTrayTileTap?: (tile: TrayTile) => void;
+  readonly onNavFirst?: () => void;
+  readonly onNavPrev?: () => void;
+  readonly onNavClear?: () => void;
+  readonly onNavNext?: () => void;
+  readonly onToggleDirection?: () => void;
 }
 
 export function ActiveClue({
@@ -14,7 +20,12 @@ export function ActiveClue({
   showTray,
   trayTiles = [],
   trayUsedTileIds,
-  onTrayTileDragStart,
+  onTrayTileTap,
+  onNavFirst,
+  onNavPrev,
+  onNavClear,
+  onNavNext,
+  onToggleDirection,
 }: ActiveClueProps) {
   const handleGoogleSearch = () => {
     if (slot?.clue) {
@@ -23,6 +34,7 @@ export function ActiveClue({
       window.open(googleUrl, "_blank");
     }
   };
+  const isDown = slot?.direction === "down";
 
   return (
     <section className="active-clue" aria-label="پرسش فعال" aria-live="polite">
@@ -54,7 +66,7 @@ export function ActiveClue({
                     className={`tray-tile${disabled ? " tray-tile-disabled" : ""}`}
                     disabled={disabled}
                     aria-disabled={disabled}
-                    onPointerDown={disabled ? undefined : (e) => onTrayTileDragStart?.(tile, e)}
+                    onClick={disabled ? undefined : () => onTrayTileTap?.(tile)}
                   >
                     <span className="cell-value">{tile.letter}</span>
                   </button>
@@ -62,6 +74,38 @@ export function ActiveClue({
               })}
             </div>
           ) : null}
+          <div className="clue-nav" role="group" aria-label="پیمایش حروف">
+            {/* Across slots start at the right edge (RTL), down slots start at the top.
+                The same chevrons are reused for both: rotating -90deg turns "points right" /
+                "points right with end-bar" into "points up" / "points up with end-bar",
+                which is exactly the down-direction meaning. */}
+            <button type="button" onClick={onNavFirst} title="رفتن به حرف اول" aria-label="رفتن به حرف اول">
+              <ChevronLast size={16} aria-hidden="true" className={isDown ? "clue-nav-rotate" : undefined} />
+            </button>
+            <button type="button" onClick={onNavPrev} title="حرف قبلی" aria-label="حرف قبلی">
+              <ChevronRight size={16} aria-hidden="true" className={isDown ? "clue-nav-rotate" : undefined} />
+            </button>
+            <button type="button" onClick={onNavNext} title="حرف بعدی" aria-label="حرف بعدی">
+              <ChevronLeft size={16} aria-hidden="true" className={isDown ? "clue-nav-rotate" : undefined} />
+            </button>
+            <button
+              type="button"
+              onClick={onToggleDirection}
+              title="تغییر جهت (افقی/عمودی)"
+              aria-label="تغییر جهت افقی یا عمودی"
+            >
+              <RotateCw size={16} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={onNavClear}
+              title="پاک کردن پاسخ و شروع دوباره"
+              aria-label="پاک کردن پاسخ و شروع دوباره"
+              className="clue-nav-danger"
+            >
+              <Eraser size={16} aria-hidden="true" />
+            </button>
+          </div>
         </>
       ) : (
         <p>یک خانه سفید را انتخاب کنید.</p>
