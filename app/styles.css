@@ -460,6 +460,7 @@ select {
 .cell-open {
   background: #fffdf7;
   cursor: pointer;
+  touch-action: none;
 }
 
 .cell-block {
@@ -560,6 +561,49 @@ select {
 
 .clue-search-link:hover {
   color: #1e5c38;
+}
+
+.letter-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.tray-tile {
+  --tray-tile-size: 2em;
+  width: var(--tray-tile-size);
+  height: var(--tray-tile-size);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #d3d8d2;
+  border-radius: 4px;
+  background: #fffdf7;
+  color: #17201b;
+  cursor: pointer;
+  /* Without these, touch browsers treat a press-and-move on the tile as a page
+     scroll/text-selection gesture and may never deliver usable pointermove events. */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.tray-tile .cell-value {
+  font-size: calc(var(--tray-tile-size) * 0.75);
+}
+
+.tray-tile-disabled {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}
+
+.tray-drag-ghost {
+  position: fixed;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 50;
 }
 
 .clue-panel {
@@ -743,28 +787,22 @@ select {
     text-overflow: ellipsis;
   }
 
-  .puzzle-meta {
-    margin-top: 0;
-    gap: 4px 10px;
-    font-size: 0.78rem;
-  }
-
-  .puzzle-meta-item {
-    gap: 4px;
+  .app-header .puzzle-meta {
+    display: none;
   }
 
   .toolbar {
     flex-wrap: nowrap;
     flex: 0 0 auto;
-    gap: 6px;
+    gap: 4px;
     width: auto;
     justify-content: flex-start;
   }
 
   .toolbar button {
     flex: 0 0 auto;
-    min-height: 36px;
-    padding: 0 10px;
+    min-height: 34px;
+    padding: 0 8px;
     gap: 0;
   }
 

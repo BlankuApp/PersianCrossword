@@ -25,6 +25,8 @@ import {
   cellKey,
   compilePuzzle,
   createState,
+  normalizePersianText,
+  parseCellKey,
   splitPersianGraphemes,
   validatePuzzleJson,
   CrosswordValidationError,
@@ -35,13 +37,17 @@ import {
   type CrosswordJson,
 } from "../../src/index";
 import {
+  buildLetterTray,
   getActiveSlot,
   handleCellSelection,
+  isTouchDevice,
   moveByArrow,
   nextCoordInSlot,
+  sameCoord,
   selectSlot,
   slotCellKeys,
   type Selection,
+  type TrayTile,
 } from "../crosswordUi";
 import { loadProgress, saveProgress, normalizeGridDirection } from "../progress";
 import { saveCloudProgress } from "../cloudProgress";
@@ -57,6 +63,35 @@ import {
 import { BoardWithLabels } from "../components/BoardWithLabels";
 import { CrosswordBoard } from "../components/CrosswordBoard";
 import { ActiveClue, CluePanel } from "../components/CluePanel";
+
+function listenPointer(onMove: (e: PointerEvent) => void, onUp: (e: PointerEvent) => void): () => void {
+  window.addEventListener("pointermove", onMove);
+  window.addEventListener("pointerup", onUp);
+  window.addEventListener("pointercancel", onUp);
+  return () => {
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", onUp);
+    window.removeEventListener("pointercancel", onUp);
+  };
+}
+
+type DragState =
+  | {
+      readonly kind: "tray";
+      readonly letter: string;
+      readonly slotId: string;
+      readonly pointerId: number;
+      readonly x: number;
+      readonly y: number;
+    }
+  | {
+      readonly kind: "cell";
+      readonly coord: Coord;
+      readonly letter: string;
+      readonly pointerId: number;
+      readonly x: number;
+      readonly y: number;
+    };
 
 interface SolverPageProps {
   readonly id: string;
@@ -74,6 +109,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
   const CLUE_OVERLAY_MOBILE_QUERY = "(max-width: 860px)";
   const normalizedJson = useMemo(() => normalizeGridDirection(json), [json]);
   const isDebugMode = import.meta.env.DEV && json.version === 3 && !!filePath;
+  const isTouch = useMemo(() => isTouchDevice(), []);
 
   // Debug-only: mutable copy of the source grid (unreversed, matches disk format).
   const [debugEditGrid, setDebugEditGrid] = useState<string[][]>(() =>
@@ -127,6 +163,15 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     }
   });
   const [clueTab, setClueTab] = useState<Direction>("across");
+  const [trayTiles, setTrayTiles] = useState<readonly TrayTile[]>([]);
+  const [dragState, setDragState] = useState<DragState | null>(null);
+  const cellDragCandidateRef = useRef<{
+    readonly coord: Coord;
+    readonly letter: string;
+    readonly pointerId: number;
+    readonly startX: number;
+    readonly startY: number;
+  } | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
   const [sourceCollapsed, setSourceCollapsed] = useState(true);
@@ -194,9 +239,106 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
   }, [puzzle, debugPuzzle, normalizedJson, isDebugMode, debugEditGrid]);
   const activeSlot = puzzle ? getActiveSlot(puzzle, selection) : undefined;
   const activeKeys = slotCellKeys(activeSlot);
+  const trayUsedTileIds = useMemo(() => {
+    if (!activeSlot || !crosswordState) return new Set<string>();
+    const claimed = new Set<string>();
+    for (const coord of activeSlot.cells) {
+      const raw = crosswordState.getCell(coord);
+      if (!raw) continue;
+      const letter = normalizePersianText(raw);
+      const tile = trayTiles.find((t) => !claimed.has(t.id) && normalizePersianText(t.letter) === letter);
+      if (tile) claimed.add(tile.id);
+    }
+    return claimed;
+  }, [trayTiles, activeSlot, crosswordState]);
   const selectionSignature = selection
     ? `${selection.coord.row}:${selection.coord.col}:${selection.direction}`
     : "none";
+
+  useEffect(() => {
+    if (normalizedJson.version !== 3 || !activeSlot) {
+      setTrayTiles([]);
+      return;
+    }
+    setTrayTiles(buildLetterTray(activeSlot));
+    // Regenerate only when the active *slot* changes, not on every selection move within it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSlot?.id, normalizedJson.version]);
+
+  useEffect(() => {
+    if (!dragState) return;
+    const pointerId = dragState.pointerId;
+
+    function onPointerMove(e: PointerEvent): void {
+      if (e.pointerId !== pointerId) return;
+      setDragState((prev) => (prev ? { ...prev, x: e.clientX, y: e.clientY } : prev));
+    }
+
+    function onPointerUp(e: PointerEvent): void {
+      if (e.pointerId !== pointerId) return;
+      setDragState((current) => {
+        if (!current) return null;
+        if (current.kind === "tray") {
+          if (puzzle) {
+            const targetCoord = hitTestCell(e.clientX, e.clientY);
+            const dragSlot = puzzle.getSlot(current.slotId);
+            const inSlot =
+              targetCoord && dragSlot ? dragSlot.cells.some((c) => sameCoord(c, targetCoord)) : false;
+            if (targetCoord && inSlot) {
+              updateCell(targetCoord, current.letter);
+            }
+          }
+        } else {
+          const boardRect = boardRef.current?.getBoundingClientRect();
+          const droppedOutside =
+            !boardRect ||
+            e.clientX < boardRect.left ||
+            e.clientX > boardRect.right ||
+            e.clientY < boardRect.top ||
+            e.clientY > boardRect.bottom;
+          if (droppedOutside) updateCell(current.coord, null);
+        }
+        return null;
+      });
+    }
+
+    return listenPointer(onPointerMove, onPointerUp);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dragState?.pointerId, puzzle]);
+
+  // Mount-once: distinguishes a plain tap/click on a cell from a drag-it-out gesture. A
+  // pointerdown on a filled cell only arms a candidate (see handleCellPointerDown); this
+  // effect promotes it to a real drag once movement crosses a small threshold, so ordinary
+  // clicks never flash a ghost tile. No preventDefault anywhere in this path — that would
+  // suppress the native click a plain tap relies on for selectCell.
+  useEffect(() => {
+    const THRESHOLD = 6;
+
+    function onPointerMove(e: PointerEvent): void {
+      const candidate = cellDragCandidateRef.current;
+      if (!candidate || e.pointerId !== candidate.pointerId) return;
+      const dx = e.clientX - candidate.startX;
+      const dy = e.clientY - candidate.startY;
+      if (dx * dx + dy * dy < THRESHOLD * THRESHOLD) return;
+      cellDragCandidateRef.current = null;
+      setDragState({
+        kind: "cell",
+        coord: candidate.coord,
+        letter: candidate.letter,
+        pointerId: candidate.pointerId,
+        x: e.clientX,
+        y: e.clientY,
+      });
+    }
+
+    function onPointerUp(e: PointerEvent): void {
+      const candidate = cellDragCandidateRef.current;
+      if (!candidate || e.pointerId !== candidate.pointerId) return;
+      cellDragCandidateRef.current = null;
+    }
+
+    return listenPointer(onPointerMove, onPointerUp);
+  }, []);
 
   useEffect(() => {
     const restored = loadProgress(id);
@@ -369,18 +511,57 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
 
   function selectCell(coord: Coord): void {
     if (!puzzle) return;
+
     setSelection((current) => {
       const next = handleCellSelection(puzzle, coord, current);
       if (next) setClueTab(next.direction);
       return next;
     });
-    focusInput();
+    if (!isTouch) focusInput();
   }
 
   function selectClue(slot: Slot): void {
     setSelection(selectSlot(slot));
     setClueTab(slot.direction);
-    focusInput();
+    if (!isTouch) focusInput();
+  }
+
+  function hitTestCell(x: number, y: number): Coord | undefined {
+    const el = document.elementFromPoint(x, y);
+    const cellEl = el?.closest<HTMLElement>("[data-cell-key]");
+    const key = cellEl?.dataset.cellKey;
+    return key ? parseCellKey(key) : undefined;
+  }
+
+  function handleTrayTileDragStart(tile: TrayTile, event: React.PointerEvent<HTMLButtonElement>): void {
+    if (!activeSlot) return;
+    event.preventDefault();
+    try {
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    } catch {
+      // Pointer capture is a tracking nicety, not required (drop is hit-tested via
+      // elementFromPoint); some browsers/synthetic pointers can reject it.
+    }
+    setDragState({
+      kind: "tray",
+      letter: tile.letter,
+      slotId: activeSlot.id,
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+    });
+  }
+
+  function handleCellPointerDown(coord: Coord, event: React.PointerEvent<HTMLButtonElement>): void {
+    const value = crosswordState?.getCell(coord);
+    if (!value) return;
+    cellDragCandidateRef.current = {
+      coord,
+      letter: value,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+    };
   }
 
   function commitGrapheme(grapheme: string): void {
@@ -464,7 +645,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     if (graphemes.length !== 1 || event.ctrlKey || event.metaKey || event.altKey) return;
 
     event.preventDefault();
-    updateCell(selection.coord, event.key);
+    updateCell(selection.coord, graphemes[0]!);
 
     if (active) {
       const next = nextCoordInSlot(active, selection.coord, 1);
@@ -775,6 +956,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
                     selection={selection}
                     activeKeys={activeKeys}
                     onCellClick={selectCell}
+                    onCellPointerDown={handleCellPointerDown}
                     onKeyDown={handleKeyDown}
                     onInputBeforeInput={handleInputBeforeInput}
                     onInputChange={handleInputChange}
@@ -784,7 +966,13 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
             </div>
 
             <div className="clue-sidebar">
-              <ActiveClue slot={activeSlot} />
+              <ActiveClue
+                slot={activeSlot}
+                showTray={normalizedJson.version === 3}
+                trayTiles={trayTiles}
+                trayUsedTileIds={trayUsedTileIds}
+                onTrayTileDragStart={handleTrayTileDragStart}
+              />
               <CluePanel
                 acrossSlots={puzzle!.acrossSlots}
                 downSlots={puzzle!.downSlots}
@@ -819,6 +1007,16 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
               )}
             </div>
           )}
+
+          {dragState ? (
+            <div
+              className="cell cell-open tray-tile tray-drag-ghost"
+              style={{ left: dragState.x, top: dragState.y }}
+              aria-hidden="true"
+            >
+              <span className="cell-value">{dragState.letter}</span>
+            </div>
+          ) : null}
         </>
       )}
     </main>

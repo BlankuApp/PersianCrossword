@@ -1,6 +1,21 @@
 import type { Direction, Slot } from "../../src/index";
+import type { TrayTile } from "../crosswordUi";
 
-export function ActiveClue({ slot }: { readonly slot: Slot | undefined }) {
+interface ActiveClueProps {
+  readonly slot: Slot | undefined;
+  readonly showTray?: boolean;
+  readonly trayTiles?: readonly TrayTile[];
+  readonly trayUsedTileIds?: ReadonlySet<string>;
+  readonly onTrayTileDragStart?: (tile: TrayTile, event: React.PointerEvent<HTMLButtonElement>) => void;
+}
+
+export function ActiveClue({
+  slot,
+  showTray,
+  trayTiles = [],
+  trayUsedTileIds,
+  onTrayTileDragStart,
+}: ActiveClueProps) {
   const handleGoogleSearch = () => {
     if (slot?.clue) {
       const searchQuery = `${slot.clue} در جدول`;
@@ -27,6 +42,26 @@ export function ActiveClue({ slot }: { readonly slot: Slot | undefined }) {
             </button>
           </div>
           <p>{slot.clue}</p>
+          {showTray && trayTiles.length > 0 ? (
+            <div className="letter-tray" role="list" aria-label="کاشی‌های حرف">
+              {trayTiles.map((tile) => {
+                const disabled = trayUsedTileIds?.has(tile.id) ?? false;
+                return (
+                  <button
+                    key={tile.id}
+                    type="button"
+                    role="listitem"
+                    className={`tray-tile${disabled ? " tray-tile-disabled" : ""}`}
+                    disabled={disabled}
+                    aria-disabled={disabled}
+                    onPointerDown={disabled ? undefined : (e) => onTrayTileDragStart?.(tile, e)}
+                  >
+                    <span className="cell-value">{tile.letter}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
         </>
       ) : (
         <p>یک خانه سفید را انتخاب کنید.</p>

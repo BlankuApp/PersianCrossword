@@ -1,4 +1,11 @@
-import { cellKey, type Coord, type CrosswordPuzzle, type Direction, type Slot } from "../src/index";
+import {
+  cellKey,
+  splitPersianGraphemes,
+  type Coord,
+  type CrosswordPuzzle,
+  type Direction,
+  type Slot,
+} from "../src/index";
 
 export interface Selection {
   readonly coord: Coord;
@@ -96,4 +103,66 @@ export function slotCellKeys(slot: Slot | undefined): ReadonlySet<string> {
 
 export function sameCoord(a: Coord, b: Coord): boolean {
   return a.row === b.row && a.col === b.col;
+}
+
+export function isTouchDevice(): boolean {
+  if (typeof navigator !== "undefined" && navigator.maxTouchPoints > 0) return true;
+  if (typeof window !== "undefined" && "ontouchstart" in window) return true;
+  return false;
+}
+
+export interface TrayTile {
+  readonly id: string;
+  readonly letter: string;
+}
+
+const TRAY_DECOY_COUNT = 5;
+const PERSIAN_LETTERS = [
+  "ا", "ب", "پ", "ت", "ث", "ج", "چ", "ح", "خ", "د", "ذ", "ر", "ز", "ژ", "س", "ش",
+  "ص", "ض", "ط", "ظ", "ع", "غ", "ف", "ق", "ک", "گ", "ل", "م", "ن", "و", "ه", "ی",
+] as const;
+
+/** Letters needed to fill `slot` plus a fixed number of random decoys, shuffled together. */
+export function buildLetterTray(slot: Slot): readonly TrayTile[] {
+  const realLetters = slot.answer ? splitPersianGraphemes(slot.answer) : [];
+  const rng = mulberry32(hashStringToSeed(slot.id));
+  const tiles: TrayTile[] = realLetters.map((letter, i) => ({
+    id: `${slot.id}:real:${i}`,
+    letter,
+  }));
+  for (let i = 0; i < TRAY_DECOY_COUNT; i += 1) {
+    const letter = PERSIAN_LETTERS[Math.floor(rng() * PERSIAN_LETTERS.length)]!;
+    tiles.push({ id: `${slot.id}:decoy:${i}`, letter });
+  }
+  return shuffle(tiles, rng);
+}
+
+function hashStringToSeed(value: string): number {
+  let h = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    h = (Math.imul(h, 31) + value.charCodeAt(i)) | 0;
+  }
+  return h >>> 0;
+}
+
+// Deterministic, dependency-free PRNG seeded by slot.id so a clue's tray order is stable
+// within a session without needing to persist it.
+function mulberry32(seed: number): () => number {
+  let a = seed;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffle<T>(items: readonly T[], rng: () => number): T[] {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rng() * (i + 1));
+    [arr[i], arr[j]] = [arr[j]!, arr[i]!];
+  }
+  return arr;
 }

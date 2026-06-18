@@ -28,6 +28,7 @@ interface CrosswordBoardProps {
   readonly selection: Selection | undefined;
   readonly activeKeys: ReadonlySet<string>;
   readonly onCellClick: (coord: Coord) => void;
+  readonly onCellPointerDown?: (coord: Coord, event: React.PointerEvent<HTMLButtonElement>) => void;
   readonly onKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => void;
   readonly onInputBeforeInput?: (event: React.FormEvent<HTMLInputElement>) => void;
   readonly onInputChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -42,6 +43,7 @@ export function CrosswordBoard({
   selection,
   activeKeys,
   onCellClick,
+  onCellPointerDown,
   onKeyDown,
   onInputBeforeInput,
   onInputChange,
@@ -103,6 +105,7 @@ export function CrosswordBoard({
               aria-label={`ردیف ${row + 1} ستون ${col + 1}`}
               disabled={isBlock && !clickableBlocks}
               onClick={() => onCellClick(coord)}
+              onPointerDown={onCellPointerDown ? (e) => onCellPointerDown(coord, e) : undefined}
             >
               {isBlock ? (
                 <svg className="cell-block-icon" viewBox="0 0 24 24" aria-hidden="true">
