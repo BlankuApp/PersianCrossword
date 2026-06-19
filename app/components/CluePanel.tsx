@@ -55,16 +55,15 @@ export function ActiveClue({
           {showTray && trayTiles.length > 0 ? (
             <div className="letter-tray" role="list" aria-label="کاشی‌های حرف">
               {trayTiles.map((tile) => {
-                const disabled = trayUsedTileIds?.has(tile.id) ?? false;
+                const used = trayUsedTileIds?.has(tile.id) ?? false;
                 return (
                   <button
                     key={tile.id}
                     type="button"
                     role="listitem"
-                    className={`tray-tile${disabled ? " tray-tile-disabled" : ""}`}
-                    disabled={disabled}
-                    aria-disabled={disabled}
-                    onClick={disabled ? undefined : () => onTrayTileTap?.(tile)}
+                    className={`tray-tile${used ? " tray-tile-used" : ""}`}
+                    aria-pressed={used}
+                    onClick={() => onTrayTileTap?.(tile)}
                   >
                     <span className="cell-value">{tile.letter}</span>
                   </button>

@@ -559,10 +559,8 @@ select {
   font-size: calc(var(--tray-tile-size) * 0.75);
 }
 
-.tray-tile-disabled {
-  opacity: 0.35;
-  cursor: default;
-  pointer-events: none;
+.tray-tile-used {
+  opacity: 0.6;
 }
 
 .clue-nav {
@@ -791,7 +789,7 @@ select {
 
 @media (max-width: 480px) {
   .app-shell {
-    padding: 10px;
+    padding: 4px;
   }
 
   .app-header {
@@ -849,8 +847,8 @@ select {
   }
 
   .board-with-labels {
-    width: calc(100% + 20px);
-    margin-inline: -10px;
+    width: calc(100% + 4px);
+    margin-inline: -2px;
   }
 
   .active-clue {
