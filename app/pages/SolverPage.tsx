@@ -53,25 +53,6 @@ import { BoardWithLabels } from "../components/BoardWithLabels";
 import { CrosswordBoard } from "../components/CrosswordBoard";
 import { ActiveClue, CluePanel } from "../components/CluePanel";
 
-function listenPointer(onMove: (e: PointerEvent) => void, onUp: (e: PointerEvent) => void): () => void {
-  window.addEventListener("pointermove", onMove);
-  window.addEventListener("pointerup", onUp);
-  window.addEventListener("pointercancel", onUp);
-  return () => {
-    window.removeEventListener("pointermove", onMove);
-    window.removeEventListener("pointerup", onUp);
-    window.removeEventListener("pointercancel", onUp);
-  };
-}
-
-interface CellDragState {
-  readonly coord: Coord;
-  readonly letter: string;
-  readonly pointerId: number;
-  readonly x: number;
-  readonly y: number;
-}
-
 interface SolverPageProps {
   readonly id: string;
   readonly json: CrosswordJson;
@@ -139,14 +120,6 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
   });
   const [clueTab, setClueTab] = useState<Direction>("across");
   const [trayTiles, setTrayTiles] = useState<readonly TrayTile[]>([]);
-  const [dragState, setDragState] = useState<CellDragState | null>(null);
-  const cellDragCandidateRef = useRef<{
-    readonly coord: Coord;
-    readonly letter: string;
-    readonly pointerId: number;
-    readonly startX: number;
-    readonly startY: number;
-  } | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
   const [sourceCollapsed, setSourceCollapsed] = useState(true);
@@ -219,68 +192,6 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     // Regenerate only when the active *slot* changes, not on every selection move within it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSlot?.id, normalizedJson.version]);
-
-  useEffect(() => {
-    if (!dragState) return;
-    const pointerId = dragState.pointerId;
-
-    function onPointerMove(e: PointerEvent): void {
-      if (e.pointerId !== pointerId) return;
-      setDragState((prev) => (prev ? { ...prev, x: e.clientX, y: e.clientY } : prev));
-    }
-
-    function onPointerUp(e: PointerEvent): void {
-      if (e.pointerId !== pointerId) return;
-      setDragState((current) => {
-        if (!current) return null;
-        const boardRect = boardRef.current?.getBoundingClientRect();
-        const droppedOutside =
-          !boardRect ||
-          e.clientX < boardRect.left ||
-          e.clientX > boardRect.right ||
-          e.clientY < boardRect.top ||
-          e.clientY > boardRect.bottom;
-        if (droppedOutside) updateCell(current.coord, null);
-        return null;
-      });
-    }
-
-    return listenPointer(onPointerMove, onPointerUp);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dragState?.pointerId, puzzle]);
-
-  // Mount-once: distinguishes a plain tap/click on a cell from a drag-it-out gesture. A
-  // pointerdown on a filled cell only arms a candidate (see handleCellPointerDown); this
-  // effect promotes it to a real drag once movement crosses a small threshold, so ordinary
-  // clicks never flash a ghost tile. No preventDefault anywhere in this path — that would
-  // suppress the native click a plain tap relies on for selectCell.
-  useEffect(() => {
-    const THRESHOLD = 6;
-
-    function onPointerMove(e: PointerEvent): void {
-      const candidate = cellDragCandidateRef.current;
-      if (!candidate || e.pointerId !== candidate.pointerId) return;
-      const dx = e.clientX - candidate.startX;
-      const dy = e.clientY - candidate.startY;
-      if (dx * dx + dy * dy < THRESHOLD * THRESHOLD) return;
-      cellDragCandidateRef.current = null;
-      setDragState({
-        coord: candidate.coord,
-        letter: candidate.letter,
-        pointerId: candidate.pointerId,
-        x: e.clientX,
-        y: e.clientY,
-      });
-    }
-
-    function onPointerUp(e: PointerEvent): void {
-      const candidate = cellDragCandidateRef.current;
-      if (!candidate || e.pointerId !== candidate.pointerId) return;
-      cellDragCandidateRef.current = null;
-    }
-
-    return listenPointer(onPointerMove, onPointerUp);
-  }, []);
 
   useEffect(() => {
     const restored = loadProgress(id);
@@ -384,18 +295,6 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     if (!slots.across || !slots.down) return;
     setSelection({ ...selection, direction: selection.direction === "across" ? "down" : "across" });
     if (!isTouch) focusInput();
-  }
-
-  function handleCellPointerDown(coord: Coord, event: React.PointerEvent<HTMLButtonElement>): void {
-    const value = crosswordState?.getCell(coord);
-    if (!value) return;
-    cellDragCandidateRef.current = {
-      coord,
-      letter: value,
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-    };
   }
 
   function commitGrapheme(grapheme: string): void {
@@ -771,7 +670,6 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
                     selection={selection}
                     activeKeys={activeKeys}
                     onCellClick={selectCell}
-                    onCellPointerDown={handleCellPointerDown}
                     onKeyDown={handleKeyDown}
                     onInputBeforeInput={handleInputBeforeInput}
                     onInputChange={handleInputChange}
@@ -827,16 +725,6 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
               )}
             </div>
           )}
-
-          {dragState ? (
-            <div
-              className="cell cell-open tray-tile tray-drag-ghost"
-              style={{ left: dragState.x, top: dragState.y }}
-              aria-hidden="true"
-            >
-              <span className="cell-value">{dragState.letter}</span>
-            </div>
-          ) : null}
         </>
       )}
     </main>

@@ -403,7 +403,6 @@ select {
   grid-auto-rows: 1fr;
   outline: none;
   direction: ltr;
-  touch-action: manipulation;
   position: relative;
 }
 
@@ -447,7 +446,6 @@ select {
 .cell-open {
   background: #fffdf7;
   cursor: pointer;
-  touch-action: none;
 }
 
 .cell-block {
@@ -569,11 +567,6 @@ select {
   background: #fffdf7;
   color: #17201b;
   cursor: pointer;
-  /* Without these, touch browsers treat a press-and-move on the tile as a page
-     scroll/text-selection gesture and may never deliver usable pointermove events. */
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
 }
 
 .tray-tile .cell-value {
@@ -584,13 +577,6 @@ select {
   opacity: 0.35;
   cursor: default;
   pointer-events: none;
-}
-
-.tray-drag-ghost {
-  position: fixed;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  z-index: 50;
 }
 
 .clue-nav {
