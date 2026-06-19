@@ -40,9 +40,8 @@ export function ActiveClue({
     <section className="active-clue" aria-label="پرسش فعال" aria-live="polite">
       {slot ? (
         <>
-          <div className="clue-kicker">
-            {slot.direction === "across" ? "ردیف" : "ستون"} {slot.groupNum}، کلمه {slot.wordIndexInGroup}
-            <span>{slot.length} حرف</span>
+          <p>
+            {slot.clue}{" "}
             <button
               type="button"
               onClick={handleGoogleSearch}
@@ -52,8 +51,7 @@ export function ActiveClue({
             >
               🔍 جستجو در گوگل
             </button>
-          </div>
-          <p>{slot.clue}</p>
+          </p>
           {showTray && trayTiles.length > 0 ? (
             <div className="letter-tray" role="list" aria-label="کاشی‌های حرف">
               {trayTiles.map((tile) => {

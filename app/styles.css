@@ -34,7 +34,7 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 18px;
+  margin-bottom: 8px;
 }
 
 .app-header-meta {
@@ -266,7 +266,7 @@ select {
 .solver-layout {
   display: grid;
   grid-template-columns: minmax(320px, 680px) minmax(280px, 1fr);
-  gap: 18px;
+  gap: 8px;
   align-items: start;
 }
 
@@ -517,22 +517,8 @@ select {
   line-height: 1.7;
 }
 
-.clue-kicker {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: #486151;
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-
-.clue-kicker span {
-  color: #657068;
-  font-weight: 500;
-}
-
 .clue-search-link {
-  margin-left: auto;
+  margin-inline-start: 6px;
   padding: 0;
   border: none;
   background: none;
@@ -730,6 +716,22 @@ select {
   outline: none;
 }
 
+@media (max-width: 1024px) {
+  .toolbar {
+    gap: 6px;
+  }
+
+  .toolbar button {
+    min-height: 36px;
+    padding: 0 10px;
+    gap: 0;
+  }
+
+  .toolbar button span {
+    display: none;
+  }
+}
+
 @media (max-width: 860px) {
   .app-shell {
     padding: 14px;
@@ -743,13 +745,6 @@ select {
   .toolbar {
     justify-content: flex-start;
     flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .toolbar button {
-    min-height: 38px;
-    padding: 0 12px;
-    gap: 6px;
   }
 
   .solver-layout {
@@ -766,6 +761,31 @@ select {
 
   .clue-lists {
     max-height: none;
+  }
+
+  .active-clue {
+    padding: 10px 12px;
+    min-height: 60px;
+  }
+
+  .active-clue p {
+    margin: 6px 0 0;
+  }
+
+  .letter-tray {
+    margin-top: 8px;
+  }
+
+  .clue-nav {
+    margin-top: 8px;
+  }
+
+  .clue-tabs button {
+    min-height: 38px;
+  }
+
+  .clue-list {
+    padding: 6px 8px;
   }
 }
 
@@ -814,11 +834,6 @@ select {
     flex: 0 0 auto;
     min-height: 34px;
     padding: 0 8px;
-    gap: 0;
-  }
-
-  .toolbar button span {
-    display: none;
   }
 
   .cell-number {
@@ -836,6 +851,31 @@ select {
   .board-with-labels {
     width: calc(100% + 20px);
     margin-inline: -10px;
+  }
+
+  .active-clue {
+    padding: 8px 10px;
+    min-height: 48px;
+  }
+
+  .active-clue p {
+    margin: 4px 0 0;
+  }
+
+  .letter-tray {
+    margin-top: 6px;
+  }
+
+  .clue-nav {
+    margin-top: 6px;
+  }
+
+  .clue-tabs button {
+    min-height: 34px;
+  }
+
+  .clue-list {
+    padding: 4px 6px;
   }
 }
 
