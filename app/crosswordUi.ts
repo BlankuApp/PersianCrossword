@@ -122,17 +122,20 @@ const PERSIAN_LETTERS = [
   "ص", "ض", "ط", "ظ", "ع", "غ", "ف", "ق", "ک", "گ", "ل", "م", "ن", "و", "ه", "ی",
 ] as const;
 
-/** Letters needed to fill `slot` plus a fixed number of random decoys, shuffled together. */
+/** Unique letters needed to fill `slot` plus a fixed number of unique random decoys, shuffled together. */
 export function buildLetterTray(slot: Slot): readonly TrayTile[] {
   const realLetters = slot.answer ? splitPersianGraphemes(slot.answer) : [];
+  const uniqueRealLetters = Array.from(new Set(realLetters));
   const rng = mulberry32(hashStringToSeed(slot.id));
-  const tiles: TrayTile[] = realLetters.map((letter, i) => ({
+  const tiles: TrayTile[] = uniqueRealLetters.map((letter, i) => ({
     id: `${slot.id}:real:${i}`,
     letter,
   }));
-  for (let i = 0; i < TRAY_DECOY_COUNT; i += 1) {
-    const letter = PERSIAN_LETTERS[Math.floor(rng() * PERSIAN_LETTERS.length)]!;
-    tiles.push({ id: `${slot.id}:decoy:${i}`, letter });
+  const usedLetters = new Set(uniqueRealLetters);
+  const decoyPool = shuffle(PERSIAN_LETTERS.filter((letter) => !usedLetters.has(letter)), rng);
+  const decoyCount = Math.min(TRAY_DECOY_COUNT, decoyPool.length);
+  for (let i = 0; i < decoyCount; i += 1) {
+    tiles.push({ id: `${slot.id}:decoy:${i}`, letter: decoyPool[i]! });
   }
   return shuffle(tiles, rng);
 }
