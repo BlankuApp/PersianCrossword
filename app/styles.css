@@ -1,9 +1,35 @@
+/* ──────────────────────────────────────────────────────────
+   Breakpoint tiers:
+     ≤1024px → toolbar shrinks to icon-only (still 2-column solver layout)
+     ≤860px  → main layout shift: 2-column grid → 1-column stack
+     ≤480px  → extreme mobile: hide row/col index labels, board bleeds into shell padding
+     ≤640px  → unrelated axis: home/library page table columns + .cell-value mobile font cap
+   Do not add a 5th breakpoint without folding it into one of these tiers' purpose.
+   ────────────────────────────────────────────────────────── */
 :root {
   color: #17201b;
   background: #f6f4ef;
   font-family: "Vazirmatn", "Segoe UI", Tahoma, Arial, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+
+  /* Sizing tokens — desktop values; redeclared per breakpoint tier further down. */
+  --shell-padding: 20px;
+  --toolbar-btn-min-h: 40px;
+  --clue-tabs-min-h: 44px;
+  --active-clue-pad-v: 14px;
+  --active-clue-pad-h: 16px;
+  --active-clue-min-h: 84px;
+  --stack-gap: 12px;
+  --tray-tile-size: 2.4em;
+  --clue-nav-btn-size: 30px;
+  --clue-list-pad: 8px 10px;
+  --help-panel-pad: 14px 18px;
+  --font-h1: clamp(1.4rem, 3vw, 2rem);
+  --font-h1-home: clamp(1.6rem, 3.5vw, 2.2rem);
+  --index-label-font: clamp(0.52rem, 1.25vw, 0.72rem);
+  --cell-value-mult: 2;
+  --cell-value-cap: 2.5rem;
 }
 
 * {
@@ -13,7 +39,7 @@
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
+  min-height: 100dvh;
   background: #f6f4ef;
 }
 
@@ -24,9 +50,13 @@ select {
 
 .app-shell {
   width: min(1180px, 100%);
-  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0 auto;
-  padding: 20px;
+  padding: var(--shell-padding);
+  padding-top: max(var(--shell-padding), env(safe-area-inset-top));
+  padding-right: max(var(--shell-padding), env(safe-area-inset-right));
+  padding-bottom: max(var(--shell-padding), env(safe-area-inset-bottom));
+  padding-left: max(var(--shell-padding), env(safe-area-inset-left));
 }
 
 .app-header {
@@ -43,7 +73,7 @@ select {
 
 .app-header h1 {
   margin: 0;
-  font-size: clamp(1.4rem, 3vw, 2rem);
+  font-size: var(--font-h1);
   line-height: 1.2;
 }
 
@@ -57,7 +87,7 @@ select {
   display: flex;
   align-items: end;
   gap: 10px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .toolbar button {
@@ -65,7 +95,7 @@ select {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 40px;
+  min-height: var(--toolbar-btn-min-h);
   padding: 0 14px;
   border: 1px solid #bac3bc;
   border-radius: 8px;
@@ -87,7 +117,7 @@ select {
 
 .help-panel {
   margin-bottom: 18px;
-  padding: 14px 18px;
+  padding: var(--help-panel-pad);
   border: 1px solid #bac3bc;
   border-radius: 10px;
   background: #f7faf8;
@@ -175,7 +205,8 @@ select {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right))
+    max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
   background: rgba(15, 25, 20, 0.78);
   backdrop-filter: blur(2px);
   animation: solution-fade-in 0.2s ease-out;
@@ -192,7 +223,7 @@ select {
   flex-direction: column;
   gap: 12px;
   max-width: min(95vw, 900px);
-  max-height: 95vh;
+  max-height: 95dvh;
   padding: 16px 20px;
   border-radius: 12px;
   background: #f7faf8;
@@ -258,7 +289,7 @@ select {
 .solution-image img {
   display: block;
   max-width: 100%;
-  max-height: calc(95vh - 100px);
+  max-height: calc(95dvh - 100px);
   height: auto;
   object-fit: contain;
 }
@@ -364,7 +395,7 @@ select {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(0.52rem, 1.2vw, 0.72rem);
+  font-size: var(--index-label-font);
   color: #657068;
   direction: ltr;
   line-height: 1;
@@ -387,7 +418,7 @@ select {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(0.52rem, 1.2vw, 0.72rem);
+  font-size: var(--index-label-font);
   color: #657068;
   direction: ltr;
   line-height: 1;
@@ -479,7 +510,7 @@ select {
   position: absolute;
   top: 3px;
   left: 4px;
-  font-size: clamp(0.52rem, 1.3vw, 0.72rem);
+  font-size: var(--index-label-font);
   line-height: 1;
   color: #4d574f;
   direction: ltr;
@@ -490,8 +521,8 @@ select {
   max-width: 90%;
   margin: auto;
   font-size: min(
-    clamp(1.25rem, 5.25vw, 2.5rem),
-    calc((min(100vw - 40px, 680px) / var(--grid-cols, 12)) * 2)
+    clamp(1.25rem, 5.25vw, var(--cell-value-cap)),
+    calc((min(100vw - (var(--shell-padding) * 2), 680px) / var(--grid-cols, 12)) * var(--cell-value-mult))
   );
   font-weight: 700;
   line-height: 1;
@@ -507,8 +538,8 @@ select {
 }
 
 .active-clue {
-  padding: 14px 16px;
-  min-height: 84px;
+  padding: var(--active-clue-pad-v) var(--active-clue-pad-h);
+  min-height: var(--active-clue-min-h);
 }
 
 .active-clue p {
@@ -538,11 +569,10 @@ select {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 12px;
+  margin-top: var(--stack-gap);
 }
 
 .tray-tile {
-  --tray-tile-size: 2em;
   width: var(--tray-tile-size);
   height: var(--tray-tile-size);
   display: grid;
@@ -556,7 +586,8 @@ select {
 }
 
 .tray-tile .cell-value {
-  font-size: calc(var(--tray-tile-size) * 0.75);
+  font-size: calc(var(--tray-tile-size) * 0.7);
+  font-weight: 300;
 }
 
 .tray-tile-used {
@@ -566,15 +597,15 @@ select {
 .clue-nav {
   display: flex;
   gap: 6px;
-  margin-top: 10px;
+  margin-top: var(--stack-gap);
 }
 
 .clue-nav button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: var(--clue-nav-btn-size);
+  height: var(--clue-nav-btn-size);
   padding: 0;
   border: 1px solid #d3d8d2;
   border-radius: 6px;
@@ -612,7 +643,7 @@ select {
 }
 
 .clue-tabs button {
-  min-height: 44px;
+  min-height: var(--clue-tabs-min-h);
   border: 0;
   background: #f1f4f2;
   color: #4e5b53;
@@ -628,13 +659,13 @@ select {
 .clue-lists {
   display: grid;
   grid-template-columns: 1fr;
-  max-height: calc(100vh - 150px);
+  max-height: calc(100dvh - 150px);
   overflow: auto;
 }
 
 .clue-list {
   display: none;
-  padding: 8px 10px;
+  padding: var(--clue-list-pad);
 }
 
 .clue-list-visible {
@@ -715,12 +746,15 @@ select {
 }
 
 @media (max-width: 1024px) {
+  :root {
+    --toolbar-btn-min-h: 36px;
+  }
+
   .toolbar {
     gap: 6px;
   }
 
   .toolbar button {
-    min-height: 36px;
     padding: 0 10px;
     gap: 0;
   }
@@ -731,18 +765,17 @@ select {
 }
 
 @media (max-width: 860px) {
-  .app-shell {
-    padding: 14px;
-  }
-
-  .app-header {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .toolbar {
-    justify-content: flex-start;
-    flex-wrap: wrap;
+  :root {
+    --shell-padding: 10px;
+    --clue-tabs-min-h: 34px;
+    --active-clue-pad-v: 8px;
+    --active-clue-pad-h: 10px;
+    --active-clue-min-h: 52px;
+    --stack-gap: 6px;
+    --tray-tile-size: 2.3em;
+    --clue-nav-btn-size: 28px;
+    --clue-list-pad: 5px 7px;
+    --help-panel-pad: 10px 12px;
   }
 
   .solver-layout {
@@ -761,35 +794,25 @@ select {
     max-height: none;
   }
 
-  .active-clue {
-    padding: 10px 12px;
-    min-height: 60px;
-  }
-
   .active-clue p {
     margin: 6px 0 0;
-  }
-
-  .letter-tray {
-    margin-top: 8px;
-  }
-
-  .clue-nav {
-    margin-top: 8px;
-  }
-
-  .clue-tabs button {
-    min-height: 38px;
-  }
-
-  .clue-list {
-    padding: 6px 8px;
   }
 }
 
 @media (max-width: 480px) {
-  .app-shell {
-    padding: 4px;
+  :root {
+    --shell-padding: 4px;
+    --toolbar-btn-min-h: 32px;
+    --clue-tabs-min-h: 30px;
+    --active-clue-pad-v: 6px;
+    --active-clue-pad-h: 8px;
+    --active-clue-min-h: 40px;
+    --stack-gap: 4px;
+    --tray-tile-size: 2.25em;
+    --clue-nav-btn-size: 26px;
+    --clue-list-pad: 3px 5px;
+    --help-panel-pad: 8px 10px;
+    --font-h1: clamp(1.1rem, 5.4vw, 1.45rem);
   }
 
   .app-header {
@@ -809,7 +832,6 @@ select {
   }
 
   .app-header h1 {
-    font-size: clamp(1.1rem, 5.4vw, 1.45rem);
     line-height: 1;
     white-space: nowrap;
     overflow: hidden;
@@ -830,7 +852,6 @@ select {
 
   .toolbar button {
     flex: 0 0 auto;
-    min-height: 34px;
     padding: 0 8px;
   }
 
@@ -851,29 +872,8 @@ select {
     margin-inline: -2px;
   }
 
-  .active-clue {
-    padding: 8px 10px;
-    min-height: 48px;
-  }
-
   .active-clue p {
     margin: 4px 0 0;
-  }
-
-  .letter-tray {
-    margin-top: 6px;
-  }
-
-  .clue-nav {
-    margin-top: 6px;
-  }
-
-  .clue-tabs button {
-    min-height: 34px;
-  }
-
-  .clue-list {
-    padding: 4px 6px;
   }
 }
 
@@ -894,13 +894,14 @@ select {
 
 .home-header h1 {
   margin: 0 0 6px;
-  font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+  font-size: var(--font-h1-home);
   line-height: 1.2;
 }
 
 .puzzle-meta {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   gap: 8px 16px;
   margin-top: 10px;
   color: #6b746e;
@@ -911,7 +912,9 @@ select {
 .puzzle-meta-item {
   display: inline-flex;
   align-items: center;
+  flex: 0 0 auto;
   gap: 6px;
+  white-space: nowrap;
 }
 
 .puzzle-meta-icon {
@@ -1009,6 +1012,8 @@ select {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 .auth-modal {
@@ -1017,7 +1022,7 @@ select {
   border-radius: 12px;
   padding: 40px 24px 24px;
   width: min(420px, 94vw);
-  max-height: 90vh;
+  max-height: 90dvh;
   overflow-y: auto;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
 }
@@ -1296,6 +1301,11 @@ select {
 }
 
 @media (max-width: 640px) {
+  :root {
+    --cell-value-mult: 1.5;
+    --cell-value-cap: 2.3rem;
+  }
+
   .home-repo-link {
     width: 100%;
     justify-content: center;
@@ -1322,10 +1332,6 @@ select {
   }
 
   .cell-value {
-    font-size: min(
-    clamp(1.25rem, 5.25vw, 2.3rem),
-    calc((min(100vw - 40px, 680px) / var(--grid-cols, 12)) * 1.5)
-  );
     line-height: 1.05;
   }
 }
