@@ -68,6 +68,9 @@ select {
 }
 
 .app-header-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
   min-width: 0;
 }
 
@@ -75,6 +78,8 @@ select {
   margin: 0;
   font-size: var(--font-h1);
   line-height: 1.2;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .app-header p {
@@ -903,7 +908,7 @@ select {
   flex-wrap: nowrap;
   overflow-x: auto;
   gap: 8px 16px;
-  margin-top: 10px;
+  min-width: 0;
   color: #6b746e;
   font-size: 0.92rem;
   font-weight: 300;

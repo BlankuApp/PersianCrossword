@@ -475,14 +475,14 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     });
   }
 
-  if (puzzleIdentifier) {
-    puzzleMetaItems.push({
-      key: "id",
-      label: "شناسه",
-      value: puzzleIdentifier,
-      icon: <Hash size={14} aria-hidden="true" />,
-    });
-  }
+  // if (puzzleIdentifier) {
+  //   puzzleMetaItems.push({
+  //     key: "id",
+  //     label: "شناسه",
+  //     value: puzzleIdentifier,
+  //     icon: <Hash size={14} aria-hidden="true" />,
+  //   });
+  // }
 
   return (
     <main className="app-shell" dir="rtl">
