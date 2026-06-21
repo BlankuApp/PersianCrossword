@@ -1,4 +1,11 @@
-import { cellKey, compilePuzzle, createState, type Coord } from "../../src/index";
+import {
+  cellKey,
+  compilePuzzle,
+  createState,
+  normalizePersianText,
+  type Coord,
+  type CrosswordState,
+} from "../../src/index";
 import { sameCoord, slotCellKeys, type Selection } from "../crosswordUi";
 
 const BLOCK_ICONS = [
@@ -32,6 +39,8 @@ interface CrosswordBoardProps {
   readonly onInputBeforeInput?: (event: React.FormEvent<HTMLInputElement>) => void;
   readonly onInputChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
   readonly clickableBlocks?: boolean;
+  readonly checkMode?: boolean;
+  readonly solutionState?: CrosswordState | null;
 }
 
 export function CrosswordBoard({
@@ -46,6 +55,8 @@ export function CrosswordBoard({
   onInputBeforeInput,
   onInputChange,
   clickableBlocks,
+  checkMode,
+  solutionState,
 }: CrosswordBoardProps) {
   return (
     <div
@@ -87,6 +98,12 @@ export function CrosswordBoard({
           const isBlock = puzzle.isBlock(coord);
           const isSelected = selection ? sameCoord(selection.coord, coord) : false;
           const value = state.getCell(coord);
+          const correctness =
+            checkMode && solutionState && !isBlock && value
+              ? normalizePersianText(value) === normalizePersianText(solutionState.getCell(coord) ?? "")
+                ? "correct"
+                : "incorrect"
+              : undefined;
 
           return (
             <button
@@ -99,6 +116,8 @@ export function CrosswordBoard({
                 isBlock ? "cell-block" : "cell-open",
                 activeKeys.has(key) ? "cell-active-word" : "",
                 isSelected ? "cell-selected" : "",
+                correctness === "correct" ? "cell-correct" : "",
+                correctness === "incorrect" ? "cell-incorrect" : "",
               ].join(" ")}
               aria-label={`ردیف ${row + 1} ستون ${col + 1}`}
               disabled={isBlock && !clickableBlocks}

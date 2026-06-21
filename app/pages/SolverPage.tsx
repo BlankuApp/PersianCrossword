@@ -5,6 +5,7 @@ import {
   HelpCircle,
   Eye,
   EyeOff,
+  SpellCheck2,
   X,
   Newspaper,
   Gauge,
@@ -122,6 +123,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
   const [trayTiles, setTrayTiles] = useState<readonly TrayTile[]>([]);
   const [showHelp, setShowHelp] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
+  const [checkMode, setCheckMode] = useState(false);
   const [sourceCollapsed, setSourceCollapsed] = useState(true);
 
   const boardRef = useRef<HTMLDivElement>(null);
@@ -200,6 +202,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     setSelection(firstSlot ? selectSlot(firstSlot) : undefined);
     setClueTab("across");
     setShowSolution(false);
+    setCheckMode(false);
   }, [id, puzzle]);
 
   // Close the solution overlay with the Escape key.
@@ -531,6 +534,18 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
             <HelpCircle size={18} aria-hidden="true" />
             <span>راهنما</span>
           </button>
+          {solutionState ? (
+            <button
+              type="button"
+              onClick={() => setCheckMode((v) => !v)}
+              title="بررسی پاسخ‌ها"
+              aria-label="بررسی پاسخ‌ها"
+              aria-pressed={checkMode}
+            >
+              <SpellCheck2 size={18} aria-hidden="true" />
+              <span>بررسی پاسخ‌ها</span>
+            </button>
+          ) : null}
           {(solutionImageUrl || solutionState) ? (
             <button
               type="button"
@@ -673,6 +688,8 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
                     onKeyDown={handleKeyDown}
                     onInputBeforeInput={handleInputBeforeInput}
                     onInputChange={handleInputChange}
+                    checkMode={checkMode}
+                    solutionState={solutionState}
                   />
                 </BoardWithLabels>
               </div>

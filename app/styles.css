@@ -120,6 +120,12 @@ select {
   font-weight: 600;
 }
 
+.toolbar button[aria-pressed="true"] {
+  background: #edf6f0;
+  border-color: #8cbca0;
+  color: #1e5c38;
+}
+
 .help-panel {
   margin-bottom: 18px;
   padding: var(--help-panel-pad);
@@ -509,6 +515,14 @@ select {
   background: #f0c96a;
   /* box-shadow: inset 0 0 0 1px #86630d; */
   z-index: 1;
+}
+
+.cell.cell-correct {
+  color: #145c35;
+}
+
+.cell.cell-incorrect {
+  color: #8b1a1a;
 }
 
 .cell-number {
