@@ -6,7 +6,8 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import type { SavedCrosswordState } from "../src/index";
-import { loadProgress, saveProgress } from "./progress";
+import { loadProgress, saveProgress, computeProgress } from "./progress";
+import { getPuzzleById } from "./puzzleLibrary";
 
 const STORAGE_PREFIX = "persian-crossword:";
 
@@ -27,6 +28,14 @@ export async function loadAllCloudProgress(uid: string): Promise<Record<string, 
   return result;
 }
 
+// Falls back to 0 if the puzzle is missing from the bundled library
+// (e.g. removed from /puzzles after progress was saved).
+function percentComplete(puzzleId: string, state: SavedCrosswordState): number {
+  const summary = getPuzzleById(puzzleId);
+  if (!summary) return 0;
+  return computeProgress(summary.json, state).percent;
+}
+
 export async function syncProgress(uid: string): Promise<void> {
   const cloudData = await loadAllCloudProgress(uid);
 
@@ -41,10 +50,24 @@ export async function syncProgress(uid: string): Promise<void> {
 
   const uploads: Promise<void>[] = [];
 
+  // Not atomic with SolverPage's own save-on-keystroke effect, which can call
+  // saveCloudProgress for the puzzle currently open in the UI at any moment,
+  // including mid-sync. Pre-existing race with no version field to resolve it;
+  // out of scope here, this only fixes which side is treated as more complete.
   for (const puzzleId of localKeys) {
     if (puzzleId in cloudData) {
-      // Cloud wins: overwrite local
-      saveProgress(puzzleId, cloudData[puzzleId]);
+      const cloudState = cloudData[puzzleId]!;
+      const localState = loadProgress(puzzleId);
+      const localPercent = percentComplete(puzzleId, localState);
+      const cloudPercent = percentComplete(puzzleId, cloudState);
+
+      if (localPercent >= cloudPercent) {
+        // Local is at least as complete: push it up to the cloud so both sides match.
+        uploads.push(saveCloudProgress(uid, puzzleId, localState));
+      } else {
+        // Cloud is more complete: pull it down to local so both sides match.
+        saveProgress(puzzleId, cloudState);
+      }
     } else {
       // Local-only: upload to cloud
       uploads.push(saveCloudProgress(uid, puzzleId, loadProgress(puzzleId)));
