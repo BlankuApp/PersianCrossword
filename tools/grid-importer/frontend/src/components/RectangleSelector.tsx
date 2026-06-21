@@ -14,7 +14,6 @@ interface Props {
   onChange: (rects: Rect[]) => void;
 }
 
-// Same coordinate math as ImageCornerSelector
 function toImageCoords(
   clientX: number, clientY: number,
   domRect: DOMRect, natW: number, natH: number,
