@@ -1,4 +1,4 @@
-import { ChevronLast, ChevronLeft, ChevronRight, Eraser, RotateCw } from "lucide-react";
+import { Delete } from "lucide-react";
 import type { Direction, Slot } from "../../src/index";
 import type { TrayTile } from "../crosswordUi";
 
@@ -8,11 +8,7 @@ interface ActiveClueProps {
   readonly trayTiles?: readonly TrayTile[];
   readonly trayUsedTileIds?: ReadonlySet<string>;
   readonly onTrayTileTap?: (tile: TrayTile) => void;
-  readonly onNavFirst?: () => void;
-  readonly onNavPrev?: () => void;
-  readonly onNavClear?: () => void;
-  readonly onNavNext?: () => void;
-  readonly onToggleDirection?: () => void;
+  readonly onBackspace?: () => void;
 }
 
 export function ActiveClue({
@@ -21,11 +17,7 @@ export function ActiveClue({
   trayTiles = [],
   trayUsedTileIds,
   onTrayTileTap,
-  onNavFirst,
-  onNavPrev,
-  onNavClear,
-  onNavNext,
-  onToggleDirection,
+  onBackspace,
 }: ActiveClueProps) {
   const handleGoogleSearch = () => {
     if (slot?.clue) {
@@ -34,24 +26,34 @@ export function ActiveClue({
       window.open(googleUrl, "_blank");
     }
   };
-  const isDown = slot?.direction === "down";
 
   return (
     <section className="active-clue" aria-label="پرسش فعال" aria-live="polite">
       {slot ? (
         <>
-          <p>
-            {slot.clue}{" "}
+          <div className="active-clue-head">
+            <p>
+              {slot.clue}{" "}
+              <button
+                type="button"
+                onClick={handleGoogleSearch}
+                className="clue-search-link"
+                title="جستجو در گوگل"
+                aria-label="جستجو در گوگل برای این پرسش"
+              >
+                🔍 جستجو در گوگل
+              </button>
+            </p>
             <button
               type="button"
-              onClick={handleGoogleSearch}
-              className="clue-search-link"
-              title="جستجو در گوگل"
-              aria-label="جستجو در گوگل برای این پرسش"
+              onClick={onBackspace}
+              className="clue-backspace-btn"
+              title="پاک کردن حرف"
+              aria-label="پاک کردن حرف و بازگشت به خانه قبلی"
             >
-              🔍 جستجو در گوگل
+              <Delete size={24} aria-hidden="true" />
             </button>
-          </p>
+          </div>
           {showTray && trayTiles.length > 0 ? (
             <div className="letter-tray" role="list" aria-label="کاشی‌های حرف">
               {trayTiles.map((tile) => {
@@ -71,38 +73,6 @@ export function ActiveClue({
               })}
             </div>
           ) : null}
-          <div className="clue-nav" role="group" aria-label="پیمایش حروف">
-            {/* Across slots start at the right edge (RTL), down slots start at the top.
-                The same chevrons are reused for both: rotating -90deg turns "points right" /
-                "points right with end-bar" into "points up" / "points up with end-bar",
-                which is exactly the down-direction meaning. */}
-            <button type="button" onClick={onNavFirst} title="رفتن به حرف اول" aria-label="رفتن به حرف اول">
-              <ChevronLast size={16} aria-hidden="true" className={isDown ? "clue-nav-rotate" : undefined} />
-            </button>
-            <button type="button" onClick={onNavPrev} title="حرف قبلی" aria-label="حرف قبلی">
-              <ChevronRight size={16} aria-hidden="true" className={isDown ? "clue-nav-rotate" : undefined} />
-            </button>
-            <button type="button" onClick={onNavNext} title="حرف بعدی" aria-label="حرف بعدی">
-              <ChevronLeft size={16} aria-hidden="true" className={isDown ? "clue-nav-rotate" : undefined} />
-            </button>
-            <button
-              type="button"
-              onClick={onToggleDirection}
-              title="تغییر جهت (افقی/عمودی)"
-              aria-label="تغییر جهت افقی یا عمودی"
-            >
-              <RotateCw size={16} aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              onClick={onNavClear}
-              title="پاک کردن پاسخ و شروع دوباره"
-              aria-label="پاک کردن پاسخ و شروع دوباره"
-              className="clue-nav-danger"
-            >
-              <Eraser size={16} aria-hidden="true" />
-            </button>
-          </div>
         </>
       ) : (
         <p>یک خانه سفید را انتخاب کنید.</p>

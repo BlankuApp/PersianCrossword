@@ -271,27 +271,6 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     commitGrapheme(tile.letter);
   }
 
-  function navigateToFirst(): void {
-    if (!selection || !activeSlot) return;
-    setSelection({ ...selection, coord: activeSlot.start });
-    if (!isTouch) focusInput();
-  }
-
-  function navigateStep(offset: 1 | -1): void {
-    if (!selection || !activeSlot) return;
-    setSelection({ ...selection, coord: nextCoordInSlot(activeSlot, selection.coord, offset) });
-    if (!isTouch) focusInput();
-  }
-
-  function clearActiveSlot(): void {
-    if (!puzzle || !selection || !activeSlot) return;
-    const nextState = createState(puzzle, savedState);
-    for (const coord of activeSlot.cells) nextState.setCell(coord, null);
-    commitState(nextState);
-    setSelection({ ...selection, coord: activeSlot.start });
-    if (!isTouch) focusInput();
-  }
-
   function toggleDirection(): void {
     if (!puzzle || !selection) return;
     const slots = puzzle.getSlotsForCell(selection.coord);
@@ -338,6 +317,23 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     commitState(nextState);
   }
 
+  function backspaceCell(): void {
+    if (!puzzle || !selection) return;
+    const currentValue = crosswordState?.getCell(selection.coord);
+    if (currentValue) {
+      updateCell(selection.coord, null);
+      if (!isTouch) focusInput();
+      return;
+    }
+    const active = getActiveSlot(puzzle, selection);
+    if (active) {
+      const previous = nextCoordInSlot(active, selection.coord, -1);
+      updateCell(previous, null);
+      setSelection({ ...selection, coord: previous });
+    }
+    if (!isTouch) focusInput();
+  }
+
   function handleKeyDown(event: React.KeyboardEvent<HTMLElement>): void {
     if (!puzzle || !selection) return;
 
@@ -345,16 +341,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
 
     if (event.key === "Backspace") {
       event.preventDefault();
-      const currentValue = crosswordState?.getCell(selection.coord);
-      if (currentValue) {
-        updateCell(selection.coord, null);
-        return;
-      }
-      if (active) {
-        const previous = nextCoordInSlot(active, selection.coord, -1);
-        updateCell(previous, null);
-        setSelection({ ...selection, coord: previous });
-      }
+      backspaceCell();
       return;
     }
 
@@ -702,11 +689,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
                 trayTiles={trayTiles}
                 trayUsedTileIds={trayUsedTileIds}
                 onTrayTileTap={handleTrayTileTap}
-                onNavFirst={navigateToFirst}
-                onNavPrev={() => navigateStep(-1)}
-                onNavClear={clearActiveSlot}
-                onNavNext={() => navigateStep(1)}
-                onToggleDirection={toggleDirection}
+                onBackspace={backspaceCell}
               />
               <CluePanel
                 acrossSlots={puzzle!.acrossSlots}

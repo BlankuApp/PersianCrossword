@@ -22,7 +22,6 @@
   --active-clue-min-h: 84px;
   --stack-gap: 12px;
   --tray-tile-size: 2.4em;
-  --clue-nav-btn-size: 30px;
   --clue-list-pad: 8px 10px;
   --help-panel-pad: 14px 18px;
   --font-h1: clamp(1.4rem, 3vw, 2rem);
@@ -613,42 +612,27 @@ select {
   opacity: 0.6;
 }
 
-.clue-nav {
+.active-clue-head {
   display: flex;
-  gap: 6px;
-  margin-top: var(--stack-gap);
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.clue-nav button {
+.clue-backspace-btn {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--clue-nav-btn-size);
-  height: var(--clue-nav-btn-size);
   padding: 0;
-  border: 1px solid #d3d8d2;
-  border-radius: 6px;
-  background: #fffdf7;
-  color: #17201b;
+  border: none;
+  background: none;
+  color: #8b1a1a;
   cursor: pointer;
 }
 
-.clue-nav button:hover {
-  background: #f0f4f2;
-}
-
-.clue-nav-rotate {
-  transform: rotate(-90deg);
-}
-
-.clue-nav button.clue-nav-danger {
-  margin-right: auto;
-  border-color: #e0a3a3;
-  color: #b3261e;
-}
-
-.clue-nav button.clue-nav-danger:hover {
-  background: #fbeaea;
+.clue-backspace-btn:hover {
+  color: #5c1010;
 }
 
 .clue-panel {
@@ -792,7 +776,6 @@ select {
     --active-clue-min-h: 52px;
     --stack-gap: 6px;
     --tray-tile-size: 2.3em;
-    --clue-nav-btn-size: 28px;
     --clue-list-pad: 5px 7px;
     --help-panel-pad: 10px 12px;
   }
@@ -828,7 +811,6 @@ select {
     --active-clue-min-h: 40px;
     --stack-gap: 4px;
     --tray-tile-size: 2.25em;
-    --clue-nav-btn-size: 26px;
     --clue-list-pad: 3px 5px;
     --help-panel-pad: 8px 10px;
     --font-h1: clamp(1.1rem, 5.4vw, 1.45rem);
