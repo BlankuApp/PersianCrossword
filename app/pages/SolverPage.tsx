@@ -75,7 +75,6 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
   useEffect(() => {
     if (json.version === 3) setDebugEditGrid(json.grid.map((row) => [...row]));
   }, [json]);
-  const [debugCell, setDebugCell] = useState<Coord | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   const [puzzle, compileError] = useMemo((): [CrosswordPuzzle | null, Error | null] => {
@@ -378,57 +377,22 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     setSelection(firstSlot ? selectSlot(firstSlot) : undefined);
   }
 
-  function debugUpdateCell(coord: Coord, letter: string): void {
-    const cols = debugEditGrid[0]?.length ?? 0;
-    if (!cols) return;
-    const sourceCol = cols - 1 - coord.col;
-    setDebugEditGrid((prev) => {
-      const next = prev.map((r) => [...r]);
-      if (next[coord.row]?.[sourceCol] !== undefined) {
-        next[coord.row]![sourceCol] = letter;
-      }
-      return next;
-    });
-  }
-
-  function debugToggleBlock(coord: Coord): void {
-    const cols = debugEditGrid[0]?.length ?? 0;
-    if (!cols) return;
-    const sourceCol = cols - 1 - coord.col;
-    setDebugEditGrid((prev) => {
-      const next = prev.map((r) => [...r]);
-      const current = next[coord.row]?.[sourceCol];
-      if (current !== undefined) {
-        next[coord.row]![sourceCol] = current === "" ? " " : "";
-      }
-      return next;
-    });
-  }
-
-  function handleSolutionKeyDown(event: React.KeyboardEvent): void {
-    if (!debugCell) return;
-    const graphemes = splitPersianGraphemes(event.key);
-    if (graphemes.length === 1) {
-      event.preventDefault();
-      debugUpdateCell(debugCell, graphemes[0]!);
-    } else if (event.key === "Backspace") {
-      event.preventDefault();
-      debugUpdateCell(debugCell, " ");
-    } else if (event.key === "Delete") {
-      event.preventDefault();
-      debugToggleBlock(debugCell);
-    }
-  }
-
   async function handleDebugSave(): Promise<void> {
-    if (!filePath) return;
+    if (!filePath || !puzzle || !crosswordState) return;
     setIsSaving(true);
     try {
-      await fetch("/dev/save-puzzle", {
+      // Bake the currently solved letters into the grid (disk format: LTR rows, "" for block).
+      const solvedGrid = Array.from({ length: puzzle.size.rows }, (_, row) =>
+        Array.from({ length: puzzle.size.cols }, (_, col) =>
+          puzzle.isBlock({ row, col }) ? "" : crosswordState.getCell({ row, col }) || " ",
+        ).reverse(),
+      );
+      const res = await fetch("/dev/save-puzzle", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filePath, json: { ...json, grid: debugEditGrid } }),
+        body: JSON.stringify({ filePath, json: { ...json, grid: solvedGrid } }),
       });
+      if (!res.ok) console.error("[debug] save failed", res.status, await res.text());
     } catch (e) {
       console.error("[debug] save failed", e);
     } finally {
@@ -549,6 +513,17 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
               <span>{showSolution ? "پنهان کردن پاسخ" : "نمایش پاسخ"}</span>
             </button>
           ) : null}
+          {isDebugMode ? (
+            <button
+              type="button"
+              onClick={() => { void handleDebugSave(); }}
+              disabled={isSaving}
+              title="ذخیره جدول (دیباگ)"
+              aria-label="ذخیره جدول"
+            >
+              {isSaving ? "در حال ذخیره..." : "ذخیره"}
+            </button>
+          ) : null}
         </div>
       </header>
 
@@ -605,32 +580,16 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
               </div>
             </div>
             {solutionState ? (
-              <div
-                className="solution-board"
-                tabIndex={isDebugMode ? 0 : -1}
-                onKeyDown={isDebugMode ? handleSolutionKeyDown : undefined}
-              >
+              <div className="solution-board">
                 <CrosswordBoard
                   boardRef={solutionBoardRef}
                   puzzle={activePuzzle!}
                   state={solutionState}
-                  selection={isDebugMode && debugCell ? { coord: debugCell, direction: "across" } : undefined}
+                  selection={undefined}
                   activeKeys={new Set()}
-                  clickableBlocks={isDebugMode}
-                  onCellClick={isDebugMode ? (coord) => setDebugCell(coord) : () => {}}
+                  onCellClick={() => {}}
                   onKeyDown={() => {}}
                 />
-                {isDebugMode && (
-                  <div className="debug-toolbar">
-                    <button
-                      type="button"
-                      onClick={() => { void handleDebugSave(); }}
-                      disabled={isSaving}
-                    >
-                      {isSaving ? "در حال ذخیره..." : "ذخیره"}
-                    </button>
-                  </div>
-                )}
               </div>
             ) : (
               <div className="solution-image">
