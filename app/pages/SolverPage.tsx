@@ -32,6 +32,7 @@ import {
   type CrosswordPuzzle,
   type Direction,
   type Slot,
+  type SlotId,
   type CrosswordJson,
 } from "../../src/index";
 import {
@@ -76,6 +77,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     if (json.version === 3) setDebugEditGrid(json.grid.map((row) => [...row]));
   }, [json]);
   const [isSaving, setIsSaving] = useState(false);
+  const [clueOverrides, setClueOverrides] = useState<Record<SlotId, string>>({});
 
   const [puzzle, compileError] = useMemo((): [CrosswordPuzzle | null, Error | null] => {
     try {
@@ -170,6 +172,10 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     return createState(puz, { cells });
   }, [puzzle, debugPuzzle, normalizedJson, isDebugMode, debugEditGrid]);
   const activeSlot = puzzle ? getActiveSlot(puzzle, selection) : undefined;
+  const activeSlotForDisplay =
+    activeSlot && clueOverrides[activeSlot.id]
+      ? { ...activeSlot, clue: clueOverrides[activeSlot.id]! }
+      : activeSlot;
   const activeKeys = slotCellKeys(activeSlot);
   const trayUsedTileIds = useMemo(() => {
     if (!activeSlot || !crosswordState) return new Set<string>();
@@ -202,6 +208,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     setClueTab("across");
     setShowSolution(false);
     setCheckMode(false);
+    setClueOverrides({});
   }, [id, puzzle]);
 
   // Close the solution overlay with the Escape key.
@@ -398,6 +405,29 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     } finally {
       setIsSaving(false);
     }
+  }
+
+  function withUpdatedClue(source: CrosswordJson, slot: Slot, newClue: string): CrosswordJson {
+    const key = slot.direction === "across" ? "horizontal" : "vertical";
+    const groupKey = String(slot.groupNum);
+    const group = [...(source.clues[key][groupKey] ?? [])];
+    while (group.length < slot.wordIndexInGroup) group.push("");
+    group[slot.wordIndexInGroup - 1] = newClue;
+    return { ...source, clues: { ...source.clues, [key]: { ...source.clues[key], [groupKey]: group } } };
+  }
+
+  async function handleSaveClue(slot: Slot, newClue: string): Promise<void> {
+    if (!filePath) return;
+    const res = await fetch("/dev/save-puzzle", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filePath, json: withUpdatedClue(json, slot, newClue) }),
+    });
+    if (!res.ok) {
+      console.error("[debug] clue save failed", res.status, await res.text());
+      throw new Error(`ذخیره با خطا مواجه شد (${res.status})`);
+    }
+    setClueOverrides((prev) => ({ ...prev, [slot.id]: newClue }));
   }
 
   const title = json.meta?.title ?? id;
@@ -643,12 +673,14 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
 
             <div className="clue-sidebar">
               <ActiveClue
-                slot={activeSlot}
+                slot={activeSlotForDisplay}
                 showTray={normalizedJson.version === 3}
                 trayTiles={trayTiles}
                 trayUsedTileIds={trayUsedTileIds}
                 onTrayTileTap={handleTrayTileTap}
                 onBackspace={backspaceCell}
+                isDebugMode={isDebugMode}
+                onSaveClue={handleSaveClue}
               />
               <CluePanel
                 acrossSlots={puzzle!.acrossSlots}

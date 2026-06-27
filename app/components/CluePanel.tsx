@@ -1,4 +1,5 @@
-import { Delete } from "lucide-react";
+import { Delete, Pencil, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import type { Direction, Slot } from "../../src/index";
 import type { TrayTile } from "../crosswordUi";
 
@@ -9,6 +10,8 @@ interface ActiveClueProps {
   readonly trayUsedTileIds?: ReadonlySet<string>;
   readonly onTrayTileTap?: (tile: TrayTile) => void;
   readonly onBackspace?: () => void;
+  readonly isDebugMode?: boolean;
+  readonly onSaveClue?: (slot: Slot, newClue: string) => Promise<void>;
 }
 
 export function ActiveClue({
@@ -18,7 +21,14 @@ export function ActiveClue({
   trayUsedTileIds,
   onTrayTileTap,
   onBackspace,
+  isDebugMode,
+  onSaveClue,
 }: ActiveClueProps) {
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [draftClue, setDraftClue] = useState("");
+  const [isSavingClue, setIsSavingClue] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const handleGoogleSearch = () => {
     if (slot?.clue) {
       const searchQuery = `${slot.clue} در جدول`;
@@ -26,6 +36,40 @@ export function ActiveClue({
       window.open(googleUrl, "_blank");
     }
   };
+
+  function openEditModal(): void {
+    if (!slot) return;
+    setDraftClue(slot.clue);
+    setSaveError(null);
+    setIsEditOpen(true);
+  }
+
+  function closeEditModal(): void {
+    setIsEditOpen(false);
+  }
+
+  async function handleSaveClick(): Promise<void> {
+    if (!slot || !onSaveClue) return;
+    setIsSavingClue(true);
+    setSaveError(null);
+    try {
+      await onSaveClue(slot, draftClue);
+      setIsEditOpen(false);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setIsSavingClue(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!isEditOpen) return;
+    function onKey(e: KeyboardEvent): void {
+      if (e.key === "Escape") closeEditModal();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isEditOpen]);
 
   return (
     <section className="active-clue" aria-label="پرسش فعال" aria-live="polite">
@@ -44,16 +88,73 @@ export function ActiveClue({
                 🔍 جستجو در گوگل
               </button>
             </p>
-            <button
-              type="button"
-              onClick={onBackspace}
-              className="clue-backspace-btn"
-              title="پاک کردن حرف"
-              aria-label="پاک کردن حرف و بازگشت به خانه قبلی"
-            >
-              <Delete size={24} aria-hidden="true" />
-            </button>
+            <div className="active-clue-head-actions">
+              {isDebugMode ? (
+                <button
+                  type="button"
+                  onClick={openEditModal}
+                  className="clue-edit-btn"
+                  title="ویرایش متن پرسش (دیباگ)"
+                  aria-label="ویرایش متن پرسش"
+                >
+                  <Pencil size={20} aria-hidden="true" />
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={onBackspace}
+                className="clue-backspace-btn"
+                title="پاک کردن حرف"
+                aria-label="پاک کردن حرف و بازگشت به خانه قبلی"
+              >
+                <Delete size={24} aria-hidden="true" />
+              </button>
+            </div>
           </div>
+          {isDebugMode && isEditOpen ? (
+            <div
+              className="solution-modal-backdrop"
+              role="dialog"
+              aria-modal="true"
+              aria-label="ویرایش متن پرسش"
+              onClick={closeEditModal}
+            >
+              <div className="solution-modal clue-edit-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="solution-modal-header">
+                  <h2>ویرایش متن پرسش</h2>
+                  <div className="solution-modal-actions">
+                    <button
+                      type="button"
+                      className="solution-close-button"
+                      onClick={closeEditModal}
+                      title="بستن"
+                      aria-label="بستن"
+                    >
+                      <X size={20} aria-hidden="true" />
+                    </button>
+                  </div>
+                </div>
+                <textarea
+                  className="clue-edit-textarea"
+                  value={draftClue}
+                  onChange={(e) => setDraftClue(e.target.value)}
+                  rows={3}
+                  autoFocus
+                  dir="rtl"
+                />
+                {saveError ? <p className="clue-edit-error">{saveError}</p> : null}
+                <div className="clue-edit-modal-footer">
+                  <button
+                    type="button"
+                    onClick={() => { void handleSaveClick(); }}
+                    disabled={isSavingClue}
+                  >
+                    {isSavingClue ? "در حال ذخیره..." : "ذخیره"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
           {showTray && trayTiles.length > 0 ? (
             <div className="letter-tray" role="list" aria-label="کاشی‌های حرف">
               {trayTiles.map((tile) => {

@@ -267,6 +267,27 @@ select {
   font-variant-numeric: tabular-nums;
 }
 
+.clue-edit-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 10px 12px;
+  border: 1px solid #bac3bc;
+  border-radius: 8px;
+  font: inherit;
+  resize: vertical;
+}
+
+.clue-edit-error {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #8b1a1a;
+}
+
+.clue-edit-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .solution-close-button {
   display: inline-flex;
   align-items: center;
@@ -617,6 +638,29 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
+
+.active-clue-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.clue-edit-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #486151;
+  cursor: pointer;
+}
+
+.clue-edit-btn:hover {
+  color: #1e5c38;
 }
 
 .clue-backspace-btn {
