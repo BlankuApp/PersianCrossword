@@ -14,15 +14,25 @@ vi.mock("firebase/firestore", () => ({
     puzzleId,
   }),
   getDocs: async () => ({
-    forEach: (cb: (d: { id: string; data: () => { cells: Record<string, string> } }) => void) => {
-      for (const [id, value] of cloudStore.entries()) {
-        cb({ id, data: () => value });
-      }
-    },
+    docs: Array.from(cloudStore.entries()).map(([id, value]) => ({ id, data: () => value })),
   }),
   setDoc: async (ref: { puzzleId: string }, data: { cells: Record<string, string> }) => {
     cloudStore.set(ref.puzzleId, { cells: data.cells });
     setDocCalls.push({ puzzleId: ref.puzzleId, cells: data.cells });
+  },
+  writeBatch: (_db: unknown) => {
+    const ops: Array<{ puzzleId: string; cells: Record<string, string> }> = [];
+    return {
+      set: (ref: { puzzleId: string }, data: { cells: Record<string, string> }) => {
+        ops.push({ puzzleId: ref.puzzleId, cells: data.cells });
+      },
+      commit: async () => {
+        for (const op of ops) {
+          cloudStore.set(op.puzzleId, { cells: op.cells });
+          setDocCalls.push(op);
+        }
+      },
+    };
   },
 }));
 

@@ -3,13 +3,12 @@ import {
   doc,
   getDocs,
   setDoc,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import type { SavedCrosswordState } from "../src/index";
-import { loadProgress, saveProgress, computeProgress } from "./progress";
+import { loadProgress, saveProgress, computeProgress, STORAGE_PREFIX } from "./progress";
 import { getPuzzleById } from "./puzzleLibrary";
-
-const STORAGE_PREFIX = "persian-crossword:";
 
 export async function saveCloudProgress(
   uid: string,
@@ -21,11 +20,9 @@ export async function saveCloudProgress(
 
 export async function loadAllCloudProgress(uid: string): Promise<Record<string, SavedCrosswordState>> {
   const snap = await getDocs(collection(db, "users", uid, "puzzles"));
-  const result: Record<string, SavedCrosswordState> = {};
-  snap.forEach((d) => {
-    result[d.id] = { cells: (d.data().cells ?? {}) as Record<string, string> };
-  });
-  return result;
+  return Object.fromEntries(
+    snap.docs.map((d) => [d.id, { cells: (d.data().cells ?? {}) as Record<string, string> }]),
+  );
 }
 
 // Falls back to 0 if the puzzle is missing from the bundled library
@@ -40,15 +37,14 @@ export async function syncProgress(uid: string): Promise<void> {
   const cloudData = await loadAllCloudProgress(uid);
 
   // Collect all local puzzle IDs
-  const localKeys: string[] = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key?.startsWith(STORAGE_PREFIX)) {
-      localKeys.push(key.slice(STORAGE_PREFIX.length));
-    }
-  }
+  const localKeys = Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i))
+    .filter((k): k is string => !!k?.startsWith(STORAGE_PREFIX))
+    .map((k) => k.slice(STORAGE_PREFIX.length));
 
-  const uploads: Promise<void>[] = [];
+  // Batched into one network round trip instead of one setDoc per puzzle —
+  // with many locally-saved puzzles, individual writes added up to "many many" Firebase calls.
+  const batch = writeBatch(db);
+  let hasUploads = false;
 
   // Not atomic with SolverPage's own save-on-keystroke effect, which can call
   // saveCloudProgress for the puzzle currently open in the UI at any moment,
@@ -63,14 +59,16 @@ export async function syncProgress(uid: string): Promise<void> {
 
       if (localPercent >= cloudPercent) {
         // Local is at least as complete: push it up to the cloud so both sides match.
-        uploads.push(saveCloudProgress(uid, puzzleId, localState));
+        batch.set(doc(db, "users", uid, "puzzles", puzzleId), { cells: localState.cells });
+        hasUploads = true;
       } else {
         // Cloud is more complete: pull it down to local so both sides match.
         saveProgress(puzzleId, cloudState);
       }
     } else {
       // Local-only: upload to cloud
-      uploads.push(saveCloudProgress(uid, puzzleId, loadProgress(puzzleId)));
+      batch.set(doc(db, "users", uid, "puzzles", puzzleId), { cells: loadProgress(puzzleId).cells });
+      hasUploads = true;
     }
   }
 
@@ -81,5 +79,5 @@ export async function syncProgress(uid: string): Promise<void> {
     }
   }
 
-  await Promise.all(uploads);
+  if (hasUploads) await batch.commit();
 }

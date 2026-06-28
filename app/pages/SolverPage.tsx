@@ -219,9 +219,11 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
 
   useEffect(() => {
     saveProgress(id, savedState);
-    if (user) {
+    if (!user) return;
+    const timer = setTimeout(() => {
       void saveCloudProgress(user.uid, id, savedState);
-    }
+    }, 1000);
+    return () => clearTimeout(timer);
   }, [id, savedState, user]);
 
   const isPuzzleSolved = useMemo(() => {

@@ -1,7 +1,7 @@
 import { compilePuzzle, createState } from "../src/index";
 import type { CrosswordJson, SavedCrosswordState } from "../src/index";
 
-const STORAGE_PREFIX = "persian-crossword:";
+export const STORAGE_PREFIX = "persian-crossword:";
 
 // v3 grid rows are LTR (index 0 = leftmost), v2 are RTL (index 0 = rightmost).
 // Reverse v3 rows so col=0 stays rightmost throughout the coord system.
