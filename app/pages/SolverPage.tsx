@@ -24,7 +24,6 @@ import {
   cellKey,
   compilePuzzle,
   createState,
-  normalizePersianText,
   splitPersianGraphemes,
   validatePuzzleJson,
   CrosswordValidationError,
@@ -177,18 +176,6 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
       ? { ...activeSlot, clue: clueOverrides[activeSlot.id]! }
       : activeSlot;
   const activeKeys = slotCellKeys(activeSlot);
-  const trayUsedTileIds = useMemo(() => {
-    if (!activeSlot || !crosswordState) return new Set<string>();
-    const claimed = new Set<string>();
-    for (const coord of activeSlot.cells) {
-      const raw = crosswordState.getCell(coord);
-      if (!raw) continue;
-      const letter = normalizePersianText(raw);
-      const tile = trayTiles.find((t) => !claimed.has(t.id) && normalizePersianText(t.letter) === letter);
-      if (tile) claimed.add(tile.id);
-    }
-    return claimed;
-  }, [trayTiles, activeSlot, crosswordState]);
 
   useEffect(() => {
     if (normalizedJson.version !== 3 || !activeSlot) {
@@ -676,7 +663,6 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
                 slot={activeSlotForDisplay}
                 showTray={normalizedJson.version === 3}
                 trayTiles={trayTiles}
-                trayUsedTileIds={trayUsedTileIds}
                 onTrayTileTap={handleTrayTileTap}
                 onBackspace={backspaceCell}
                 isDebugMode={isDebugMode}

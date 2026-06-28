@@ -629,10 +629,6 @@ select {
   font-weight: 300;
 }
 
-.tray-tile-used {
-  opacity: 0.6;
-}
-
 .active-clue-head {
   display: flex;
   align-items: center;

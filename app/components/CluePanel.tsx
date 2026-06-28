@@ -7,7 +7,6 @@ interface ActiveClueProps {
   readonly slot: Slot | undefined;
   readonly showTray?: boolean;
   readonly trayTiles?: readonly TrayTile[];
-  readonly trayUsedTileIds?: ReadonlySet<string>;
   readonly onTrayTileTap?: (tile: TrayTile) => void;
   readonly onBackspace?: () => void;
   readonly isDebugMode?: boolean;
@@ -18,7 +17,6 @@ export function ActiveClue({
   slot,
   showTray,
   trayTiles = [],
-  trayUsedTileIds,
   onTrayTileTap,
   onBackspace,
   isDebugMode,
@@ -157,21 +155,17 @@ export function ActiveClue({
           ) : null}
           {showTray && trayTiles.length > 0 ? (
             <div className="letter-tray" role="list" aria-label="کاشی‌های حرف">
-              {trayTiles.map((tile) => {
-                const used = trayUsedTileIds?.has(tile.id) ?? false;
-                return (
-                  <button
-                    key={tile.id}
-                    type="button"
-                    role="listitem"
-                    className={`tray-tile${used ? " tray-tile-used" : ""}`}
-                    aria-pressed={used}
-                    onClick={() => onTrayTileTap?.(tile)}
-                  >
-                    <span className="cell-value">{tile.letter}</span>
-                  </button>
-                );
-              })}
+              {trayTiles.map((tile) => (
+                <button
+                  key={tile.id}
+                  type="button"
+                  role="listitem"
+                  className="tray-tile"
+                  onClick={() => onTrayTileTap?.(tile)}
+                >
+                  <span className="cell-value">{tile.letter}</span>
+                </button>
+              ))}
             </div>
           ) : null}
         </>
