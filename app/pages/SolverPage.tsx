@@ -46,7 +46,7 @@ import {
   type Selection,
   type TrayTile,
 } from "../crosswordUi";
-import { loadProgress, saveProgress, normalizeGridDirection } from "../progress";
+import { loadProgress, saveProgress, normalizeGridDirection, loadCheckMode, saveCheckMode } from "../progress";
 import { saveCloudProgress } from "../cloudProgress";
 import { useAuth } from "../AuthContext";
 import { navigate } from "../router";
@@ -123,7 +123,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
   const [trayTiles, setTrayTiles] = useState<readonly TrayTile[]>([]);
   const [showHelp, setShowHelp] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
-  const [checkMode, setCheckMode] = useState(false);
+  const [checkMode, setCheckMode] = useState(loadCheckMode);
   const [sourceCollapsed, setSourceCollapsed] = useState(true);
 
   const boardRef = useRef<HTMLDivElement>(null);
@@ -194,9 +194,12 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     setSelection(firstSlot ? selectSlot(firstSlot) : undefined);
     setClueTab("across");
     setShowSolution(false);
-    setCheckMode(false);
     setClueOverrides({});
   }, [id, puzzle]);
+
+  useEffect(() => {
+    saveCheckMode(checkMode);
+  }, [checkMode]);
 
   // Close the solution overlay with the Escape key.
   useEffect(() => {

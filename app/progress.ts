@@ -26,6 +26,20 @@ export function saveProgress(id: string, state: SavedCrosswordState): void {
   window.localStorage.setItem(STORAGE_PREFIX + id, JSON.stringify(state));
 }
 
+// Note: deliberately not prefixed with STORAGE_PREFIX — cloudProgress.syncProgress()
+// treats every "persian-crossword:*" key as a puzzle id to sync to Firestore.
+const CHECK_MODE_KEY = "persian-crossword-check-mode";
+
+export function loadCheckMode(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(CHECK_MODE_KEY) === "true";
+}
+
+export function saveCheckMode(value: boolean): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(CHECK_MODE_KEY, String(value));
+}
+
 export interface ProgressInfo {
   readonly filled: number;
   readonly total: number;
