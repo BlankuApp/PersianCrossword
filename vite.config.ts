@@ -32,6 +32,9 @@ function devPuzzleSaverPlugin() {
 
 export default defineConfig({
   base: "./",
+  server: {
+    port: 5567,
+  },
   plugins: [devPuzzleSaverPlugin(), react()],
   build: {
     outDir: "app-dist",
