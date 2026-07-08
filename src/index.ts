@@ -13,7 +13,6 @@ export type {
   ClueSelection,
   Coord,
   CrosswordJson,
-  CrosswordJsonV2,
   CrosswordJsonV3,
   CrosswordPuzzle,
   CrosswordState,

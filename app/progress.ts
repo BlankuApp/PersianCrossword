@@ -3,10 +3,9 @@ import type { CrosswordJson, SavedCrosswordState } from "../src/index";
 
 export const STORAGE_PREFIX = "persian-crossword:";
 
-// v3 grid rows are LTR (index 0 = leftmost), v2 are RTL (index 0 = rightmost).
-// Reverse v3 rows so col=0 stays rightmost throughout the coord system.
+// Grid rows are stored LTR (index 0 = leftmost); reverse so col=0 stays
+// rightmost throughout the internal coord system.
 export function normalizeGridDirection(json: CrosswordJson): CrosswordJson {
-  if (json.version !== 3) return json;
   return { ...json, grid: json.grid.map((row) => [...row].reverse()) };
 }
 

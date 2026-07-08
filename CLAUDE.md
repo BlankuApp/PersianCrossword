@@ -43,7 +43,7 @@ is for the React app. Both are checked by `npm run typecheck`.
 
 ## Puzzle Format
 
-Puzzles are `CrosswordJson` (version 2) JSON files under `puzzles/`.
+Puzzles are `CrosswordJson` (version 3) JSON files under `puzzles/`.
 - **Slot IDs**: `R{row}-{n}` for horizontal, `C{col}-{n}` for vertical.
 - **Vertical column numbering**: 1-based *from the right* (RTL convention).
 - Each puzzle folder can have a matching `{id}.png` (solution image) and an optional

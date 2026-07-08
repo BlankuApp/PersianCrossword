@@ -28,11 +28,6 @@ export interface CrosswordClues {
   readonly vertical: Readonly<Record<string, readonly string[]>>;
 }
 
-export interface CrosswordAnswers {
-  readonly horizontal?: Readonly<Record<string, readonly (string | null)[]>>;
-  readonly vertical?: Readonly<Record<string, readonly (string | null)[]>>;
-}
-
 export interface CrosswordMeta {
   readonly id?: string;
   readonly title?: string;
@@ -46,14 +41,6 @@ export interface CrosswordMeta {
   readonly sourceFile?: string;
 }
 
-export interface CrosswordJsonV2 {
-  readonly version: 2;
-  readonly grid: readonly (readonly number[])[];
-  readonly clues: CrosswordClues;
-  readonly answers?: CrosswordAnswers;
-  readonly meta?: CrosswordMeta;
-}
-
 /** Version 3: grid cells are strings; "" = black cell, any other string = open cell with solution letter. */
 export interface CrosswordJsonV3 {
   readonly version: 3;
@@ -62,7 +49,7 @@ export interface CrosswordJsonV3 {
   readonly meta?: CrosswordMeta;
 }
 
-export type CrosswordJson = CrosswordJsonV2 | CrosswordJsonV3;
+export type CrosswordJson = CrosswordJsonV3;
 
 export interface DerivedSlot {
   readonly id: SlotId;

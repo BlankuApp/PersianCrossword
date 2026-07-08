@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { basicPuzzle } from "./fixtures";
+import { basicPuzzleV3 } from "./fixtures";
 
 const cloudStore = new Map<string, { cells: Record<string, string> }>();
 const setDocCalls: Array<{ puzzleId: string; cells: Record<string, string> }> = [];
@@ -36,9 +36,17 @@ vi.mock("firebase/firestore", () => ({
   },
 }));
 
+// syncProgress runs puzzle JSON through normalizeGridDirection (on-disk grids
+// are stored LTR and get reversed to the internal RTL order), so the mocked
+// puzzle here must be the pre-reversal, on-disk shape of basicPuzzleV3.
+const onDiskPuzzle = {
+  ...basicPuzzleV3,
+  grid: basicPuzzleV3.grid.map((row) => [...row].reverse()),
+};
+
 vi.mock("../app/puzzleLibrary", () => ({
   getPuzzleById: (id: string) =>
-    id === "missing-puzzle" ? undefined : { id, json: basicPuzzle },
+    id === "missing-puzzle" ? undefined : { id, json: onDiskPuzzle },
 }));
 
 import { syncProgress } from "../app/cloudProgress";
@@ -52,7 +60,7 @@ describe("syncProgress", () => {
   });
 
   it("uploads local progress to cloud when local is more complete", async () => {
-    // basicPuzzle has 11 fillable cells. Local: 5 filled (~45%). Cloud: 1 filled (~9%, stale).
+    // basicPuzzleV3 has 11 fillable cells. Local: 5 filled (~45%). Cloud: 1 filled (~9%, stale).
     saveProgress("p1", {
       cells: { "0,0": "س", "0,1": "ل", "0,2": "ا", "0,3": "م", "2,0": "د" },
     });

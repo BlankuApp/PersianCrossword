@@ -1,6 +1,5 @@
 import { buildBlockSet } from "./grid.js";
 import { deriveSlots } from "./slots.js";
-import { countPersianGraphemes } from "./text.js";
 import type {
   Coord,
   DerivedSlot,
@@ -42,30 +41,15 @@ export function validatePuzzleJson(input: unknown): ValidationResult {
     };
   }
 
-  if (input.version === 1) {
-    return {
-      valid: false,
-      issues: [
-        {
-          code: "unsupported_version",
-          message:
-            "Puzzle JSON version 1 is no longer supported. Run `node tools/migrate-v1-to-v2.mjs <files>` to upgrade.",
-          path: "version",
-        },
-      ],
-      derivedSlots: [],
-    };
-  }
-
-  if (input.version !== 2 && input.version !== 3) {
+  if (input.version !== 3) {
     issues.push({
       code: "unsupported_version",
-      message: 'Puzzle JSON must declare "version": 2 or 3.',
+      message: 'Puzzle JSON must declare "version": 3.',
       path: "version",
     });
   }
 
-  const gridResult = readGrid(input.grid, input.version, issues);
+  const gridResult = readGrid(input.grid, issues);
 
   let derivedSlots: DerivedSlot[] = [];
   if (gridResult) {
@@ -73,9 +57,6 @@ export function validatePuzzleJson(input: unknown): ValidationResult {
   }
 
   validateClues(input.clues, derivedSlots, issues, gridResult !== undefined);
-  if (input.version !== 3) {
-    validateAnswers(input.answers, derivedSlots, issues);
-  }
 
   return {
     valid: issues.length === 0,
@@ -84,7 +65,7 @@ export function validatePuzzleJson(input: unknown): ValidationResult {
   };
 }
 
-function readGrid(value: unknown, version: unknown, issues: ValidationIssue[]): GridReadResult | undefined {
+function readGrid(value: unknown, issues: ValidationIssue[]): GridReadResult | undefined {
   if (!Array.isArray(value) || value.length === 0) {
     issues.push({
       code: "invalid_grid",
@@ -94,7 +75,6 @@ function readGrid(value: unknown, version: unknown, issues: ValidationIssue[]): 
     return undefined;
   }
 
-  const isV3 = version === 3;
   const rows = value.length;
   let cols: number | undefined;
   const blocks: Coord[] = [];
@@ -107,9 +87,7 @@ function readGrid(value: unknown, version: unknown, issues: ValidationIssue[]): 
     if (!Array.isArray(rowValue)) {
       issues.push({
         code: "invalid_grid_row",
-        message: isV3
-          ? 'Each grid row must be an array of strings ("" for black, letter for open).'
-          : "Each grid row must be an array of 0/1 integers.",
+        message: 'Each grid row must be an array of strings ("" for black, letter for open).',
         path: rowPath,
       });
       hasError = true;
@@ -139,28 +117,15 @@ function readGrid(value: unknown, version: unknown, issues: ValidationIssue[]): 
 
     for (let col = 0; col < rowValue.length; col += 1) {
       const cell = rowValue[col];
-      if (isV3) {
-        if (cell === "") {
-          blocks.push({ row, col });
-        } else if (typeof cell !== "string") {
-          issues.push({
-            code: "invalid_grid_cell",
-            message: 'Grid cells must be strings ("" for black, letter for open).',
-            path: `${rowPath}[${col}]`,
-          });
-          hasError = true;
-        }
-      } else {
-        if (cell === 1) {
-          blocks.push({ row, col });
-        } else if (cell !== 0) {
-          issues.push({
-            code: "invalid_grid_cell",
-            message: "Grid cells must be 0 (open) or 1 (black).",
-            path: `${rowPath}[${col}]`,
-          });
-          hasError = true;
-        }
+      if (cell === "") {
+        blocks.push({ row, col });
+      } else if (typeof cell !== "string") {
+        issues.push({
+          code: "invalid_grid_cell",
+          message: 'Grid cells must be strings ("" for black, letter for open).',
+          path: `${rowPath}[${col}]`,
+        });
+        hasError = true;
       }
     }
   }
@@ -299,110 +264,6 @@ function validateClues(
           message: `${key} group ${groupNum} has no slots in the derived grid.`,
           path: `clues.${key}.${groupKey}`,
         });
-      }
-    }
-  }
-}
-
-function validateAnswers(
-  value: unknown,
-  derivedSlots: readonly DerivedSlot[],
-  issues: ValidationIssue[],
-): void {
-  if (value === undefined) {
-    return;
-  }
-
-  if (!isRecord(value)) {
-    issues.push({
-      code: "invalid_answers",
-      message:
-        "Puzzle answers must be an object with optional `horizontal` and `vertical` group maps.",
-      path: "answers",
-    });
-    return;
-  }
-
-  const directions = buildDirectionGroups(derivedSlots);
-
-  for (const { key, groups } of directions) {
-    const dirValue = value[key];
-    if (dirValue === undefined) {
-      continue;
-    }
-    if (!isRecord(dirValue)) {
-      issues.push({
-        code: "invalid_answer_group",
-        message: `answers.${key} must be an object mapping group numbers to answer arrays.`,
-        path: `answers.${key}`,
-      });
-      continue;
-    }
-
-    for (const [groupKey, arr] of Object.entries(dirValue)) {
-      const groupNum = Number.parseInt(groupKey, 10);
-      const path = `answers.${key}.${groupKey}`;
-
-      if (!Number.isInteger(groupNum) || groupNum <= 0 || String(groupNum) !== groupKey) {
-        issues.push({
-          code: "invalid_group_key",
-          message: `Group keys must be positive integers, got "${groupKey}".`,
-          path,
-        });
-        continue;
-      }
-
-      const slots = groups.get(groupNum);
-      if (!slots) {
-        issues.push({
-          code: "orphaned_answer_group",
-          message: `${key} group ${groupNum} has no slots in the derived grid.`,
-          path,
-        });
-        continue;
-      }
-
-      if (!Array.isArray(arr)) {
-        issues.push({
-          code: "invalid_answer_group",
-          message: `${path} must be an array of answer strings or nulls.`,
-          path,
-        });
-        continue;
-      }
-
-      if (arr.length > slots.length) {
-        issues.push({
-          code: "answer_length_mismatch",
-          message: `${path} has ${arr.length} entries, expected at most ${slots.length}.`,
-          path,
-        });
-      }
-
-      const limit = Math.min(arr.length, slots.length);
-      for (let i = 0; i < limit; i += 1) {
-        const entry = arr[i];
-        if (entry === null) {
-          continue;
-        }
-        if (typeof entry !== "string") {
-          issues.push({
-            code: "invalid_answer",
-            message: "Answer values must be strings or null.",
-            path: `${path}[${i}]`,
-            slotId: slots[i]!.id,
-          });
-          continue;
-        }
-        const length = countPersianGraphemes(entry);
-        if (length !== slots[i]!.length) {
-          issues.push({
-            code: "answer_length_mismatch",
-            message: `Answer for slot ${slots[i]!.id} has ${length} characters, but the slot has length ${slots[i]!.length}.`,
-            path: `${path}[${i}]`,
-            slotId: slots[i]!.id,
-          });
-        }
       }
     }
   }

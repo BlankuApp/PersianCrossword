@@ -24,7 +24,7 @@ export function compilePuzzle(input: CrosswordJson): CrosswordPuzzle {
     const rowValues = input.grid[row]!;
     for (let col = 0; col < rowValues.length; col += 1) {
       const cell = rowValues[col];
-      if (input.version === 3 ? cell === "" : cell === 1) {
+      if (cell === "") {
         blocks.add(cellKey({ row, col }));
       }
     }
@@ -32,25 +32,13 @@ export function compilePuzzle(input: CrosswordJson): CrosswordPuzzle {
 
   const slots = validation.derivedSlots.map<Slot>((slot) => {
     const clue = lookupGroupEntry(input.clues, slot.direction, slot.groupNum, slot.wordIndexInGroup);
-    let answer: string | null;
-
-    if (input.version === 3) {
-      answer = slot.cells.map((c) => input.grid[c.row]![c.col]!).join("");
-    } else {
-      const rawAnswer = lookupGroupEntry(
-        input.answers,
-        slot.direction,
-        slot.groupNum,
-        slot.wordIndexInGroup,
-      );
-      answer = typeof rawAnswer === "string" ? rawAnswer : null;
-    }
+    const answer = slot.cells.map((c) => input.grid[c.row]![c.col]!).join("");
 
     return {
       ...slot,
       clue: clue as string,
       answer,
-      normalizedAnswer: answer === null ? null : normalizePersianText(answer),
+      normalizedAnswer: normalizePersianText(answer),
     };
   });
 
