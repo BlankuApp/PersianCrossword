@@ -96,6 +96,80 @@
         "reveal": "silent"
       },
       "problemMatcher": []
+    },
+    {
+      "label": "Android: Build & Sync",
+      "type": "shell",
+      "command": "npm run build && npx cap sync android",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "group": "android",
+        "panel": "dedicated",
+        "reveal": "always",
+        "focus": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: Open in Android Studio",
+      "type": "shell",
+      "command": "npx cap open android",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "group": "android",
+        "panel": "dedicated",
+        "reveal": "always",
+        "focus": false
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: Run on Device/Emulator",
+      "type": "shell",
+      "command": "npm run build && npx cap sync android && npx cap run android",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "group": "android",
+        "panel": "dedicated",
+        "reveal": "always",
+        "focus": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Android: Start Emulator",
+      "type": "shell",
+      "command": "${env:ANDROID_HOME}/emulator/emulator.exe",
+      "args": ["-avd", "Medium_Phone"],
+      "windows": {
+        "command": "${env:ANDROID_HOME}\\emulator\\emulator.exe"
+      },
+      "presentation": {
+        "group": "android",
+        "panel": "dedicated",
+        "reveal": "always",
+        "focus": false
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "android-emulator",
+        "pattern": {
+          "regexp": "^ERROR.*$",
+          "message": 0
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*emulator.*$",
+          "endsPattern": "^.*boot completed.*$"
+        }
+      }
     }
   ]
 }
