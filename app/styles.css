@@ -1085,6 +1085,23 @@ select {
   color: #17201b;
 }
 
+.auth-native-google {
+  margin-bottom: 16px;
+}
+
+.auth-btn-block {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+
+.auth-error {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  color: #b3261e;
+  text-align: center;
+}
+
 .empty-state {
   padding: 40px 20px;
   text-align: center;

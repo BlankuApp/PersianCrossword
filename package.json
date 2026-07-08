@@ -34,9 +34,10 @@
     "vitest": "^4.1.5"
   },
   "dependencies": {
-    "@capacitor/android": "^8.4.1",
-    "@capacitor/cli": "^7.6.7",
-    "@capacitor/core": "^8.4.1",
+    "@capacitor-firebase/authentication": "^6.3.1",
+    "@capacitor/android": "^6.2.1",
+    "@capacitor/cli": "^6.2.1",
+    "@capacitor/core": "^6.2.1",
     "canvas-confetti": "^1.9.4",
     "firebase": "^10.14.1",
     "firebaseui": "^6.1.0",

@@ -7,8 +7,8 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.7.2'
-        classpath 'com.google.gms:google-services:4.4.2'
+        classpath 'com.android.tools.build:gradle:8.2.1'
+        classpath 'com.google.gms:google-services:4.4.0'
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -21,17 +21,6 @@ allprojects {
     repositories {
         google()
         mavenCentral()
-    }
-    configurations.all {
-        resolutionStrategy {
-            // capacitor-cordova-android-plugins (cordovaAndroidVersion in variables.gradle)
-            // pulls an older kotlin-stdlib-jdk7/jdk8 that duplicates classes already merged
-            // into the newer kotlin-stdlib pulled in by capacitor-android. Force one version.
-            force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'
-            force 'org.jetbrains.kotlin:kotlin-stdlib-common:1.8.22'
-            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22'
-            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22'
-        }
     }
 }
 
