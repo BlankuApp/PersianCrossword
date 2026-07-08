@@ -13,4 +13,9 @@ ext {
     androidxJunitVersion = '1.1.5'
     androidxEspressoCoreVersion = '3.5.1'
     cordovaAndroidVersion = '10.1.1'
+
+    // @capacitor-firebase/authentication only bundles play-services-auth at runtime
+    // (vs. compileOnly) when this is true -- without it, GoogleAuthProviderHandler's
+    // native Google Sign-In classes are missing at runtime (NoClassDefFoundError).
+    rgcfaIncludeGoogle = true
 }

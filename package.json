@@ -36,6 +36,7 @@
   "dependencies": {
     "@capacitor-firebase/authentication": "^6.3.1",
     "@capacitor/android": "^6.2.1",
+    "@capacitor/app": "^6.0.3",
     "@capacitor/cli": "^6.2.1",
     "@capacitor/core": "^6.2.1",
     "canvas-confetti": "^1.9.4",

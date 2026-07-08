@@ -33,6 +33,35 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:649464156880:android:4707eef69f1a6e525484d5",
+        "android_client_info": {
+          "package_name": "com.persiancrossword.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "649464156880-c1altmii8omtkrjoqnf54i7h3sjs05qj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlfworNsQOeBMcrbZXMVvl8mGQeq4P_Nk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "649464156880-c1altmii8omtkrjoqnf54i7h3sjs05qj.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"

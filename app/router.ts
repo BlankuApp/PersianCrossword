@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { App as CapacitorApp } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
 
 export type Route = { readonly name: "home" } | { readonly name: "puzzle"; readonly id: string };
 
@@ -27,4 +29,27 @@ export function useHashRoute(): Route {
   }, []);
 
   return route;
+}
+
+// On Android, the hardware back button should navigate within the app (puzzle -> home)
+// instead of immediately closing it; only the second press from home should exit.
+export function useHardwareBackButton(route: Route): void {
+  const routeRef = useRef(route);
+  routeRef.current = route;
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const listenerPromise = CapacitorApp.addListener("backButton", () => {
+      if (routeRef.current.name === "puzzle") {
+        navigate("#/");
+      } else {
+        CapacitorApp.exitApp();
+      }
+    });
+
+    return () => {
+      listenerPromise.then((handle) => handle.remove());
+    };
+  }, []);
 }
