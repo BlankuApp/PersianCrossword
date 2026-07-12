@@ -39,6 +39,19 @@ export function saveCheckMode(value: boolean): void {
   window.localStorage.setItem(CHECK_MODE_KEY, String(value));
 }
 
+// Dash, not the STORAGE_PREFIX colon — same reason as CHECK_MODE_KEY above.
+const SEEN_TUTORIAL_KEY = "persian-crossword-seen-tutorial";
+
+export function loadSeenTutorial(): boolean {
+  if (typeof window === "undefined") return true;
+  return window.localStorage.getItem(SEEN_TUTORIAL_KEY) === "true";
+}
+
+export function saveSeenTutorial(): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(SEEN_TUTORIAL_KEY, "true");
+}
+
 export interface ProgressInfo {
   readonly filled: number;
   readonly total: number;

@@ -23,7 +23,6 @@
   --stack-gap: 12px;
   --tray-tile-size: 2.4em;
   --clue-list-pad: 8px 10px;
-  --help-panel-pad: 14px 18px;
   --font-h1: clamp(1.4rem, 3vw, 2rem);
   --font-h1-home: clamp(1.6rem, 3.5vw, 2.2rem);
   --index-label-font: clamp(0.52rem, 1.25vw, 0.72rem);
@@ -125,32 +124,176 @@ select {
   color: #1e5c38;
 }
 
-.help-panel {
-  margin-bottom: 18px;
-  padding: var(--help-panel-pad);
-  border: 1px solid #bac3bc;
-  border-radius: 10px;
-  background: #f7faf8;
-  color: #17201b;
-  line-height: 1.9;
+/* ---- Animated راهنما tutorial modal ---- */
+
+/* Doubled class beats the later .solution-modal max-width/padding rules. */
+.solution-modal.tutorial-modal {
+  max-width: min(92vw, 420px);
+  width: 100%;
 }
 
-.help-panel h2 {
-  margin: 0 0 8px;
-  font-size: 1.05rem;
+.tutorial-message {
+  margin: 0;
+  min-height: 3.4em;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.7;
   color: #1e5c38;
 }
 
-.help-panel ul {
-  margin: 0;
+.tutorial-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.tutorial-grid {
+  --t-cell: 52px;
+  display: grid;
+  grid-template-columns: repeat(4, var(--t-cell));
+  direction: rtl;
+  border: 2px solid #1e2a23;
+  background: #1e2a23;
+  gap: 1px;
+}
+
+.tutorial-grid .cell {
+  width: var(--t-cell);
+  height: var(--t-cell);
+  pointer-events: none;
+}
+
+.tutorial-grid .cell-value {
+  font-size: calc(var(--t-cell) * 0.55);
+}
+
+.tutorial-clue {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d3d8d2;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.tutorial-clue-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.tutorial-clue-text {
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.tutorial-backspace {
+  pointer-events: none;
+}
+
+.tutorial-clue-highlight {
+  animation: tutorial-clue-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes tutorial-clue-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(30, 92, 56, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(30, 92, 56, 0.35);
+  }
+}
+
+.tutorial-tray {
+  margin-top: 0;
+}
+
+.tutorial-tray .tray-tile {
+  pointer-events: none;
+}
+
+.tutorial-hand {
+  position: absolute;
+  top: 0;
+  right: auto;
+  left: 0;
+  z-index: 5;
+  pointer-events: none;
+  will-change: transform;
+  transition: transform 0.45s ease;
+  color: #1e5c38;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
+}
+
+.tutorial-hand-inner {
+  display: block;
+  transform-origin: 30% 15%;
+}
+
+.tutorial-hand-tap {
+  animation: tutorial-tap 0.4s ease-in-out;
+}
+
+@keyframes tutorial-tap {
+  40% {
+    transform: scale(0.72) translateY(2px);
+  }
+}
+
+.tutorial-dots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.tutorial-dot {
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border: 1px solid #8cbca0;
+  border-radius: 50%;
+  background: #edf6f0;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.tutorial-dot[aria-current="true"] {
+  background: #1e5c38;
+  border-color: #1e5c38;
+  transform: scale(1.2);
+}
+
+.tutorial-keyboard-help {
+  border: 1px solid #d3d8d2;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #ffffff;
+  font-size: 0.9rem;
+  line-height: 1.9;
+}
+
+.tutorial-keyboard-help summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #1e5c38;
+}
+
+.tutorial-keyboard-help ul {
+  margin: 8px 0 0;
   padding-inline-start: 20px;
 }
 
-.help-panel li {
+.tutorial-keyboard-help li {
   margin-bottom: 4px;
 }
 
-.help-panel kbd {
+.tutorial-keyboard-help kbd {
   display: inline-block;
   padding: 1px 6px;
   border: 1px solid #bac3bc;
@@ -160,6 +303,44 @@ select {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.85em;
   color: #17201b;
+}
+
+.tutorial-done-btn {
+  align-self: center;
+  min-width: 140px;
+  padding: 10px 24px;
+  border: none;
+  border-radius: 999px;
+  background: #1e5c38;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tutorial-done-btn:hover {
+  background: #17472b;
+}
+
+@media (max-width: 480px) {
+  .tutorial-grid {
+    --t-cell: 44px;
+  }
+
+  .solution-modal.tutorial-modal {
+    padding: 12px 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tutorial-hand {
+    transition: none;
+  }
+
+  .tutorial-hand-tap,
+  .tutorial-clue-highlight {
+    animation: none;
+  }
 }
 
 .puzzle-error-panel {
@@ -817,7 +998,6 @@ select {
     --stack-gap: 6px;
     --tray-tile-size: 2.3em;
     --clue-list-pad: 5px 7px;
-    --help-panel-pad: 10px 12px;
   }
 
   .solver-layout {
@@ -852,7 +1032,6 @@ select {
     --stack-gap: 4px;
     --tray-tile-size: 2.25em;
     --clue-list-pad: 3px 5px;
-    --help-panel-pad: 8px 10px;
     --font-h1: clamp(1.1rem, 5.4vw, 1.45rem);
   }
 

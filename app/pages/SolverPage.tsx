@@ -46,13 +46,22 @@ import {
   type Selection,
   type TrayTile,
 } from "../crosswordUi";
-import { loadProgress, saveProgress, normalizeGridDirection, loadCheckMode, saveCheckMode } from "../progress";
+import {
+  loadProgress,
+  saveProgress,
+  normalizeGridDirection,
+  loadCheckMode,
+  saveCheckMode,
+  loadSeenTutorial,
+  saveSeenTutorial,
+} from "../progress";
 import { saveCloudProgress } from "../cloudProgress";
 import { useAuth } from "../AuthContext";
 import { navigate } from "../router";
 import { BoardWithLabels } from "../components/BoardWithLabels";
 import { CrosswordBoard } from "../components/CrosswordBoard";
 import { ActiveClue, CluePanel } from "../components/CluePanel";
+import { HelpTutorial } from "../components/HelpTutorial";
 
 interface SolverPageProps {
   readonly id: string;
@@ -216,6 +225,21 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
   function closeSolution(): void {
     setShowSolution(false);
   }
+
+  function closeHelp(): void {
+    setShowHelp(false);
+    saveSeenTutorial();
+  }
+
+  // Auto-open the tutorial the first time a puzzle actually renders.
+  useEffect(() => {
+    if (!puzzle || compileError) return;
+    if (loadSeenTutorial()) return;
+    if (showSolution) return; // never stack over another modal
+    setShowHelp(true);
+    // Only re-check when the rendered puzzle changes, not on solution toggles.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [puzzle, compileError]);
 
   useEffect(() => {
     saveProgress(id, savedState);
@@ -502,7 +526,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
             onClick={() => setShowHelp((v) => !v)}
             title="راهنمای استفاده"
             aria-label="راهنمای استفاده"
-            aria-expanded={showHelp}
+            aria-haspopup="dialog"
           >
             <HelpCircle size={18} aria-hidden="true" />
             <span>راهنما</span>
@@ -549,34 +573,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
         </div>
       </header>
 
-      {showHelp ? (
-        <section className="help-panel" aria-label="راهنمای استفاده">
-          <h2>راهنمای استفاده</h2>
-          <ul>
-            <li>برای انتخاب یک خانه روی آن کلیک کنید.</li>
-            <li>
-              با کلیک دوباره روی همان خانه یا فشردن کلید <kbd>Space</kbd>،
-              جهت بین افقی و عمودی جابجا می‌شود.
-            </li>
-            <li>
-              برای حرکت بین خانه‌ها از کلیدهای جهت‌نما
-              (<kbd>↑</kbd> <kbd>↓</kbd> <kbd>→</kbd> <kbd>←</kbd>) استفاده کنید.
-            </li>
-            <li>
-              برای پاک کردن محتوای یک خانه، کلید <kbd>Backspace</kbd> را بزنید.
-              اگر خانه خالی باشد، خانهٔ قبلی در همان کلمه پاک می‌شود.
-            </li>
-            <li>برای وارد کردن حرف، کافی است حرف فارسی را تایپ کنید.</li>
-            <li>
-              با کلیک روی هر سرنخ در فهرست کنار جدول، خانهٔ مربوط به آن سرنخ
-              فعال می‌شود.
-            </li>
-            <li>
-              با دکمهٔ <strong>پاک کردن</strong> همهٔ پاسخ‌های ذخیره‌شده حذف می‌شوند.
-            </li>
-          </ul>
-        </section>
-      ) : null}
+      {showHelp ? <HelpTutorial onClose={closeHelp} /> : null}
 
       {showSolution && (solutionImageUrl || solutionState) ? (
         <div

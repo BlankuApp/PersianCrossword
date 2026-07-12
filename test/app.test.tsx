@@ -14,6 +14,8 @@ const json11 = sample11 as CrosswordJson;
 describe("Persian crossword UI", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    // Prevent the first-run tutorial from auto-opening in unrelated tests.
+    window.localStorage.setItem("persian-crossword-seen-tutorial", "true");
     window.location.hash = "";
   });
 
@@ -54,6 +56,33 @@ describe("Persian crossword UI", () => {
 
     expect(firstCell).toHaveTextContent("س");
     expect(secondCell).toHaveClass("cell-selected");
+  });
+
+  it("auto-opens the tutorial on first run and persists dismissal", async () => {
+    const user = userEvent.setup();
+    window.localStorage.removeItem("persian-crossword-seen-tutorial");
+
+    render(<SolverPage id="sample-10x10-garden" json={json10} />);
+
+    const dialog = screen.getByRole("dialog", { name: "راهنمای استفاده" });
+    expect(dialog).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("button", { name: "فهمیدم" }));
+
+    expect(screen.queryByRole("dialog", { name: "راهنمای استفاده" })).not.toBeInTheDocument();
+    expect(window.localStorage.getItem("persian-crossword-seen-tutorial")).toBe("true");
+  });
+
+  it("does not auto-open the tutorial when already seen, but opens from the toolbar", async () => {
+    const user = userEvent.setup();
+
+    render(<SolverPage id="sample-10x10-garden" json={json10} />);
+
+    expect(screen.queryByRole("dialog", { name: "راهنمای استفاده" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "راهنمای استفاده" }));
+
+    expect(screen.getByRole("dialog", { name: "راهنمای استفاده" })).toBeInTheDocument();
   });
 
   it("restores localStorage progress for the given id", () => {
