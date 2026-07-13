@@ -1,0 +1,103 @@
+
+> persian-crossword-core@0.1.0 dev
+> vite --host 127.0.0.1
+
+
+  [32m[1mVITE[22m v8.0.10[39m  [2mready in [0m[1m561[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m5567[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+^C
+> persian-crossword-core@0.1.0 dev
+> vite --host 127.0.0.1
+
+
+  [32m[1mVITE[22m v8.0.10[39m  [2mready in [0m[1m3372[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m5567[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+^C
+> persian-crossword-core@0.1.0 dev
+> vite --host 127.0.0.1
+
+
+  [32m[1mVITE[22m v8.0.10[39m  [2mready in [0m[1m262[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m5567[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[2m9:00:41 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/AuthContext.tsx, /app/pages/SolverPage.tsx[22m
+[2m9:00:41 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/app/AuthContext.tsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m9:00:41 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/pages/SolverPage.tsx, /app/components/AuthButton.tsx[22m
+[2m9:10:11 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/AuthContext.tsx, /app/pages/SolverPage.tsx[22m
+[2m9:10:11 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/app/AuthContext.tsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m9:10:11 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/pages/SolverPage.tsx, /app/components/AuthButton.tsx[22m
+[2m9:14:28 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/AuthContext.tsx, /app/pages/SolverPage.tsx[22m
+[2m9:14:29 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/app/AuthContext.tsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m9:14:29 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/pages/SolverPage.tsx, /app/components/AuthButton.tsx[22m
+[2m9:45:46 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/AuthContext.tsx, /app/pages/SolverPage.tsx[22m
+[2m9:45:46 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/app/AuthContext.tsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m9:45:46 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/pages/SolverPage.tsx, /app/components/AuthButton.tsx[22m
+[2m10:40:17 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/AuthContext.tsx, /app/pages/SolverPage.tsx[22m
+[2m10:40:42 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/AuthContext.tsx, /app/pages/SolverPage.tsx[22m
+[2m10:41:06 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/AuthContext.tsx, /app/pages/SolverPage.tsx[22m
+[2m10:41:27 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/AuthContext.tsx, /app/pages/SolverPage.tsx[22m
+
+> persian-crossword-core@0.1.0 dev
+> vite --host 127.0.0.1
+
+
+  [32m[1mVITE[22m v8.0.10[39m  [2mready in [0m[1m947[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m5567[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[2m11:41:20 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/AuthContext.tsx, /app/pages/SolverPage.tsx[22m
+[2m11:41:20 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/app/AuthContext.tsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m11:41:20 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/pages/SolverPage.tsx, /app/components/AuthButton.tsx[22m
+
+> persian-crossword-core@0.1.0 dev
+> vite --host 127.0.0.1
+
+
+  [32m[1mVITE[22m v8.0.10[39m  [2mready in [0m[1m2082[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m5567[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[2m5:15:40 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/AuthContext.tsx, /app/pages/SolverPage.tsx[22m
+[2m5:15:40 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/app/AuthContext.tsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m5:15:40 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/pages/SolverPage.tsx, /app/components/AuthButton.tsx[22m
+[2m5:24:53 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/AuthContext.tsx, /app/pages/SolverPage.tsx[22m
+[2m5:24:54 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/app/AuthContext.tsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m5:24:54 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/pages/SolverPage.tsx, /app/components/AuthButton.tsx[22m
+
+> persian-crossword-core@0.1.0 dev
+> vite --host 127.0.0.1
+
+
+  [32m[1mVITE[22m v8.0.10[39m  [2mready in [0m[1m1165[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m5567[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[2m9:46:51 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/AuthContext.tsx, /app/pages/SolverPage.tsx[22m
+[2m9:46:51 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/app/AuthContext.tsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m9:46:51 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/pages/SolverPage.tsx, /app/components/AuthButton.tsx[22m
+[2m11:39:20 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/AuthContext.tsx, /app/pages/SolverPage.tsx[22m
+[2m11:39:20 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/app/AuthContext.tsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m11:39:20 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/pages/SolverPage.tsx, /app/components/AuthButton.tsx[22m
+[2m3:22:29 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/AuthContext.tsx, /app/pages/SolverPage.tsx[22m
+[2m3:22:29 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/app/AuthContext.tsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m3:22:29 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/pages/SolverPage.tsx, /app/components/AuthButton.tsx[22m
+[2m4:01:42 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/AuthContext.tsx, /app/pages/SolverPage.tsx[22m
+[2m4:01:42 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/app/AuthContext.tsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m4:01:42 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/pages/SolverPage.tsx, /app/components/AuthButton.tsx[22m
+[2m5:56:12 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/AuthContext.tsx, /app/pages/SolverPage.tsx[22m
+[2m5:56:13 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/app/AuthContext.tsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m5:56:13 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/pages/SolverPage.tsx, /app/components/AuthButton.tsx[22m
+[2m5:56:29 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/AuthContext.tsx, /app/pages/SolverPage.tsx[22m
+[2m5:56:29 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/app/AuthContext.tsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m5:56:29 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/pages/SolverPage.tsx, /app/components/AuthButton.tsx[22m
+[2m5:56:36 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/AuthContext.tsx, /app/pages/SolverPage.tsx[22m
+[2m5:56:37 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/app/AuthContext.tsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m5:56:37 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/pages/SolverPage.tsx, /app/components/AuthButton.tsx[22m
+[2m5:56:53 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/AuthContext.tsx, /app/pages/SolverPage.tsx[22m
+[2m5:56:53 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/app/AuthContext.tsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m5:56:53 PM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/app/App.tsx, /app/pages/HomePage.tsx, /app/pages/SolverPage.tsx, /app/components/AuthButton.tsx[22m
