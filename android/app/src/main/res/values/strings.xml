@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Persian Crossword</string>
+    <string name="title_activity_main">Persian Crossword</string>
+    <string name="package_name">com.persiancrossword.app</string>
+    <string name="custom_url_scheme">com.persiancrossword.app</string>
+</resources>

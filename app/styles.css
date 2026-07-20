@@ -6,6 +6,16 @@
      ≤640px  → unrelated axis: home/library page table columns + .cell-value mobile font cap
    Do not add a 5th breakpoint without folding it into one of these tiers' purpose.
    ────────────────────────────────────────────────────────── */
+@font-face {
+  font-family: "Vazirmatn";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("./fonts/vazirmatn.woff2") format("woff2");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF,
+    U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+}
+
 :root {
   color: #17201b;
   background: #f6f4ef;
@@ -1262,6 +1272,23 @@ select {
 
 .auth-modal-close:hover {
   color: #17201b;
+}
+
+.auth-native-google {
+  margin-bottom: 16px;
+}
+
+.auth-btn-block {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+
+.auth-error {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  color: #b3261e;
+  text-align: center;
 }
 
 .empty-state {
