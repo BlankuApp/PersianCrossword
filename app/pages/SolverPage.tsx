@@ -134,6 +134,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
   const [showSolution, setShowSolution] = useState(false);
   const [checkMode, setCheckMode] = useState(loadCheckMode);
   const [sourceCollapsed, setSourceCollapsed] = useState(true);
+  const [confirmAction, setConfirmAction] = useState<"reset" | "save" | null>(null);
 
   const boardRef = useRef<HTMLDivElement>(null);
   const solutionBoardRef = useRef<HTMLDivElement>(null);
@@ -420,6 +421,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
       console.error("[debug] save failed", e);
     } finally {
       setIsSaving(false);
+      setConfirmAction(null);
     }
   }
 
@@ -514,7 +516,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
           </button>
           <button
             type="button"
-            onClick={resetProgress}
+            onClick={() => setConfirmAction("reset")}
             title="پاک کردن پاسخ‌ها"
             aria-label="پاک کردن پاسخ‌ها"
           >
@@ -562,7 +564,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
           {isDebugMode ? (
             <button
               type="button"
-              onClick={() => { void handleDebugSave(); }}
+              onClick={() => setConfirmAction("save")}
               disabled={isSaving}
               title="ذخیره جدول (دیباگ)"
               aria-label="ذخیره جدول"
@@ -572,6 +574,45 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
           ) : null}
         </div>
       </header>
+
+      {confirmAction ? (
+        <div
+          className="solution-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label="تایید عملیات"
+          onClick={() => setConfirmAction(null)}
+        >
+          <div className="solution-modal confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <h2>{confirmAction === "reset" ? "پاک کردن پاسخ‌ها" : "ذخیره جدول"}</h2>
+            <p>
+              {confirmAction === "reset"
+                ? "همه پاسخ‌های واردشده پاک می‌شوند و قابل بازگشت نیست. ادامه می‌دهید؟"
+                : "جدول با وضعیت فعلی روی دیسک ذخیره می‌شود. ادامه می‌دهید؟"}
+            </p>
+            <div className="solution-modal-actions">
+              <button type="button" onClick={() => setConfirmAction(null)}>
+                انصراف
+              </button>
+              <button
+                type="button"
+                className="confirm-modal-primary"
+                disabled={confirmAction === "save" && isSaving}
+                onClick={() => {
+                  if (confirmAction === "reset") {
+                    resetProgress();
+                    setConfirmAction(null);
+                  } else {
+                    void handleDebugSave();
+                  }
+                }}
+              >
+                {confirmAction === "save" && isSaving ? "در حال ذخیره..." : "تایید"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {showHelp ? <HelpTutorial onClose={closeHelp} /> : null}
 
