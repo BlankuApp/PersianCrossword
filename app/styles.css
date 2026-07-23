@@ -786,6 +786,18 @@ select {
   min-height: var(--active-clue-min-h);
 }
 
+.active-clue-block + .active-clue-block {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #d3d8d2;
+}
+
+.active-clue-block-active {
+  border-inline-start: 3px solid #1e5c38;
+  padding-inline-start: calc(var(--active-clue-pad-h) - 3px);
+  margin-inline-start: calc(var(--active-clue-pad-h) * -1);
+}
+
 .active-clue p {
   margin: 8px 0 0;
   font-size: 1.1rem;
