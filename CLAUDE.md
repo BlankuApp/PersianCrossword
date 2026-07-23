@@ -41,6 +41,10 @@ app-dist/     Vite app build output → deployed to GitHub Pages
 Two separate tsconfigs: `tsconfig.json` builds the library (`dist/`), `tsconfig.app.json`
 is for the React app. Both are checked by `npm run typecheck`.
 
+Both tsconfigs set `exactOptionalPropertyTypes: true`: an optional prop/field typed `foo?: T`
+rejects an explicitly-passed `undefined` value — write `foo?: T | undefined` when the value
+(not just the key) can be `undefined`.
+
 ## Puzzle Format
 
 Puzzles are `CrosswordJson` (version 3) JSON files under `puzzles/`.
@@ -49,6 +53,9 @@ Puzzles are `CrosswordJson` (version 3) JSON files under `puzzles/`.
 - Each puzzle folder can have a matching `{id}.png` (solution image) and an optional
   source image referenced via `meta.sourceFile`.
 - `meta.id` must be set; if missing, the filename slug is used and progress breaks on rename.
+- Never compare/count Persian text with raw JS strings — use `normalizePersianText` /
+  `splitPersianGraphemes` (`src/text.ts`). They fold Arabic look-alike letters (ي→ی, ك→گ) and
+  strip diacritics/tatweel; a cell always holds exactly one grapheme, not one JS char.
 
 ## Firebase
 
@@ -60,3 +67,13 @@ Local fallback uses `localStorage` with key prefix `persian-crossword:`.
 
 Merges to `main` auto-deploy to GitHub Pages via `.github/workflows/`.
 Build output uploaded: `app-dist/`.
+
+## Android (Capacitor)
+
+```bash
+npm run build           # writes app-dist/, which capacitor.config.ts uses as webDir
+npx cap sync android    # copy app-dist/ + plugin config into android/
+```
+Release builds are signed via `android/keystore.properties` (gitignored, not in repo — release
+builds are unsigned without it locally). Output APKs are named
+`persian-crossword-${version}-${buildType}.apk` (`android/app/build.gradle`).
