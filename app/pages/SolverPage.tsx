@@ -186,6 +186,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
       ? { ...activeSlot, clue: clueOverrides[activeSlot.id]! }
       : activeSlot;
   const activeKeys = slotCellKeys(activeSlot);
+  const cellValues = activeSlotForDisplay?.cells.map((c) => crosswordState?.getCell(c));
 
   useEffect(() => {
     if (normalizedJson.version !== 3 || !activeSlot) {
@@ -290,10 +291,6 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     if (!isTouch) focusInput();
   }
 
-  function handleTrayTileTap(tile: TrayTile): void {
-    commitGrapheme(tile.letter);
-  }
-
   function toggleDirection(): void {
     if (!puzzle || !selection) return;
     const slots = puzzle.getSlotsForCell(selection.coord);
@@ -333,10 +330,11 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     commitGrapheme(value);
   }
 
-  function updateCell(coord: Coord, value: string | null): void {
+  function updateCell(coord: Coord, value: string | null, clearCoord?: Coord): void {
     if (!puzzle) return;
     const nextState = createState(puzzle, savedState);
     nextState.setCell(coord, value);
+    if (clearCoord) nextState.setCell(clearCoord, null);
     commitState(nextState);
   }
 
@@ -706,7 +704,8 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
                 slot={activeSlotForDisplay}
                 showTray={normalizedJson.version === 3}
                 trayTiles={trayTiles}
-                onTrayTileTap={handleTrayTileTap}
+                cellValues={cellValues}
+                onCellChange={updateCell}
                 onBackspace={backspaceCell}
                 isDebugMode={isDebugMode}
                 onSaveClue={handleSaveClue}

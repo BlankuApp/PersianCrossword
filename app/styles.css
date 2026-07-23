@@ -834,6 +834,44 @@ select {
   font-weight: 300;
 }
 
+.word-cells-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: var(--stack-gap);
+}
+
+.word-cell {
+  width: var(--tray-tile-size);
+  height: var(--tray-tile-size);
+  display: grid;
+  place-items: center;
+  border: 1px solid #d3d8d2;
+  border-radius: 4px;
+  background: #f4f7f2;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.word-cell .cell-value {
+  font-size: calc(var(--tray-tile-size) * 0.7);
+}
+
+.word-cell-filled {
+  cursor: grab;
+}
+
+.word-cell-drop-hover {
+  background: #dff0e2;
+  border-color: #1e5c38;
+}
+
+.tile-ghost {
+  position: fixed;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 1000;
+}
+
 .active-clue-head {
   display: flex;
   align-items: center;

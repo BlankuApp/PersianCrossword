@@ -1,23 +1,37 @@
 import { Delete, Pencil, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { Direction, Slot } from "../../src/index";
+import type { Coord, Direction, Slot } from "../../src/index";
 import type { TrayTile } from "../crosswordUi";
 
 interface ActiveClueProps {
   readonly slot: Slot | undefined;
   readonly showTray?: boolean;
   readonly trayTiles?: readonly TrayTile[];
-  readonly onTrayTileTap?: (tile: TrayTile) => void;
+  readonly cellValues?: readonly (string | undefined)[] | undefined;
+  readonly onCellChange?: (coord: Coord, value: string | null, clearCoord?: Coord) => void;
   readonly onBackspace?: () => void;
   readonly isDebugMode?: boolean;
   readonly onSaveClue?: (slot: Slot, newClue: string) => Promise<void>;
+}
+
+interface DragState {
+  readonly letter: string;
+  readonly sourceCoord?: Coord | undefined;
+  readonly x: number;
+  readonly y: number;
+  readonly hoverKey: string | null;
+}
+
+function coordKey(coord: Coord): string {
+  return `${coord.row},${coord.col}`;
 }
 
 export function ActiveClue({
   slot,
   showTray,
   trayTiles = [],
-  onTrayTileTap,
+  cellValues,
+  onCellChange,
   onBackspace,
   isDebugMode,
   onSaveClue,
@@ -26,6 +40,46 @@ export function ActiveClue({
   const [draftClue, setDraftClue] = useState("");
   const [isSavingClue, setIsSavingClue] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [drag, setDrag] = useState<DragState | null>(null);
+
+  function startTileDrag(event: React.PointerEvent, letter: string, sourceCoord?: Coord): void {
+    event.preventDefault();
+
+    function hoveredCell(ev: PointerEvent): HTMLElement | null {
+      return (ev.target as Element | null)?.closest<HTMLElement>("[data-coord]") ??
+        (document.elementFromPoint(ev.clientX, ev.clientY)?.closest<HTMLElement>("[data-coord]") ?? null);
+    }
+
+    function onMove(ev: PointerEvent): void {
+      const cell = hoveredCell(ev);
+      setDrag({ letter, sourceCoord, x: ev.clientX, y: ev.clientY, hoverKey: cell?.dataset.coord ?? null });
+    }
+
+    function onEnd(ev: PointerEvent): void {
+      const cell = hoveredCell(ev);
+      const targetKey = cell?.dataset.coord ?? null;
+      const sourceKey = sourceCoord ? coordKey(sourceCoord) : null;
+      if (targetKey && targetKey !== sourceKey) {
+        const [row, col] = targetKey.split(",").map(Number);
+        onCellChange?.({ row: row!, col: col! }, letter, sourceCoord);
+      } else if (!targetKey && sourceCoord) {
+        onCellChange?.(sourceCoord, null);
+      }
+      cleanup();
+    }
+
+    function cleanup(): void {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onEnd);
+      document.removeEventListener("pointercancel", cleanup);
+      setDrag(null);
+    }
+
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onEnd);
+    document.addEventListener("pointercancel", cleanup);
+    setDrag({ letter, sourceCoord, x: event.clientX, y: event.clientY, hoverKey: null });
+  }
 
   const handleGoogleSearch = () => {
     if (slot?.clue) {
@@ -153,6 +207,30 @@ export function ActiveClue({
               </div>
             </div>
           ) : null}
+          {showTray && slot.cells.length > 0 ? (
+            <div className="word-cells-row" role="list" aria-label="خانه‌های کلمه انتخاب شده">
+              {slot.cells.map((coord, i) => {
+                const key = coordKey(coord);
+                const value = cellValues?.[i];
+                return (
+                  <div
+                    key={key}
+                    role="listitem"
+                    className={[
+                      "word-cell",
+                      value ? "word-cell-filled" : "",
+                      drag?.hoverKey === key ? "word-cell-drop-hover" : "",
+                    ].join(" ")}
+                    data-coord={key}
+                    onPointerDown={value ? (e) => startTileDrag(e, value, coord) : undefined}
+                    style={value ? { touchAction: "none" } : undefined}
+                  >
+                    <span className="cell-value">{value ?? ""}</span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
           {showTray && trayTiles.length > 0 ? (
             <div className="letter-tray" role="list" aria-label="کاشی‌های حرف">
               {trayTiles.map((tile) => (
@@ -161,11 +239,21 @@ export function ActiveClue({
                   type="button"
                   role="listitem"
                   className="tray-tile"
-                  onClick={() => onTrayTileTap?.(tile)}
+                  onPointerDown={(e) => startTileDrag(e, tile.letter)}
+                  style={{ touchAction: "none" }}
                 >
                   <span className="cell-value">{tile.letter}</span>
                 </button>
               ))}
+            </div>
+          ) : null}
+          {drag ? (
+            <div
+              className="tile-ghost tray-tile"
+              aria-hidden="true"
+              style={{ left: drag.x, top: drag.y }}
+            >
+              <span className="cell-value">{drag.letter}</span>
             </div>
           ) : null}
         </>
