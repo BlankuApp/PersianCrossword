@@ -730,7 +730,7 @@ select {
   background: #d7eadf;
 }
 
-.cell-crossing-word {
+.cell-down-word {
   background: #e9edf1;
 }
 
@@ -796,6 +796,10 @@ select {
   border-inline-start: 3px solid #1e5c38;
   padding-inline-start: calc(var(--active-clue-pad-h) - 3px);
   margin-inline-start: calc(var(--active-clue-pad-h) * -1);
+}
+
+.active-clue-block-active-down {
+  border-inline-start-color: #2f5673;
 }
 
 .active-clue p {
@@ -1037,10 +1041,17 @@ select {
 }
 
 .clue-item-btn:hover,
-.clue-item-btn:focus-visible,
-.clue-item-btn.clue-selected {
+.clue-item-btn:focus-visible {
   background: #edf6f0;
   outline: none;
+}
+
+.clue-item-btn.clue-selected-across {
+  background: #edf6f0;
+}
+
+.clue-item-btn.clue-selected-down {
+  background: #e7eef4;
 }
 
 @media (max-width: 1024px) {

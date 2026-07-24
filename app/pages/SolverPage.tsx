@@ -177,9 +177,9 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     }
     return createState(puz, { cells });
   }, [puzzle, debugPuzzle, normalizedJson, isDebugMode, debugEditGrid]);
-  const activeSlot = puzzle ? getActiveSlot(puzzle, selection) : undefined;
-  const activeKeys = slotCellKeys(activeSlot);
   const cellSlots = puzzle && selection ? puzzle.getSlotsForCell(selection.coord) : {};
+  const acrossKeys = slotCellKeys(cellSlots.across);
+  const downKeys = slotCellKeys(cellSlots.down);
   function withClueOverride(slot: Slot | undefined): Slot | undefined {
     return slot && clueOverrides[slot.id] ? { ...slot, clue: clueOverrides[slot.id]! } : slot;
   }
@@ -632,7 +632,8 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
                   puzzle={activePuzzle!}
                   state={solutionState}
                   selection={undefined}
-                  activeKeys={new Set()}
+                  acrossKeys={new Set()}
+                  downKeys={new Set()}
                   onCellClick={() => {}}
                   onKeyDown={() => {}}
                 />
@@ -675,7 +676,8 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
                     puzzle={puzzle!}
                     state={crosswordState!}
                     selection={selection}
-                    activeKeys={activeKeys}
+                    acrossKeys={acrossKeys}
+                    downKeys={downKeys}
                     onCellClick={selectCell}
                     onKeyDown={handleKeyDown}
                     onInputBeforeInput={handleInputBeforeInput}
@@ -701,7 +703,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
               <CluePanel
                 acrossSlots={puzzle!.acrossSlots}
                 downSlots={puzzle!.downSlots}
-                activeSlot={activeSlot}
+                activeSlots={cellSlots}
                 clueTab={clueTab}
                 onTabChange={setClueTab}
                 onClueClick={selectClue}

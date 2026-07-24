@@ -1,6 +1,6 @@
 import { Delete, Pencil, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { Coord, Direction, Slot } from "../../src/index";
+import type { Coord, Direction, Slot, SlotsForCell } from "../../src/index";
 import { buildLetterTray } from "../crosswordUi";
 
 interface ActiveClueProps {
@@ -185,7 +185,9 @@ function ClueBlock({
   }, [isEditOpen]);
 
   return (
-    <div className={`active-clue-block${isActive ? " active-clue-block-active" : ""}`}>
+    <div
+      className={`active-clue-block${isActive ? ` active-clue-block-active active-clue-block-active-${slot.direction}` : ""}`}
+    >
       <div className="active-clue-head">
         <p>
           {slot.clue}{" "}
@@ -322,7 +324,7 @@ function ClueBlock({
 interface CluePanelProps {
   readonly acrossSlots: readonly Slot[];
   readonly downSlots: readonly Slot[];
-  readonly activeSlot: Slot | undefined;
+  readonly activeSlots: SlotsForCell;
   readonly clueTab: Direction;
   readonly onTabChange: (direction: Direction) => void;
   readonly onClueClick: (slot: Slot) => void;
@@ -331,7 +333,7 @@ interface CluePanelProps {
 export function CluePanel({
   acrossSlots,
   downSlots,
-  activeSlot,
+  activeSlots,
   clueTab,
   onTabChange,
   onClueClick,
@@ -361,14 +363,16 @@ export function CluePanel({
         <GroupedClueList
           title="افقی"
           slots={acrossSlots}
-          activeSlot={activeSlot}
+          activeSlotId={activeSlots.across?.id}
+          direction="across"
           visibleOnSmall={clueTab === "across"}
           onClueClick={onClueClick}
         />
         <GroupedClueList
           title="عمودی"
           slots={downSlots}
-          activeSlot={activeSlot}
+          activeSlotId={activeSlots.down?.id}
+          direction="down"
           visibleOnSmall={clueTab === "down"}
           onClueClick={onClueClick}
         />
@@ -393,13 +397,15 @@ function groupSlotsByGroupNum(slots: readonly Slot[]): [number, Slot[]][] {
 function GroupedClueList({
   title,
   slots,
-  activeSlot,
+  activeSlotId,
+  direction,
   visibleOnSmall,
   onClueClick,
 }: {
   readonly title: string;
   readonly slots: readonly Slot[];
-  readonly activeSlot: Slot | undefined;
+  readonly activeSlotId: string | undefined;
+  readonly direction: Direction;
   readonly visibleOnSmall: boolean;
   readonly onClueClick: (slot: Slot) => void;
 }) {
@@ -416,7 +422,7 @@ function GroupedClueList({
                   {i > 0 && <span className="clue-sep"> — </span>}
                   <button
                     type="button"
-                    className={`clue-item-btn${activeSlot?.id === slot.id ? " clue-selected" : ""}`}
+                    className={`clue-item-btn${activeSlotId === slot.id ? ` clue-selected-${direction}` : ""}`}
                     onClick={() => onClueClick(slot)}
                   >
                     {slot.clue}
