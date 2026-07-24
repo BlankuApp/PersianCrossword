@@ -699,6 +699,8 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
                 onBackspace={backspaceCell}
                 isDebugMode={isDebugMode}
                 onSaveClue={handleSaveClue}
+                checkMode={checkMode}
+                getSolutionValue={(c) => solutionState?.getCell(c)}
               />
               <CluePanel
                 acrossSlots={puzzle!.acrossSlots}

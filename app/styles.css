@@ -881,6 +881,14 @@ select {
   border-color: #1e5c38;
 }
 
+.word-cell-correct {
+  color: #145c35;
+}
+
+.word-cell-incorrect {
+  color: #8b1a1a;
+}
+
 .tile-ghost {
   position: fixed;
   transform: translate(-50%, -50%);

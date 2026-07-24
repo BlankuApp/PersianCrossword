@@ -1,6 +1,6 @@
 import { Delete, Pencil, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { Coord, Direction, Slot, SlotsForCell } from "../../src/index";
+import { normalizePersianText, type Coord, type Direction, type Slot, type SlotsForCell } from "../../src/index";
 import { buildLetterTray } from "../crosswordUi";
 
 interface ActiveClueProps {
@@ -12,6 +12,8 @@ interface ActiveClueProps {
   readonly onBackspace?: () => void;
   readonly isDebugMode?: boolean;
   readonly onSaveClue?: (slot: Slot, newClue: string) => Promise<void>;
+  readonly checkMode?: boolean;
+  readonly getSolutionValue?: (coord: Coord) => string | undefined;
 }
 
 interface ClueBlockProps {
@@ -23,6 +25,8 @@ interface ClueBlockProps {
   readonly onBackspace?: (() => void) | undefined;
   readonly isDebugMode?: boolean | undefined;
   readonly onSaveClue?: ((slot: Slot, newClue: string) => Promise<void>) | undefined;
+  readonly checkMode?: boolean | undefined;
+  readonly getSolutionValue?: ((coord: Coord) => string | undefined) | undefined;
 }
 
 interface DragState {
@@ -46,6 +50,8 @@ export function ActiveClue({
   onBackspace,
   isDebugMode,
   onSaveClue,
+  checkMode,
+  getSolutionValue,
 }: ActiveClueProps) {
   if (!slots.across && !slots.down) {
     return (
@@ -67,6 +73,8 @@ export function ActiveClue({
           onBackspace={onBackspace}
           isDebugMode={isDebugMode}
           onSaveClue={onSaveClue}
+          checkMode={checkMode}
+          getSolutionValue={getSolutionValue}
         />
       ) : null}
       {slots.down ? (
@@ -79,6 +87,8 @@ export function ActiveClue({
           onBackspace={onBackspace}
           isDebugMode={isDebugMode}
           onSaveClue={onSaveClue}
+          checkMode={checkMode}
+          getSolutionValue={getSolutionValue}
         />
       ) : null}
     </section>
@@ -94,11 +104,24 @@ function ClueBlock({
   onBackspace,
   isDebugMode,
   onSaveClue,
+  checkMode,
+  getSolutionValue,
 }: ClueBlockProps) {
   const trayTiles = useMemo(() => (showTray ? buildLetterTray(slot) : []), [slot.id, showTray]);
   const cellValues = useMemo(
     () => slot.cells.map((c) => getCellValue?.(c)),
     [slot, getCellValue],
+  );
+  const correctness = useMemo(
+    () =>
+      slot.cells.map((coord, i) => {
+        const value = cellValues[i];
+        if (!checkMode || !getSolutionValue || !value) return undefined;
+        return normalizePersianText(value) === normalizePersianText(getSolutionValue(coord) ?? "")
+          ? "correct"
+          : "incorrect";
+      }),
+    [slot, cellValues, checkMode, getSolutionValue],
   );
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [draftClue, setDraftClue] = useState("");
@@ -281,6 +304,8 @@ function ClueBlock({
                   "word-cell",
                   value ? "word-cell-filled" : "",
                   drag?.hoverKey === key ? "word-cell-drop-hover" : "",
+                  correctness[i] === "correct" ? "word-cell-correct" : "",
+                  correctness[i] === "incorrect" ? "word-cell-incorrect" : "",
                 ].join(" ")}
                 data-coord={key}
                 onPointerDown={value ? (e) => startTileDrag(e, value, coord) : undefined}
