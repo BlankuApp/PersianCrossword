@@ -33,7 +33,8 @@ interface CrosswordBoardProps {
   readonly puzzle: ReturnType<typeof compilePuzzle>;
   readonly state: ReturnType<typeof createState>;
   readonly selection: Selection | undefined;
-  readonly activeKeys: ReadonlySet<string>;
+  readonly acrossKeys: ReadonlySet<string>;
+  readonly downKeys: ReadonlySet<string>;
   readonly onCellClick: (coord: Coord) => void;
   readonly onKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => void;
   readonly onInputBeforeInput?: (event: React.FormEvent<HTMLInputElement>) => void;
@@ -49,7 +50,8 @@ export function CrosswordBoard({
   puzzle,
   state,
   selection,
-  activeKeys,
+  acrossKeys,
+  downKeys,
   onCellClick,
   onKeyDown,
   onInputBeforeInput,
@@ -114,7 +116,8 @@ export function CrosswordBoard({
               className={[
                 "cell",
                 isBlock ? "cell-block" : "cell-open",
-                activeKeys.has(key) ? "cell-active-word" : "",
+                acrossKeys.has(key) ? "cell-active-word" : "",
+                downKeys.has(key) ? "cell-down-word" : "",
                 isSelected ? "cell-selected" : "",
                 correctness === "correct" ? "cell-correct" : "",
                 correctness === "incorrect" ? "cell-incorrect" : "",

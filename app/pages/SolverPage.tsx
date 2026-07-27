@@ -35,7 +35,6 @@ import {
   type CrosswordJson,
 } from "../../src/index";
 import {
-  buildLetterTray,
   getActiveSlot,
   handleCellSelection,
   isTouchDevice,
@@ -44,7 +43,6 @@ import {
   selectSlot,
   slotCellKeys,
   type Selection,
-  type TrayTile,
 } from "../crosswordUi";
 import {
   loadProgress,
@@ -129,7 +127,6 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     }
   });
   const [clueTab, setClueTab] = useState<Direction>("across");
-  const [trayTiles, setTrayTiles] = useState<readonly TrayTile[]>([]);
   const [showHelp, setShowHelp] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
   const [checkMode, setCheckMode] = useState(loadCheckMode);
@@ -180,22 +177,14 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     }
     return createState(puz, { cells });
   }, [puzzle, debugPuzzle, normalizedJson, isDebugMode, debugEditGrid]);
-  const activeSlot = puzzle ? getActiveSlot(puzzle, selection) : undefined;
-  const activeSlotForDisplay =
-    activeSlot && clueOverrides[activeSlot.id]
-      ? { ...activeSlot, clue: clueOverrides[activeSlot.id]! }
-      : activeSlot;
-  const activeKeys = slotCellKeys(activeSlot);
-
-  useEffect(() => {
-    if (normalizedJson.version !== 3 || !activeSlot) {
-      setTrayTiles([]);
-      return;
-    }
-    setTrayTiles(buildLetterTray(activeSlot));
-    // Regenerate only when the active *slot* changes, not on every selection move within it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSlot?.id, normalizedJson.version]);
+  const cellSlots = puzzle && selection ? puzzle.getSlotsForCell(selection.coord) : {};
+  const acrossKeys = slotCellKeys(cellSlots.across);
+  const downKeys = slotCellKeys(cellSlots.down);
+  function withClueOverride(slot: Slot | undefined): Slot | undefined {
+    return slot && clueOverrides[slot.id] ? { ...slot, clue: clueOverrides[slot.id]! } : slot;
+  }
+  const acrossSlotForDisplay = withClueOverride(cellSlots.across);
+  const downSlotForDisplay = withClueOverride(cellSlots.down);
 
   useEffect(() => {
     const restored = loadProgress(id);
@@ -290,10 +279,6 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     if (!isTouch) focusInput();
   }
 
-  function handleTrayTileTap(tile: TrayTile): void {
-    commitGrapheme(tile.letter);
-  }
-
   function toggleDirection(): void {
     if (!puzzle || !selection) return;
     const slots = puzzle.getSlotsForCell(selection.coord);
@@ -333,10 +318,11 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     commitGrapheme(value);
   }
 
-  function updateCell(coord: Coord, value: string | null): void {
+  function updateCell(coord: Coord, value: string | null, clearCoord?: Coord): void {
     if (!puzzle) return;
     const nextState = createState(puzzle, savedState);
     nextState.setCell(coord, value);
+    if (clearCoord) nextState.setCell(clearCoord, null);
     commitState(nextState);
   }
 
@@ -646,7 +632,8 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
                   puzzle={activePuzzle!}
                   state={solutionState}
                   selection={undefined}
-                  activeKeys={new Set()}
+                  acrossKeys={new Set()}
+                  downKeys={new Set()}
                   onCellClick={() => {}}
                   onKeyDown={() => {}}
                 />
@@ -689,7 +676,8 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
                     puzzle={puzzle!}
                     state={crosswordState!}
                     selection={selection}
-                    activeKeys={activeKeys}
+                    acrossKeys={acrossKeys}
+                    downKeys={downKeys}
                     onCellClick={selectCell}
                     onKeyDown={handleKeyDown}
                     onInputBeforeInput={handleInputBeforeInput}
@@ -703,18 +691,21 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
 
             <div className="clue-sidebar">
               <ActiveClue
-                slot={activeSlotForDisplay}
+                slots={{ across: acrossSlotForDisplay, down: downSlotForDisplay }}
+                activeDirection={selection?.direction}
                 showTray={normalizedJson.version === 3}
-                trayTiles={trayTiles}
-                onTrayTileTap={handleTrayTileTap}
+                getCellValue={(c) => crosswordState?.getCell(c)}
+                onCellChange={updateCell}
                 onBackspace={backspaceCell}
                 isDebugMode={isDebugMode}
                 onSaveClue={handleSaveClue}
+                checkMode={checkMode}
+                getSolutionValue={(c) => solutionState?.getCell(c)}
               />
               <CluePanel
                 acrossSlots={puzzle!.acrossSlots}
                 downSlots={puzzle!.downSlots}
-                activeSlot={activeSlot}
+                activeSlots={cellSlots}
                 clueTab={clueTab}
                 onTabChange={setClueTab}
                 onClueClick={selectClue}
