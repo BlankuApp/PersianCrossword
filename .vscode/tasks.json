@@ -102,7 +102,10 @@
       "type": "shell",
       "command": "npm run build && npx cap sync android",
       "options": {
-        "cwd": "${workspaceFolder}"
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "JAVA_HOME": "C:\\Program Files\\Android\\Android Studio\\jbr"
+        }
       },
       "presentation": {
         "group": "android",
@@ -131,9 +134,12 @@
     {
       "label": "Android: Run on Device/Emulator",
       "type": "shell",
-      "command": "npm run build && npx cap sync android && npx cap run android",
+      "command": "npm run build && npx cap sync android && npx cap run android --target Medium_Phone",
       "options": {
-        "cwd": "${workspaceFolder}"
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "JAVA_HOME": "C:\\Program Files\\Android\\Android Studio\\jbr"
+        }
       },
       "presentation": {
         "group": "android",

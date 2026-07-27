@@ -37,7 +37,7 @@
   --font-h1-home: clamp(1.6rem, 3.5vw, 2.2rem);
   --index-label-font: clamp(0.52rem, 1.25vw, 0.72rem);
   --cell-value-mult: 2;
-  --cell-value-cap: 2.5rem;
+  --cell-value-cap: 2.1rem;
 }
 
 * {
@@ -1633,7 +1633,7 @@ select {
 @media (max-width: 640px) {
   :root {
     --cell-value-mult: 1.5;
-    --cell-value-cap: 2.3rem;
+    --cell-value-cap: 1.9rem;
   }
 
   .home-repo-link {
