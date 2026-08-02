@@ -14,7 +14,7 @@ export interface PuzzleSummary {
   readonly filePath: string;
   readonly solutionImageUrl: string | undefined;
   readonly sourceImageUrl: string | undefined;
-  readonly error?: string;
+  readonly error?: string | undefined;
 }
 
 // Vite eager glob – at build time every puzzle JSON under /puzzles/ is bundled.

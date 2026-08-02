@@ -75,7 +75,8 @@ export async function syncProgress(uid: string): Promise<void> {
   // Also download cloud puzzles not in local (other devices' progress)
   for (const puzzleId of Object.keys(cloudData)) {
     if (!localKeys.includes(puzzleId)) {
-      saveProgress(puzzleId, cloudData[puzzleId]);
+      const cloudState = cloudData[puzzleId];
+      if (cloudState) saveProgress(puzzleId, cloudState);
     }
   }
 

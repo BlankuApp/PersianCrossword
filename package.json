@@ -35,14 +35,13 @@
     "vitest": "^4.1.5"
   },
   "dependencies": {
-    "@capacitor-firebase/authentication": "^6.3.1",
-    "@capacitor/android": "^6.2.1",
-    "@capacitor/app": "^6.0.3",
-    "@capacitor/cli": "^6.2.1",
-    "@capacitor/core": "^6.2.1",
+    "@capacitor-firebase/authentication": "^8.3.0",
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
     "canvas-confetti": "^1.9.4",
-    "firebase": "^10.14.1",
-    "firebaseui": "^6.1.0",
+    "firebase": "^12.17.0",
     "lucide-react": "^1.11.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"

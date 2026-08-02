@@ -59,10 +59,10 @@ select {
   min-height: 100dvh;
   margin: 0 auto;
   padding: var(--shell-padding);
-  padding-top: max(var(--shell-padding), env(safe-area-inset-top));
-  padding-right: max(var(--shell-padding), env(safe-area-inset-right));
-  padding-bottom: max(var(--shell-padding), env(safe-area-inset-bottom));
-  padding-left: max(var(--shell-padding), env(safe-area-inset-left));
+  padding-top: max(var(--shell-padding), var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
+  padding-right: max(var(--shell-padding), var(--safe-area-inset-right, env(safe-area-inset-right, 0px)));
+  padding-bottom: max(var(--shell-padding), var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+  padding-left: max(var(--shell-padding), var(--safe-area-inset-left, env(safe-area-inset-left, 0px)));
 }
 
 .app-header {
@@ -476,8 +476,10 @@ select {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right))
-    max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+  padding: max(20px, var(--safe-area-inset-top, env(safe-area-inset-top, 0px)))
+    max(20px, var(--safe-area-inset-right, env(safe-area-inset-right, 0px)))
+    max(20px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)))
+    max(20px, var(--safe-area-inset-left, env(safe-area-inset-left, 0px)));
   background: rgba(15, 25, 20, 0.78);
   backdrop-filter: blur(2px);
   animation: solution-fade-in 0.2s ease-out;
@@ -1382,8 +1384,10 @@ select {
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right)
-    env(safe-area-inset-bottom) env(safe-area-inset-left);
+  padding: var(--safe-area-inset-top, env(safe-area-inset-top, 0px))
+    var(--safe-area-inset-right, env(safe-area-inset-right, 0px))
+    var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))
+    var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
 }
 
 .auth-modal {
@@ -1395,6 +1399,13 @@ select {
   max-height: 90dvh;
   overflow-y: auto;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+}
+
+.auth-modal h2 {
+  margin: 0 0 18px;
+  color: #1e5c38;
+  font-size: 1.25rem;
+  text-align: center;
 }
 
 .auth-modal-close {
@@ -1414,21 +1425,117 @@ select {
   color: #17201b;
 }
 
-.auth-native-google {
-  margin-bottom: 16px;
-}
-
 .auth-btn-block {
   display: flex;
   width: 100%;
   justify-content: center;
 }
 
+.auth-google-btn {
+  min-height: 42px;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0;
+  color: #7b847e;
+  font-size: 0.82rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: #dce2de;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.auth-form label {
+  color: #4c5750;
+  font-size: 0.86rem;
+}
+
+.auth-form input {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid #bac3bc;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #17201b;
+  font: inherit;
+  direction: ltr;
+}
+
+.auth-form input:focus {
+  border-color: #4c9f70;
+  outline: 2px solid rgba(76, 159, 112, 0.18);
+}
+
+.auth-primary-btn {
+  min-height: 42px;
+  margin-top: 8px;
+  border-color: #1e5c38;
+  background: #1e5c38;
+  color: #ffffff;
+}
+
+.auth-primary-btn:hover {
+  border-color: #17482d;
+  background: #17482d;
+}
+
+.auth-mode-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 14px;
+  margin-top: 14px;
+}
+
+.auth-mode-actions button {
+  padding: 2px;
+  border: none;
+  background: transparent;
+  color: #1e5c38;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.auth-guest-btn {
+  margin-top: 16px;
+}
+
+.auth-btn:disabled,
+.auth-mode-actions button:disabled,
+.auth-modal-close:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
 .auth-error {
-  margin: 8px 0 0;
+  margin: 12px 0 0;
   font-size: 0.85rem;
-  color: #b3261e;
+  color: #8b1a1a;
   text-align: center;
+  line-height: 1.7;
+}
+
+.auth-notice {
+  margin: 12px 0 0;
+  color: #1e5c38;
+  font-size: 0.85rem;
+  text-align: center;
+  line-height: 1.7;
 }
 
 .empty-state {

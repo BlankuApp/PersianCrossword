@@ -1,63 +1,105 @@
-import { useEffect, useRef, useState } from "react";
-import * as firebaseui from "firebaseui";
-import { GoogleAuthProvider, EmailAuthProvider, signInWithCredential } from "firebase/auth";
+import { useState, type FormEvent } from "react";
+import {
+  createUserWithEmailAndPassword,
+  GoogleAuthProvider,
+  sendPasswordResetEmail,
+  signInAnonymously,
+  signInWithCredential,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+} from "firebase/auth";
 import { Capacitor } from "@capacitor/core";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
-import "firebaseui/dist/firebaseui.css";
 import { auth } from "../firebase";
 import { useAuth } from "../AuthContext";
 
-// Google's OAuth servers block sign-in inside embedded WebViews (signInWithPopup fails
-// with "disallowed_useragent"), so native platforms use a native Google Sign-In button
-// instead and bridge the resulting ID token into the same firebase/auth instance.
-const isNative = Capacitor.isNativePlatform();
+type EmailMode = "signin" | "signup" | "reset";
+
+const AUTH_ERRORS: Readonly<Record<string, string>> = {
+  "auth/email-already-in-use": "این ایمیل قبلاً ثبت شده است.",
+  "auth/invalid-credential": "ایمیل یا رمز عبور نادرست است.",
+  "auth/invalid-email": "نشانی ایمیل معتبر نیست.",
+  "auth/network-request-failed": "ارتباط با اینترنت برقرار نشد.",
+  "auth/popup-blocked": "مرورگر پنجرهٔ ورود را مسدود کرد.",
+  "auth/popup-closed-by-user": "پنجرهٔ ورود پیش از پایان بسته شد.",
+  "auth/too-many-requests": "تلاش‌های زیادی انجام شده است؛ کمی بعد دوباره امتحان کنید.",
+  "auth/weak-password": "رمز عبور باید دست‌کم ۶ نویسه باشد.",
+};
+
+function authErrorMessage(error: unknown): string {
+  if (typeof error === "object" && error !== null && "code" in error) {
+    const message = AUTH_ERRORS[String(error.code)];
+    if (message) return message;
+  }
+  return error instanceof Error ? error.message : "ورود انجام نشد. دوباره امتحان کنید.";
+}
 
 export function AuthButton() {
   const { user, signOut } = useAuth();
   const [open, setOpen] = useState(false);
-  const [googleError, setGoogleError] = useState<string | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const uiRef = useRef<firebaseui.auth.AuthUI | null>(null);
+  const [mode, setMode] = useState<EmailMode>("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const isNative = Capacitor.isNativePlatform();
 
-  useEffect(() => {
-    if (!open || !containerRef.current) return;
+  function chooseMode(nextMode: EmailMode) {
+    setMode(nextMode);
+    setError(null);
+    setNotice(null);
+  }
 
-    const ui = firebaseui.auth.AuthUI.getInstance() ?? new firebaseui.auth.AuthUI(auth);
-    uiRef.current = ui;
-
-    ui.start(containerRef.current, {
-      signInFlow: "popup",
-      signInOptions: isNative
-        ? [EmailAuthProvider.PROVIDER_ID, firebaseui.auth.AnonymousAuthProvider.PROVIDER_ID]
-        : [
-            GoogleAuthProvider.PROVIDER_ID,
-            EmailAuthProvider.PROVIDER_ID,
-            firebaseui.auth.AnonymousAuthProvider.PROVIDER_ID,
-          ],
-      callbacks: {
-        signInSuccessWithAuthResult: () => {
-          setOpen(false);
-          return false;
-        },
-      },
-    });
-
-    return () => {
-      uiRef.current?.reset();
-    };
-  }, [open]);
-
-  async function signInWithGoogleNative() {
-    setGoogleError(null);
+  async function runAuth(action: () => Promise<unknown>, closeOnSuccess = true) {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
     try {
+      await action();
+      if (closeOnSuccess) setOpen(false);
+      return true;
+    } catch (authError) {
+      setError(authErrorMessage(authError));
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    await runAuth(async () => {
+      if (!isNative) {
+        await signInWithPopup(auth, new GoogleAuthProvider());
+        return;
+      }
+
+      // Google's popup flow is blocked in embedded WebViews. Obtain a native ID token
+      // and bridge it into the same Firebase JS Auth instance used by the web app.
       const result = await FirebaseAuthentication.signInWithGoogle({ skipNativeAuth: true });
       const idToken = result.credential?.idToken;
-      if (!idToken) throw new Error("توکن ورود دریافت نشد");
+      if (!idToken) throw new Error("توکن ورود از گوگل دریافت نشد.");
       await signInWithCredential(auth, GoogleAuthProvider.credential(idToken));
-      setOpen(false);
-    } catch (err) {
-      setGoogleError(err instanceof Error ? err.message : "خطا در ورود با گوگل");
+    });
+  }
+
+  async function handleEmailSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (mode === "reset") {
+      const sent = await runAuth(() => sendPasswordResetEmail(auth, email), false);
+      if (sent) setNotice("پیوند بازنشانی رمز عبور به ایمیل شما فرستاده شد.");
+      return;
     }
+
+    await runAuth(() =>
+      mode === "signup"
+        ? createUserWithEmailAndPassword(auth, email, password)
+        : signInWithEmailAndPassword(auth, email, password),
+    );
+  }
+
+  async function handleGuestSignIn() {
+    await runAuth(() => signInAnonymously(auth));
   }
 
   if (user) {
@@ -65,39 +107,112 @@ export function AuthButton() {
     return (
       <div className="auth-user">
         <span className="auth-user-name">{label}</span>
-        <button type="button" className="auth-btn" onClick={signOut}>
-          خروج
-        </button>
+        <button type="button" className="auth-btn" onClick={signOut}>خروج</button>
       </div>
     );
   }
 
   return (
     <>
-      <button type="button" className="auth-btn" onClick={() => setOpen(true)}>
-        ورود
-      </button>
+      <button type="button" className="auth-btn" onClick={() => setOpen(true)}>ورود</button>
 
       {open && (
         <div className="auth-modal-backdrop" onClick={() => setOpen(false)}>
-          <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="auth-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="auth-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
             <button
               type="button"
               className="auth-modal-close"
               onClick={() => setOpen(false)}
               aria-label="بستن"
+              disabled={busy}
             >
               ✕
             </button>
-            {isNative && (
-              <div className="auth-native-google">
-                <button type="button" className="auth-btn auth-btn-block" onClick={signInWithGoogleNative}>
-                  ورود با گوگل
+            <h2 id="auth-modal-title">
+              {mode === "signup" ? "ساخت حساب" : mode === "reset" ? "بازیابی رمز عبور" : "ورود"}
+            </h2>
+
+            <button
+              type="button"
+              className="auth-btn auth-btn-block auth-google-btn"
+              onClick={handleGoogleSignIn}
+              disabled={busy}
+            >
+              ورود با گوگل
+            </button>
+
+            <div className="auth-divider" aria-hidden="true"><span>یا</span></div>
+
+            <form className="auth-form" onSubmit={handleEmailSubmit}>
+              <label htmlFor="auth-email">ایمیل</label>
+              <input
+                id="auth-email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                disabled={busy}
+                required
+              />
+
+              {mode !== "reset" && (
+                <>
+                  <label htmlFor="auth-password">رمز عبور</label>
+                  <input
+                    id="auth-password"
+                    type="password"
+                    autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    disabled={busy}
+                    minLength={6}
+                    required
+                  />
+                </>
+              )}
+
+              <button type="submit" className="auth-btn auth-btn-block auth-primary-btn" disabled={busy}>
+                {busy
+                  ? "لطفاً صبر کنید…"
+                  : mode === "signup"
+                    ? "ساخت حساب"
+                    : mode === "reset"
+                      ? "ارسال پیوند بازنشانی"
+                      : "ورود با ایمیل"}
+              </button>
+            </form>
+
+            {error && <p className="auth-error" role="alert">{error}</p>}
+            {notice && <p className="auth-notice" role="status">{notice}</p>}
+
+            <div className="auth-mode-actions">
+              {mode !== "signin" && (
+                <button type="button" onClick={() => chooseMode("signin")} disabled={busy}>ورود</button>
+              )}
+              {mode !== "signup" && (
+                <button type="button" onClick={() => chooseMode("signup")} disabled={busy}>ساخت حساب</button>
+              )}
+              {mode !== "reset" && (
+                <button type="button" onClick={() => chooseMode("reset")} disabled={busy}>
+                  رمز را فراموش کرده‌ام
                 </button>
-                {googleError && <p className="auth-error">{googleError}</p>}
-              </div>
-            )}
-            <div ref={containerRef} />
+              )}
+            </div>
+
+            <button
+              type="button"
+              className="auth-btn auth-btn-block auth-guest-btn"
+              onClick={handleGuestSignIn}
+              disabled={busy}
+            >
+              ادامه به‌عنوان مهمان
+            </button>
           </div>
         </div>
       )}
