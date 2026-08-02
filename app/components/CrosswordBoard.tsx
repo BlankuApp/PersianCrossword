@@ -7,6 +7,7 @@ import {
   type CrosswordState,
 } from "../../src/index";
 import { sameCoord, slotCellKeys, type Selection } from "../crosswordUi";
+import { LetterGlyph } from "./LetterGlyph";
 
 const BLOCK_ICONS = [
   // 4-pointed star
@@ -131,7 +132,7 @@ export function CrosswordBoard({
                   <path d={BLOCK_ICONS[(row * puzzle.size.cols + col) % BLOCK_ICONS.length]} />
                 </svg>
               ) : (
-                <span className="cell-value">{value ?? ""}</span>
+                <LetterGlyph letter={value} />
               )}
             </button>
           );

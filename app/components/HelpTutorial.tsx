@@ -4,22 +4,44 @@ import {
   ACROSS_CELLS,
   ACROSS_CLUE,
   DEMO_BLOCKS,
-  DEMO_TRAY,
+  DEMO_TRAYS,
   DOWN_CELLS,
   DOWN_CLUE,
   TUTORIAL_STEPS,
   nextPosition,
   type DemoCellId,
+  type DemoDirection,
   type HandTarget,
   type PlaybackPos,
 } from "../tutorialSteps";
+import { LetterGlyph } from "./LetterGlyph";
+
+const DIRECTIONS: readonly DemoDirection[] = ["across", "down"];
+const WORD_CELLS: Readonly<Record<DemoDirection, readonly DemoCellId[]>> = {
+  across: ACROSS_CELLS,
+  down: DOWN_CELLS,
+};
+const CLUES: Readonly<Record<DemoDirection, string>> = {
+  across: ACROSS_CLUE,
+  down: DOWN_CLUE,
+};
+const DIRECTION_LABELS: Readonly<Record<DemoDirection, string>> = {
+  across: "افقی",
+  down: "عمودی",
+};
 
 function handTargetKey(target: HandTarget): string {
   switch (target.kind) {
     case "cell":
       return `cell:${target.cell}`;
     case "tray":
-      return `tray:${target.index}`;
+      return `tray:${target.direction}:${target.index}`;
+    case "word-cell":
+      return `word-cell:${target.direction}:${target.index}`;
+    case "backspace":
+      return `backspace:${target.direction}`;
+    case "clue":
+      return `clue:${target.direction}`;
     default:
       return target.kind;
   }
@@ -80,11 +102,10 @@ export function HelpTutorial({ onClose }: HelpTutorialProps) {
       if (!stage) return;
       const stageRect = stage.getBoundingClientRect();
       if (targetKey === "rest") {
-        const grid = gridRef.current;
-        const gridRect = grid?.getBoundingClientRect();
+        const gridRect = gridRef.current?.getBoundingClientRect();
         setHandPos({
           x: stageRect.width / 2,
-          y: gridRect ? gridRect.bottom - stageRect.top + 24 : stageRect.height / 2,
+          y: gridRect ? gridRect.bottom - stageRect.top + 18 : stageRect.height / 2,
         });
         return;
       }
@@ -100,11 +121,6 @@ export function HelpTutorial({ onClose }: HelpTutorialProps) {
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
   }, [targetKey]);
-
-  const activeCells: readonly DemoCellId[] =
-    frame.activeWord === "across" ? ACROSS_CELLS : frame.activeWord === "down" ? DOWN_CELLS : [];
-  const clueText =
-    frame.activeWord === "down" ? DOWN_CLUE : frame.activeWord === "across" ? ACROSS_CLUE : "یک خانه سفید را انتخاب کنید.";
 
   return (
     <div
@@ -145,53 +161,109 @@ export function HelpTutorial({ onClose }: HelpTutorialProps) {
                   return <div key={cellId} className="cell cell-block" />;
                 }
                 const classes = ["cell", "cell-open"];
-                if (activeCells.includes(cellId)) classes.push("cell-active-word");
+                if (frame.showHighlights && ACROSS_CELLS.includes(cellId)) {
+                  classes.push("cell-active-word");
+                }
+                if (frame.showHighlights && DOWN_CELLS.includes(cellId)) {
+                  classes.push("cell-down-word");
+                }
                 if (frame.selected === cellId) classes.push("cell-selected");
-                const letter = frame.letters[cellId];
                 return (
                   <div key={cellId} ref={setTarget(`cell:${cellId}`)} className={classes.join(" ")}>
-                    {letter ? <span className="cell-value">{letter}</span> : null}
+                    <LetterGlyph letter={frame.letters[cellId]} />
                   </div>
                 );
               }),
             )}
           </div>
 
-          <div className={`tutorial-clue${frame.clueHighlight ? " tutorial-clue-highlight" : ""}`}>
-            <div className="tutorial-clue-head" ref={setTarget("clue")}>
-              <span className="tutorial-clue-text">{clueText}</span>
-              <span className="clue-backspace-btn tutorial-backspace" ref={setTarget("backspace")}>
-                <Delete size={22} aria-hidden="true" />
-              </span>
-            </div>
-            <div className="letter-tray tutorial-tray">
-              {DEMO_TRAY.map((letter, index) => (
-                <div key={index} className="tray-tile" ref={setTarget(`tray:${index}`)}>
-                  <span className="cell-value">{letter}</span>
+          <div className={`tutorial-clues${frame.showClues ? " tutorial-clues-visible" : ""}`}>
+            {DIRECTIONS.map((direction) => (
+              <div
+                key={direction}
+                ref={setTarget(`clue:${direction}`)}
+                className={[
+                  "tutorial-clue",
+                  `tutorial-clue-${direction}`,
+                  frame.highlightClues ? "tutorial-clue-highlight" : "",
+                ].join(" ")}
+              >
+                <div className="tutorial-clue-head">
+                  <span className="tutorial-clue-copy">
+                    <span className="tutorial-direction-label">{DIRECTION_LABELS[direction]}</span>
+                    <span className="tutorial-clue-text">{CLUES[direction]}</span>
+                  </span>
+                  <span
+                    className="clue-backspace-btn tutorial-backspace"
+                    ref={setTarget(`backspace:${direction}`)}
+                  >
+                    <Delete size={20} aria-hidden="true" />
+                  </span>
                 </div>
-              ))}
-            </div>
+
+                <div className="word-cells-row tutorial-word-row">
+                  {WORD_CELLS[direction].map((cellId, index) => {
+                    const isDropTarget =
+                      frame.dropTarget?.direction === direction && frame.dropTarget.index === index;
+                    return (
+                      <div
+                        key={cellId}
+                        ref={setTarget(`word-cell:${direction}:${index}`)}
+                        className={`word-cell${frame.letters[cellId] ? " word-cell-filled" : ""}${
+                          isDropTarget ? " word-cell-drop-hover" : ""
+                        }`}
+                      >
+                        <LetterGlyph letter={frame.letters[cellId]} />
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="letter-tray tutorial-tray">
+                  {DEMO_TRAYS[direction].map((letter, index) => (
+                    <div
+                      key={`${letter}-${index}`}
+                      className="tray-tile"
+                      ref={setTarget(`tray:${direction}:${index}`)}
+                    >
+                      <LetterGlyph letter={letter} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
+
+          {!reducedMotion && frame.drag && handPos ? (
+            <div
+              className={`tutorial-drag-ghost tutorial-drag-ghost-${frame.drag.direction}`}
+              style={{ transform: `translate(${handPos.x - 19}px, ${handPos.y - 19}px)` }}
+            >
+              <LetterGlyph letter={frame.drag.letter} />
+            </div>
+          ) : null}
 
           {!reducedMotion && handPos ? (
             <div
               className="tutorial-hand"
-              style={{ transform: `translate(${handPos.x - 8}px, ${handPos.y - 4}px)` }}
+              style={{ transform: `translate(${handPos.x + 4}px, ${handPos.y + 3}px)` }}
             >
               <span
                 key={`${pos.stepIndex}-${pos.frameIndex}`}
-                className={`tutorial-hand-inner${frame.tap ? " tutorial-hand-tap" : ""}`}
+                className={`tutorial-hand-inner${frame.tap ? " tutorial-hand-tap" : ""}${
+                  frame.drag ? " tutorial-hand-dragging" : ""
+                }`}
               >
-                <Pointer size={34} aria-hidden="true" />
+                <Pointer size={32} aria-hidden="true" />
               </span>
             </div>
           ) : null}
         </div>
 
         <div className="tutorial-dots">
-          {TUTORIAL_STEPS.map((s, i) => (
+          {TUTORIAL_STEPS.map((tutorialStep, i) => (
             <button
-              key={s.id}
+              key={tutorialStep.id}
               type="button"
               className="tutorial-dot"
               aria-label={`مرحله ${i + 1}`}
@@ -200,24 +272,6 @@ export function HelpTutorial({ onClose }: HelpTutorialProps) {
             />
           ))}
         </div>
-
-        <details className="tutorial-keyboard-help">
-          <summary>راهنمای صفحه‌کلید</summary>
-          <ul>
-            <li>
-              با فشردن کلید <kbd>Space</kbd> جهت بین افقی و عمودی جابجا می‌شود.
-            </li>
-            <li>
-              برای حرکت بین خانه‌ها از کلیدهای جهت‌نما
-              (<kbd>↑</kbd> <kbd>↓</kbd> <kbd>→</kbd> <kbd>←</kbd>) استفاده کنید.
-            </li>
-            <li>
-              برای پاک کردن محتوای یک خانه، کلید <kbd>Backspace</kbd> را بزنید. اگر خانه خالی باشد،
-              خانهٔ قبلی در همان کلمه پاک می‌شود.
-            </li>
-            <li>برای وارد کردن حرف، کافی است حرف فارسی را تایپ کنید.</li>
-          </ul>
-        </details>
 
         <button type="button" className="tutorial-done-btn" onClick={onClose}>
           فهمیدم

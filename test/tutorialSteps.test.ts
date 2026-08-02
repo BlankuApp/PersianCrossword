@@ -5,16 +5,17 @@ import {
   DEMO_BLOCKS,
   DEMO_COLS,
   DEMO_ROWS,
-  DEMO_TRAY,
+  DEMO_TRAYS,
   DOWN_CELLS,
   TUTORIAL_STEPS,
   nextPosition,
   type DemoCellId,
+  type DemoDirection,
 } from "../app/tutorialSteps";
 
 describe("tutorial step data", () => {
-  it("has 5 steps, each with at least one frame and positive hold times", () => {
-    expect(TUTORIAL_STEPS).toHaveLength(5);
+  it("has 4 steps, each with at least one frame and positive hold times", () => {
+    expect(TUTORIAL_STEPS).toHaveLength(4);
     for (const step of TUTORIAL_STEPS) {
       expect(step.frames.length).toBeGreaterThan(0);
       for (const frame of step.frames) {
@@ -23,22 +24,35 @@ describe("tutorial step data", () => {
     }
   });
 
-  it("only writes letters into cells of the down word", () => {
+  it("only writes letters into cells belonging to one of the two demo words", () => {
+    const demoWordCells = new Set([...ACROSS_CELLS, ...DOWN_CELLS]);
     for (const step of TUTORIAL_STEPS) {
       for (const frame of step.frames) {
         for (const cell of Object.keys(frame.letters)) {
-          expect(DOWN_CELLS).toContain(cell as DemoCellId);
+          expect(demoWordCells.has(cell as DemoCellId)).toBe(true);
         }
       }
     }
   });
 
-  it("keeps hand tray targets within the demo tray bounds", () => {
+  it("keeps tray, word-cell, and drop targets within their direction bounds", () => {
+    const wordCells: Readonly<Record<DemoDirection, readonly DemoCellId[]>> = {
+      across: ACROSS_CELLS,
+      down: DOWN_CELLS,
+    };
     for (const step of TUTORIAL_STEPS) {
       for (const frame of step.frames) {
         if (frame.hand.kind === "tray") {
           expect(frame.hand.index).toBeGreaterThanOrEqual(0);
-          expect(frame.hand.index).toBeLessThan(DEMO_TRAY.length);
+          expect(frame.hand.index).toBeLessThan(DEMO_TRAYS[frame.hand.direction].length);
+        }
+        if (frame.hand.kind === "word-cell") {
+          expect(frame.hand.index).toBeGreaterThanOrEqual(0);
+          expect(frame.hand.index).toBeLessThan(wordCells[frame.hand.direction].length);
+        }
+        if (frame.dropTarget) {
+          expect(frame.dropTarget.index).toBeGreaterThanOrEqual(0);
+          expect(frame.dropTarget.index).toBeLessThan(wordCells[frame.dropTarget.direction].length);
         }
       }
     }
@@ -60,10 +74,33 @@ describe("tutorial step data", () => {
     }
   });
 
+  it("shows both word highlights together after the crossing cell is selected", () => {
+    const selectedFrame = TUTORIAL_STEPS[0]!.frames.at(-1)!;
+    expect(selectedFrame.selected).toBe(CROSSING_CELL);
+    expect(selectedFrame.showHighlights).toBe(true);
+    expect(selectedFrame.showClues).toBe(true);
+  });
+
+  it("demonstrates a drop in each direction and synchronizes the crossing letter", () => {
+    const placeStep = TUTORIAL_STEPS.find((step) => step.id === "place")!;
+    const dragDirections = new Set(
+      placeStep.frames.flatMap((frame) => (frame.drag ? [frame.drag.direction] : [])),
+    );
+    expect(dragDirections).toEqual(new Set<DemoDirection>(["across", "down"]));
+
+    const finalFrame = placeStep.frames.at(-1)!;
+    expect(finalFrame.letters[CROSSING_CELL]).toBe("م");
+    expect(finalFrame.letters["1-1"]).toBe("ا");
+    expect(ACROSS_CELLS).toContain(CROSSING_CELL);
+    expect(DOWN_CELLS).toContain(CROSSING_CELL);
+  });
+
   it("ends the clear step with an empty grid", () => {
     const lastStep = TUTORIAL_STEPS[TUTORIAL_STEPS.length - 1]!;
     const lastFrame = lastStep.frames[lastStep.frames.length - 1]!;
     expect(Object.keys(lastFrame.letters)).toHaveLength(0);
+    expect(lastFrame.showHighlights).toBe(false);
+    expect(lastFrame.showClues).toBe(false);
   });
 });
 

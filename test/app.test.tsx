@@ -66,6 +66,13 @@ describe("Persian crossword UI", () => {
 
     const dialog = screen.getByRole("dialog", { name: "راهنمای استفاده" });
     expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByText("افقی")).toBeInTheDocument();
+    expect(within(dialog).getByText("عمودی")).toBeInTheDocument();
+    expect(within(dialog).getByText("سرحد")).toBeInTheDocument();
+    expect(within(dialog).getByText("والده")).toBeInTheDocument();
+    expect(within(dialog).getAllByRole("button", { name: /مرحله/ })).toHaveLength(4);
+    expect(within(dialog).queryByText("راهنمای صفحه‌کلید")).not.toBeInTheDocument();
+    expect(dialog.querySelectorAll(".tutorial-stage .cell-value svg").length).toBeGreaterThan(0);
 
     await user.click(within(dialog).getByRole("button", { name: "فهمیدم" }));
 

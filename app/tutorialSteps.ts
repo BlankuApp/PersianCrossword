@@ -1,11 +1,10 @@
 // Pure data + advance logic for the animated راهنما tutorial.
 // The demo grid is a 4×4 layout (RTL, col 0 = rightmost): across مرز fills
-// row 0's open cells and down مادر fills col 1, crossing at "0-1" — the
-// FIRST cell of مادر — so selecting the down word never has to jump the
-// active cell before typing starts; it's already sitting on م.
+// row 0's open cells and down مادر fills col 1, crossing at "0-1".
 
 // Cell ids are "{row}-{col}" in the RTL coord system (col 0 = rightmost).
 export type DemoCellId = `${number}-${number}`;
+export type DemoDirection = "across" | "down";
 
 export const DEMO_ROWS = 4;
 export const DEMO_COLS = 4;
@@ -25,15 +24,25 @@ export const CROSSING_CELL: DemoCellId = "0-1";
 export const ACROSS_CLUE = "سرحد";
 export const DOWN_CLUE = "والده";
 
-// 4 real letters of مادر + 2 decoys, fixed order (indices: ر=0, م=2, ا=4, د=5).
-export const DEMO_TRAY: readonly string[] = ["ر", "ب", "م", "س", "ا", "د"];
+// Fixed trays keep the animation stable. Each contains the answer's unique
+// letters plus decoys, just like the real clue trays.
+export const DEMO_TRAYS: Readonly<Record<DemoDirection, readonly string[]>> = {
+  across: ["ز", "ب", "م", "س", "ر"],
+  down: ["ر", "ب", "م", "س", "ا", "د"],
+};
 
 export type HandTarget =
   | { readonly kind: "cell"; readonly cell: DemoCellId }
-  | { readonly kind: "tray"; readonly index: number }
-  | { readonly kind: "backspace" }
-  | { readonly kind: "clue" }
+  | { readonly kind: "tray"; readonly direction: DemoDirection; readonly index: number }
+  | { readonly kind: "word-cell"; readonly direction: DemoDirection; readonly index: number }
+  | { readonly kind: "backspace"; readonly direction: DemoDirection }
+  | { readonly kind: "clue"; readonly direction: DemoDirection }
   | { readonly kind: "rest" };
+
+export interface DemoDrag {
+  readonly letter: string;
+  readonly direction: DemoDirection;
+}
 
 // Every frame is an absolute snapshot of the whole visual state, so jumping
 // to any step via a dot is just {stepIndex, frameIndex: 0} — nothing accumulates.
@@ -41,10 +50,16 @@ export interface DemoFrame {
   readonly holdMs: number;
   readonly hand: HandTarget;
   readonly tap: boolean;
-  readonly activeWord: "across" | "down" | null;
+  readonly showHighlights: boolean;
+  readonly showClues: boolean;
   readonly selected: DemoCellId | null;
   readonly letters: Partial<Record<DemoCellId, string>>;
-  readonly clueHighlight?: boolean;
+  readonly highlightClues?: boolean;
+  readonly drag?: DemoDrag;
+  readonly dropTarget?: {
+    readonly direction: DemoDirection;
+    readonly index: number;
+  };
 }
 
 export interface TutorialStep {
@@ -60,92 +75,296 @@ export interface PlaybackPos {
 
 const REST: HandTarget = { kind: "rest" };
 const CROSS: HandTarget = { kind: "cell", cell: CROSSING_CELL };
-const CLUE: HandTarget = { kind: "clue" };
-const BACKSPACE: HandTarget = { kind: "backspace" };
 
-function tray(index: number): HandTarget {
-  return { kind: "tray", index };
+function cell(cellId: DemoCellId): HandTarget {
+  return { kind: "cell", cell: cellId };
+}
+
+function clue(direction: DemoDirection): HandTarget {
+  return { kind: "clue", direction };
+}
+
+function tray(direction: DemoDirection, index: number): HandTarget {
+  return { kind: "tray", direction, index };
+}
+
+function wordCell(direction: DemoDirection, index: number): HandTarget {
+  return { kind: "word-cell", direction, index };
+}
+
+function backspace(direction: DemoDirection): HandTarget {
+  return { kind: "backspace", direction };
 }
 
 const NO_LETTERS: Partial<Record<DemoCellId, string>> = {};
 const M: Partial<Record<DemoCellId, string>> = { "0-1": "م" };
 const MA: Partial<Record<DemoCellId, string>> = { "0-1": "م", "1-1": "ا" };
-const MAD: Partial<Record<DemoCellId, string>> = { "0-1": "م", "1-1": "ا", "2-1": "د" };
-const MADR: Partial<Record<DemoCellId, string>> = { "0-1": "م", "1-1": "ا", "2-1": "د", "3-1": "ر" };
 
 export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   {
     id: "select",
-    message: "برای انتخاب کلمه، روی یک خانه بزنید.",
+    message: "روی یک خانهٔ سفید بزنید تا کلمه‌های افقی و عمودی آن مشخص شوند.",
     frames: [
-      { holdMs: 700, hand: REST, tap: false, activeWord: null, selected: null, letters: NO_LETTERS },
-      { holdMs: 500, hand: CROSS, tap: false, activeWord: null, selected: null, letters: NO_LETTERS },
-      { holdMs: 450, hand: CROSS, tap: true, activeWord: null, selected: null, letters: NO_LETTERS },
-      { holdMs: 1600, hand: CROSS, tap: false, activeWord: "across", selected: CROSSING_CELL, letters: NO_LETTERS },
-    ],
-  },
-  {
-    id: "toggle-direction",
-    message: "با زدن دوباره روی همان خانه، جهت بین افقی و عمودی عوض می‌شود.",
-    frames: [
-      { holdMs: 600, hand: CROSS, tap: false, activeWord: "across", selected: CROSSING_CELL, letters: NO_LETTERS },
-      { holdMs: 450, hand: CROSS, tap: true, activeWord: "across", selected: CROSSING_CELL, letters: NO_LETTERS },
-      { holdMs: 1900, hand: CROSS, tap: false, activeWord: "down", selected: CROSSING_CELL, letters: NO_LETTERS },
-    ],
-  },
-  {
-    id: "clue",
-    message: "پرسشِ کلمهٔ انتخاب‌شده اینجا نمایش داده می‌شود.",
-    frames: [
-      { holdMs: 500, hand: CLUE, tap: false, activeWord: "down", selected: CROSSING_CELL, letters: NO_LETTERS },
       {
-        holdMs: 2400,
-        hand: CLUE,
+        holdMs: 650,
+        hand: REST,
         tap: false,
-        activeWord: "down",
+        showHighlights: false,
+        showClues: false,
+        selected: null,
+        letters: NO_LETTERS,
+      },
+      {
+        holdMs: 500,
+        hand: CROSS,
+        tap: false,
+        showHighlights: false,
+        showClues: false,
+        selected: null,
+        letters: NO_LETTERS,
+      },
+      {
+        holdMs: 400,
+        hand: CROSS,
+        tap: true,
+        showHighlights: false,
+        showClues: false,
+        selected: null,
+        letters: NO_LETTERS,
+      },
+      {
+        holdMs: 1800,
+        hand: CROSS,
+        tap: false,
+        showHighlights: true,
+        showClues: true,
         selected: CROSSING_CELL,
         letters: NO_LETTERS,
-        clueHighlight: true,
       },
     ],
   },
   {
-    id: "fill",
-    message: "با زدن روی حرف‌ها، خانه‌های کلمه یکی‌یکی پر می‌شوند.",
+    id: "clues",
+    message: "پرسش‌های افقی و عمودی این خانه هم‌زمان نمایش داده می‌شوند.",
     frames: [
-      { holdMs: 600, hand: REST, tap: false, activeWord: "down", selected: "0-1", letters: NO_LETTERS },
-      // م
-      { holdMs: 450, hand: tray(2), tap: false, activeWord: "down", selected: "0-1", letters: NO_LETTERS },
-      { holdMs: 400, hand: tray(2), tap: true, activeWord: "down", selected: "0-1", letters: NO_LETTERS },
-      { holdMs: 700, hand: tray(2), tap: false, activeWord: "down", selected: "1-1", letters: M },
-      // ا
-      { holdMs: 450, hand: tray(4), tap: false, activeWord: "down", selected: "1-1", letters: M },
-      { holdMs: 400, hand: tray(4), tap: true, activeWord: "down", selected: "1-1", letters: M },
-      { holdMs: 700, hand: tray(4), tap: false, activeWord: "down", selected: "2-1", letters: MA },
-      // د
-      { holdMs: 450, hand: tray(5), tap: false, activeWord: "down", selected: "2-1", letters: MA },
-      { holdMs: 400, hand: tray(5), tap: true, activeWord: "down", selected: "2-1", letters: MA },
-      { holdMs: 700, hand: tray(5), tap: false, activeWord: "down", selected: "3-1", letters: MAD },
-      // ر
-      { holdMs: 450, hand: tray(0), tap: false, activeWord: "down", selected: "3-1", letters: MAD },
-      { holdMs: 400, hand: tray(0), tap: true, activeWord: "down", selected: "3-1", letters: MAD },
-      { holdMs: 1500, hand: tray(0), tap: false, activeWord: "down", selected: "3-1", letters: MADR },
+      {
+        holdMs: 600,
+        hand: clue("across"),
+        tap: false,
+        showHighlights: true,
+        showClues: true,
+        selected: CROSSING_CELL,
+        letters: NO_LETTERS,
+      },
+      {
+        holdMs: 700,
+        hand: clue("down"),
+        tap: false,
+        showHighlights: true,
+        showClues: true,
+        selected: CROSSING_CELL,
+        letters: NO_LETTERS,
+        highlightClues: true,
+      },
+      {
+        holdMs: 1700,
+        hand: REST,
+        tap: false,
+        showHighlights: true,
+        showClues: true,
+        selected: CROSSING_CELL,
+        letters: NO_LETTERS,
+        highlightClues: true,
+      },
+    ],
+  },
+  {
+    id: "place",
+    message: "هر حرف را بکشید و در خانهٔ درستِ پاسخ رها کنید.",
+    frames: [
+      {
+        holdMs: 450,
+        hand: REST,
+        tap: false,
+        showHighlights: true,
+        showClues: true,
+        selected: CROSSING_CELL,
+        letters: NO_LETTERS,
+      },
+      {
+        holdMs: 450,
+        hand: tray("across", 2),
+        tap: false,
+        showHighlights: true,
+        showClues: true,
+        selected: CROSSING_CELL,
+        letters: NO_LETTERS,
+      },
+      {
+        holdMs: 300,
+        hand: tray("across", 2),
+        tap: true,
+        showHighlights: true,
+        showClues: true,
+        selected: CROSSING_CELL,
+        letters: NO_LETTERS,
+        drag: { letter: "م", direction: "across" },
+      },
+      {
+        holdMs: 750,
+        hand: wordCell("across", 0),
+        tap: false,
+        showHighlights: true,
+        showClues: true,
+        selected: CROSSING_CELL,
+        letters: NO_LETTERS,
+        drag: { letter: "م", direction: "across" },
+        dropTarget: { direction: "across", index: 0 },
+      },
+      {
+        holdMs: 650,
+        hand: wordCell("across", 0),
+        tap: false,
+        showHighlights: true,
+        showClues: true,
+        selected: CROSSING_CELL,
+        letters: M,
+      },
+      {
+        holdMs: 450,
+        hand: tray("down", 4),
+        tap: false,
+        showHighlights: true,
+        showClues: true,
+        selected: CROSSING_CELL,
+        letters: M,
+      },
+      {
+        holdMs: 300,
+        hand: tray("down", 4),
+        tap: true,
+        showHighlights: true,
+        showClues: true,
+        selected: CROSSING_CELL,
+        letters: M,
+        drag: { letter: "ا", direction: "down" },
+      },
+      {
+        holdMs: 750,
+        hand: wordCell("down", 1),
+        tap: false,
+        showHighlights: true,
+        showClues: true,
+        selected: CROSSING_CELL,
+        letters: M,
+        drag: { letter: "ا", direction: "down" },
+        dropTarget: { direction: "down", index: 1 },
+      },
+      {
+        holdMs: 1700,
+        hand: wordCell("down", 1),
+        tap: false,
+        showHighlights: true,
+        showClues: true,
+        selected: "1-1",
+        letters: MA,
+      },
     ],
   },
   {
     id: "clear",
-    message: "برای پاک کردن حرف، دکمهٔ پاک کردن را بزنید.",
+    message: "برای پاک کردن حرف، خانهٔ پُر را انتخاب کنید و دکمهٔ پاک کردن را بزنید.",
     frames: [
-      { holdMs: 500, hand: BACKSPACE, tap: false, activeWord: "down", selected: "3-1", letters: MADR },
-      { holdMs: 400, hand: BACKSPACE, tap: true, activeWord: "down", selected: "3-1", letters: MADR },
-      { holdMs: 600, hand: BACKSPACE, tap: false, activeWord: "down", selected: "2-1", letters: MAD },
-      { holdMs: 400, hand: BACKSPACE, tap: true, activeWord: "down", selected: "2-1", letters: MAD },
-      { holdMs: 600, hand: BACKSPACE, tap: false, activeWord: "down", selected: "1-1", letters: MA },
-      { holdMs: 400, hand: BACKSPACE, tap: true, activeWord: "down", selected: "1-1", letters: MA },
-      { holdMs: 600, hand: BACKSPACE, tap: false, activeWord: "down", selected: "0-1", letters: M },
-      { holdMs: 400, hand: BACKSPACE, tap: true, activeWord: "down", selected: "0-1", letters: M },
-      { holdMs: 600, hand: BACKSPACE, tap: false, activeWord: "down", selected: "0-1", letters: NO_LETTERS },
-      { holdMs: 2200, hand: REST, tap: false, activeWord: null, selected: null, letters: NO_LETTERS },
+      {
+        holdMs: 500,
+        hand: cell("1-1"),
+        tap: false,
+        showHighlights: true,
+        showClues: true,
+        selected: "1-1",
+        letters: MA,
+      },
+      {
+        holdMs: 350,
+        hand: cell("1-1"),
+        tap: true,
+        showHighlights: true,
+        showClues: true,
+        selected: "1-1",
+        letters: MA,
+      },
+      {
+        holdMs: 500,
+        hand: backspace("down"),
+        tap: false,
+        showHighlights: true,
+        showClues: true,
+        selected: "1-1",
+        letters: MA,
+      },
+      {
+        holdMs: 350,
+        hand: backspace("down"),
+        tap: true,
+        showHighlights: true,
+        showClues: true,
+        selected: "1-1",
+        letters: MA,
+      },
+      {
+        holdMs: 650,
+        hand: cell(CROSSING_CELL),
+        tap: false,
+        showHighlights: true,
+        showClues: true,
+        selected: CROSSING_CELL,
+        letters: M,
+      },
+      {
+        holdMs: 350,
+        hand: cell(CROSSING_CELL),
+        tap: true,
+        showHighlights: true,
+        showClues: true,
+        selected: CROSSING_CELL,
+        letters: M,
+      },
+      {
+        holdMs: 500,
+        hand: backspace("across"),
+        tap: false,
+        showHighlights: true,
+        showClues: true,
+        selected: CROSSING_CELL,
+        letters: M,
+      },
+      {
+        holdMs: 350,
+        hand: backspace("across"),
+        tap: true,
+        showHighlights: true,
+        showClues: true,
+        selected: CROSSING_CELL,
+        letters: M,
+      },
+      {
+        holdMs: 600,
+        hand: backspace("across"),
+        tap: false,
+        showHighlights: true,
+        showClues: true,
+        selected: CROSSING_CELL,
+        letters: NO_LETTERS,
+      },
+      {
+        holdMs: 1700,
+        hand: REST,
+        tap: false,
+        showHighlights: false,
+        showClues: false,
+        selected: null,
+        letters: NO_LETTERS,
+      },
     ],
   },
 ];

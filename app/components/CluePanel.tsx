@@ -2,6 +2,7 @@ import { Delete, Pencil, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { normalizePersianText, type Coord, type Direction, type Slot, type SlotsForCell } from "../../src/index";
 import { buildLetterTray } from "../crosswordUi";
+import { LetterGlyph } from "./LetterGlyph";
 
 interface ActiveClueProps {
   readonly slots: { readonly across?: Slot | undefined; readonly down?: Slot | undefined };
@@ -292,7 +293,7 @@ function ClueBlock({
         </div>
       ) : null}
       {showTray && slot.cells.length > 0 ? (
-        <div className="word-cells-row" role="list" aria-label="خانه‌های کلمه انتخاب شده">
+        <div className="word-cells-row" role="list" aria-label="خانه‌های کلمه انتخاب شده" data-no-back-gesture>
           {slot.cells.map((coord, i) => {
             const key = coordKey(coord);
             const value = cellValues?.[i];
@@ -311,14 +312,14 @@ function ClueBlock({
                 onPointerDown={value ? (e) => startTileDrag(e, value, coord) : undefined}
                 style={value ? { touchAction: "none" } : undefined}
               >
-                <span className="cell-value">{value ?? ""}</span>
+                <LetterGlyph letter={value} />
               </div>
             );
           })}
         </div>
       ) : null}
       {showTray && trayTiles.length > 0 ? (
-        <div className="letter-tray" role="list" aria-label="کاشی‌های حرف">
+        <div className="letter-tray" role="list" aria-label="کاشی‌های حرف" data-no-back-gesture>
           {trayTiles.map((tile) => (
             <button
               key={tile.id}
@@ -328,7 +329,7 @@ function ClueBlock({
               onPointerDown={(e) => startTileDrag(e, tile.letter)}
               style={{ touchAction: "none" }}
             >
-              <span className="cell-value">{tile.letter}</span>
+              <LetterGlyph letter={tile.letter} />
             </button>
           ))}
         </div>
@@ -339,7 +340,7 @@ function ClueBlock({
           aria-hidden="true"
           style={{ left: drag.x, top: drag.y }}
         >
-          <span className="cell-value">{drag.letter}</span>
+          <LetterGlyph letter={drag.letter} />
         </div>
       ) : null}
     </div>

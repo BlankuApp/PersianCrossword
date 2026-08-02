@@ -221,6 +221,10 @@ export function HomePage() {
           )}
         </>
       )}
+
+      <footer className="home-footer">
+        <a href="https://blankuapp.github.io/PersianCrossword/privacy.html" target="_blank" rel="noopener">سیاست حریم خصوصی</a>
+      </footer>
     </main>
   );
 }

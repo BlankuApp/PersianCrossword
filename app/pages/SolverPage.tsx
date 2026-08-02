@@ -56,6 +56,7 @@ import {
 import { saveCloudProgress } from "../cloudProgress";
 import { useAuth } from "../AuthContext";
 import { navigate } from "../router";
+import { useNoBackGesture } from "../gestureExclusion";
 import { BoardWithLabels } from "../components/BoardWithLabels";
 import { CrosswordBoard } from "../components/CrosswordBoard";
 import { ActiveClue, CluePanel } from "../components/CluePanel";
@@ -74,6 +75,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
   const normalizedJson = useMemo(() => normalizeGridDirection(json), [json]);
   const isDebugMode = import.meta.env.DEV && json.version === 3 && !!filePath;
   const isTouch = useMemo(() => isTouchDevice(), []);
+  useNoBackGesture();
 
   // Debug-only: mutable copy of the source grid (unreversed, matches disk format).
   const [debugEditGrid, setDebugEditGrid] = useState<string[][]>(() =>

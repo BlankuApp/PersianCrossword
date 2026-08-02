@@ -3,7 +3,7 @@
      ≤1024px → toolbar shrinks to icon-only (still 2-column solver layout)
      ≤860px  → main layout shift: 2-column grid → 1-column stack
      ≤480px  → extreme mobile: hide row/col index labels, board bleeds into shell padding
-     ≤640px  → unrelated axis: home/library page table columns + .cell-value mobile font cap
+     ≤640px  → unrelated axis: home/library page table columns
    Do not add a 5th breakpoint without folding it into one of these tiers' purpose.
    ────────────────────────────────────────────────────────── */
 @font-face {
@@ -36,8 +36,6 @@
   --font-h1: clamp(1.4rem, 3vw, 2rem);
   --font-h1-home: clamp(1.6rem, 3.5vw, 2.2rem);
   --index-label-font: clamp(0.52rem, 1.25vw, 0.72rem);
-  --cell-value-mult: 2;
-  --cell-value-cap: 2.1rem;
 }
 
 * {
@@ -138,16 +136,19 @@ select {
 
 /* Doubled class beats the later .solution-modal max-width/padding rules. */
 .solution-modal.tutorial-modal {
-  max-width: min(92vw, 420px);
+  max-width: min(94vw, 470px);
+  max-height: 92dvh;
   width: 100%;
+  gap: 9px;
+  padding: 14px 16px;
 }
 
 .tutorial-message {
   margin: 0;
-  min-height: 3.4em;
-  font-size: 1rem;
+  min-height: 3.2em;
+  font-size: 0.95rem;
   font-weight: 600;
-  line-height: 1.7;
+  line-height: 1.6;
   color: #1e5c38;
 }
 
@@ -156,11 +157,11 @@ select {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
+  gap: 9px;
 }
 
 .tutorial-grid {
-  --t-cell: 52px;
+  --t-cell: 44px;
   display: grid;
   grid-template-columns: repeat(4, var(--t-cell));
   direction: rtl;
@@ -175,31 +176,71 @@ select {
   pointer-events: none;
 }
 
-.tutorial-grid .cell-value {
-  font-size: calc(var(--t-cell) * 0.55);
+.tutorial-clues {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.tutorial-clues-visible {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .tutorial-clue {
+  --tutorial-accent-rgb: 30, 92, 56;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  width: 100%;
-  padding: 8px 12px;
+  gap: 5px;
+  min-width: 0;
+  padding: 7px 8px;
   border: 1px solid #d3d8d2;
+  border-inline-start: 3px solid rgb(var(--tutorial-accent-rgb));
   border-radius: 8px;
   background: #ffffff;
+}
+
+.tutorial-clue-down {
+  --tutorial-accent-rgb: 47, 86, 115;
 }
 
 .tutorial-clue-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 6px;
+}
+
+.tutorial-clue-copy {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.tutorial-direction-label {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(var(--tutorial-accent-rgb), 0.12);
+  color: rgb(var(--tutorial-accent-rgb));
+  font-size: 0.72rem;
+  font-weight: 800;
 }
 
 .tutorial-clue-text {
-  font-size: 0.95rem;
-  line-height: 1.6;
+  overflow: hidden;
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tutorial-backspace {
@@ -213,19 +254,49 @@ select {
 @keyframes tutorial-clue-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(30, 92, 56, 0.35);
+    box-shadow: 0 0 0 0 rgba(var(--tutorial-accent-rgb), 0.32);
   }
   50% {
-    box-shadow: 0 0 0 4px rgba(30, 92, 56, 0.35);
+    box-shadow: 0 0 0 3px rgba(var(--tutorial-accent-rgb), 0.28);
   }
 }
 
+.tutorial-word-row,
 .tutorial-tray {
   margin-top: 0;
+  justify-content: center;
+  gap: 4px;
+}
+
+.tutorial-clue .word-cell,
+.tutorial-clue .tray-tile {
+  width: 30px;
+  height: 30px;
 }
 
 .tutorial-tray .tray-tile {
   pointer-events: none;
+}
+
+.tutorial-drag-ghost {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 6;
+  width: 38px;
+  height: 38px;
+  padding: 2px;
+  border: 2px solid #1e5c38;
+  border-radius: 5px;
+  background: #fffdf7;
+  pointer-events: none;
+  will-change: transform;
+  transition: transform 0.55s ease-in-out;
+  filter: drop-shadow(0 4px 7px rgba(0, 0, 0, 0.3));
+}
+
+.tutorial-drag-ghost-down {
+  border-color: #2f5673;
 }
 
 .tutorial-hand {
@@ -233,10 +304,10 @@ select {
   top: 0;
   right: auto;
   left: 0;
-  z-index: 5;
+  z-index: 7;
   pointer-events: none;
   will-change: transform;
-  transition: transform 0.45s ease;
+  transition: transform 0.55s ease-in-out;
   color: #1e5c38;
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
 }
@@ -248,6 +319,10 @@ select {
 
 .tutorial-hand-tap {
   animation: tutorial-tap 0.4s ease-in-out;
+}
+
+.tutorial-hand-dragging {
+  transform: scale(0.82);
 }
 
 @keyframes tutorial-tap {
@@ -279,42 +354,6 @@ select {
   transform: scale(1.2);
 }
 
-.tutorial-keyboard-help {
-  border: 1px solid #d3d8d2;
-  border-radius: 8px;
-  padding: 8px 12px;
-  background: #ffffff;
-  font-size: 0.9rem;
-  line-height: 1.9;
-}
-
-.tutorial-keyboard-help summary {
-  cursor: pointer;
-  font-weight: 600;
-  color: #1e5c38;
-}
-
-.tutorial-keyboard-help ul {
-  margin: 8px 0 0;
-  padding-inline-start: 20px;
-}
-
-.tutorial-keyboard-help li {
-  margin-bottom: 4px;
-}
-
-.tutorial-keyboard-help kbd {
-  display: inline-block;
-  padding: 1px 6px;
-  border: 1px solid #bac3bc;
-  border-bottom-width: 2px;
-  border-radius: 4px;
-  background: #ffffff;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.85em;
-  color: #17201b;
-}
-
 .tutorial-done-btn {
   align-self: center;
   min-width: 140px;
@@ -334,15 +373,46 @@ select {
 
 @media (max-width: 480px) {
   .tutorial-grid {
-    --t-cell: 44px;
+    --t-cell: 40px;
   }
 
   .solution-modal.tutorial-modal {
-    padding: 12px 14px;
+    gap: 7px;
+    padding: 10px 12px;
+  }
+
+  .tutorial-message {
+    min-height: 3em;
+    font-size: 0.88rem;
+  }
+
+  .tutorial-clues {
+    gap: 6px;
+  }
+
+  .tutorial-clue {
+    padding: 6px;
+  }
+
+  .tutorial-direction-label {
+    padding-inline: 4px;
+    font-size: 0.67rem;
+  }
+
+  .tutorial-clue-text {
+    font-size: 0.78rem;
+  }
+
+  .tutorial-clue .word-cell,
+  .tutorial-clue .tray-tile {
+    width: 27px;
+    height: 27px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .tutorial-clues,
+  .tutorial-drag-ghost,
   .tutorial-hand {
     transition: none;
   }
@@ -760,18 +830,14 @@ select {
 
 .cell-value {
   display: block;
-  max-width: 90%;
-  margin: auto;
-  /* Vazirmatn's glyph ink sits low within its line box; nudge up. em-based so it tracks font-size, not cell width. */
-  margin-top: -0.15em;
-  font-size: min(
-    clamp(1.25rem, 5.25vw, var(--cell-value-cap)),
-    calc((min(100vw - (var(--shell-padding) * 2), 680px) / var(--grid-cols, 12)) * var(--cell-value-mult))
-  );
-  font-weight: 700;
-  line-height: 1;
-  direction: rtl;
-  text-align: center;
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+.cell-value svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .active-clue,
@@ -845,11 +911,6 @@ select {
   cursor: pointer;
 }
 
-.tray-tile .cell-value {
-  font-size: calc(var(--tray-tile-size) * 0.7);
-  font-weight: 300;
-}
-
 .word-cells-row {
   display: flex;
   flex-wrap: wrap;
@@ -866,10 +927,6 @@ select {
   border-radius: 4px;
   background: #f4f7f2;
   transition: background-color 0.15s, border-color 0.15s;
-}
-
-.word-cell .cell-value {
-  font-size: calc(var(--tray-tile-size) * 0.7);
 }
 
 .word-cell-filled {
@@ -1631,11 +1688,6 @@ select {
 }
 
 @media (max-width: 640px) {
-  :root {
-    --cell-value-mult: 1.5;
-    --cell-value-cap: 1.9rem;
-  }
-
   .home-repo-link {
     width: 100%;
     justify-content: center;
@@ -1660,8 +1712,12 @@ select {
   .pagination {
     justify-content: center;
   }
+}
 
-  .cell-value {
-    line-height: 1.05;
-  }
+.home-footer {
+  margin-top: 2rem;
+  padding: 1rem 0;
+  text-align: center;
+  font-size: 0.85rem;
+  opacity: 0.7;
 }

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- fill must stay currentColor so check-mode correct/incorrect coloring still works -->
+  <text x="50" y="45" font-family="Vazirmatn" font-size="90" font-weight="700"
+        text-anchor="middle" dominant-baseline="central" fill="currentColor">ق</text>
+</svg>
