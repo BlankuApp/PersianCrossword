@@ -10,6 +10,7 @@
       h2 { font-size: 1.15rem; margin-top: 2rem; }
       section[lang="en"] { direction: ltr; text-align: left; border-top: 1px solid #ddd; margin-top: 3rem; padding-top: 1rem; }
       a { color: #1a56db; }
+      .contact-email { display: inline-block; width: 22.5rem; max-width: 100%; height: auto; }
       @media (prefers-color-scheme: dark) { body { background: #111; color: #eee; } a { color: #7ba7ff; } section[lang="en"] { border-color: #333; } }
     </style>
   </head>
@@ -35,7 +36,12 @@
     <p>این برنامه محتوای مخصوص کودکان زیر ۱۳ سال ندارد و آگاهانه اطلاعاتی از آن‌ها جمع‌آوری نمی‌کند.</p>
 
     <h2>تماس</h2>
-    <p><a href="mailto:eskandari.hmd@gmail.com">eskandari.hmd@gmail.com</a></p>
+    <p>
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="contact-email-dark.png" />
+        <img class="contact-email" src="contact-email-light.png" alt="آدرس ایمیل تماس" width="450" height="56" />
+      </picture>
+    </p>
 
     <section lang="en" dir="ltr">
       <h1>Privacy Policy</h1>
@@ -59,7 +65,12 @@
       <p>The app is not directed at children under 13 and we do not knowingly collect data from them.</p>
 
       <h2>Contact</h2>
-      <p><a href="mailto:eskandari.hmd@gmail.com">eskandari.hmd@gmail.com</a></p>
+      <p>
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="contact-email-dark.png" />
+          <img class="contact-email" src="contact-email-light.png" alt="Contact email address" width="450" height="56" />
+        </picture>
+      </p>
     </section>
   </body>
 </html>
