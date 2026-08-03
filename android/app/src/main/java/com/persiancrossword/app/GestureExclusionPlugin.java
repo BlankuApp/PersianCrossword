@@ -29,9 +29,9 @@ public class GestureExclusionPlugin extends Plugin {
 
         JSArray input = call.getArray("rects", new JSArray());
         List<Rect> rects = new ArrayList<>();
-        for (Object entry : input.toList()) {
+        for (int i = 0; i < input.length(); i++) {
             // each entry: [left, top, right, bottom] in device pixels
-            JSONArray r = new JSONArray((List<?>) entry);
+            JSONArray r = input.getJSONArray(i);
             rects.add(new Rect(r.getInt(0), r.getInt(1), r.getInt(2), r.getInt(3)));
         }
 
