@@ -116,6 +116,28 @@
       "problemMatcher": []
     },
     {
+      "label": "Android: Build Release App Bundle",
+      "type": "shell",
+      "command": "npm run build && npx cap sync android && ./android/gradlew -p android bundleRelease",
+      "windows": {
+        "command": "npm run build && npx cap sync android && .\\android\\gradlew.bat -p android bundleRelease"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "JAVA_HOME": "C:\\Program Files\\Android\\Android Studio\\jbr"
+        }
+      },
+      "group": "build",
+      "presentation": {
+        "group": "android",
+        "panel": "dedicated",
+        "reveal": "always",
+        "focus": false
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "Android: Open in Android Studio",
       "type": "shell",
       "command": "npx cap open android",
