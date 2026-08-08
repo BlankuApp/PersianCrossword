@@ -130,15 +130,6 @@ export function HomePage() {
         </div>
         <div className="home-header-actions">
           <AuthButton />
-          <a
-            className="home-repo-link"
-            href="https://github.com/BlankuApp/PersianCrossword"
-            target="_blank"
-            rel="noreferrer"
-            aria-label="مشاهده مخزن گیت‌هاب پروژه"
-          >
-            <GitHubIcon width={30} height={30} />
-          </a>
         </div>
       </header>
 
@@ -224,6 +215,15 @@ export function HomePage() {
 
       <footer className="home-footer">
         <a href="https://blankuapp.github.io/PersianCrossword/privacy.html" target="_blank" rel="noopener">سیاست حریم خصوصی</a>
+        <a
+          className="home-repo-link"
+          href="https://github.com/BlankuApp/PersianCrossword"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="مشاهده مخزن گیت‌هاب پروژه"
+        >
+          <GitHubIcon width={22} height={22} />
+        </a>
       </footer>
     </main>
   );
