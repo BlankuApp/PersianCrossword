@@ -26,13 +26,11 @@
   /* Sizing tokens — desktop values; redeclared per breakpoint tier further down. */
   --shell-padding: 20px;
   --toolbar-btn-min-h: 40px;
-  --clue-tabs-min-h: 44px;
   --active-clue-pad-v: 14px;
   --active-clue-pad-h: 16px;
   --active-clue-min-h: 84px;
   --stack-gap: 12px;
   --tray-tile-size: 2.4em;
-  --clue-list-pad: 8px 10px;
   --font-h1: clamp(1.4rem, 3vw, 2rem);
   --font-h1-home: clamp(1.6rem, 3.5vw, 2.2rem);
   --index-label-font: clamp(0.52rem, 1.25vw, 0.72rem);
@@ -95,10 +93,20 @@ select {
 }
 
 .toolbar {
+  position: relative;
+  display: flex;
+  align-items: end;
+  flex-wrap: nowrap;
+}
+
+.toolbar-menu {
   display: flex;
   align-items: end;
   gap: 10px;
-  flex-wrap: nowrap;
+}
+
+.toolbar .toolbar-menu-toggle {
+  display: none;
 }
 
 .toolbar button {
@@ -842,8 +850,7 @@ select {
   display: block;
 }
 
-.active-clue,
-.clue-panel {
+.active-clue {
   border: 1px solid #d3d8d2;
   border-radius: 8px;
   background: #ffffff;
@@ -874,6 +881,14 @@ select {
   margin: 8px 0 0;
   font-size: 1.1rem;
   line-height: 1.7;
+}
+
+.active-clue-label {
+  margin-inline-end: 4px;
+  color: #8a948d;
+  font-size: 0.85em;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .clue-search-link {
@@ -1001,132 +1016,16 @@ select {
   color: #5c1010;
 }
 
-.clue-panel {
-  overflow: hidden;
-}
-
-.clue-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  border-bottom: 1px solid #d3d8d2;
-}
-
-.clue-tabs button {
-  min-height: var(--clue-tabs-min-h);
-  border: 0;
-  background: #f1f4f2;
-  color: #4e5b53;
-  cursor: pointer;
-}
-
-.clue-tabs button[aria-selected="true"] {
-  background: #ffffff;
-  color: #17201b;
-  font-weight: 700;
-}
-
-.clue-lists {
-  display: grid;
-  grid-template-columns: 1fr;
-  max-height: calc(100dvh - 150px);
-  overflow: auto;
-}
-
-.clue-list {
-  display: none;
-  padding: var(--clue-list-pad);
-}
-
-.clue-list-visible {
-  display: block;
-}
-
-.clue-list + .clue-list {
-  border-right: 0;
-}
-
-.clue-list ol {
-  display: grid;
-  gap: 0;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* Grouped clue row */
-.clue-group {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-  padding: 2px;
-  border-radius: 4px;
-  font-size: 1.1rem;
-}
-
-.clue-group:hover {
-  background: #f4f7f5;
-}
-
-.clue-group-number {
-  flex-shrink: 0;
-  min-width: 18px;
-  color: #69746c;
-  font-weight: 700;
-  direction: ltr;
-  text-align: center;
-}
-
-.clue-group-words {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0;
-  flex: 1;
-}
-
-.clue-word-entry {
-  display: inline-flex;
-  align-items: baseline;
-}
-
-.clue-sep {
-  color: #9aa49d;
-  font-size: 0.85rem;
-  padding: 0 2px;
-  user-select: none;
-}
-
-.clue-item-btn {
-  border: 0;
-  background: transparent;
-  color: #26312a;
-  text-align: right;
-  cursor: pointer;
-  padding: 1px;
-  border-radius: 4px;
-  font: inherit;
-}
-
-.clue-item-btn:hover,
-.clue-item-btn:focus-visible {
-  background: #edf6f0;
-  outline: none;
-}
-
-.clue-item-btn.clue-selected-across {
-  background: #edf6f0;
-}
-
-.clue-item-btn.clue-selected-down {
-  background: #e7eef4;
-}
-
 @media (max-width: 1024px) {
   :root {
     --toolbar-btn-min-h: 36px;
   }
 
   .toolbar {
+    gap: 6px;
+  }
+
+  .toolbar-menu {
     gap: 6px;
   }
 
@@ -1143,17 +1042,56 @@ select {
 @media (max-width: 860px) {
   :root {
     --shell-padding: 10px;
-    --clue-tabs-min-h: 34px;
     --active-clue-pad-v: 8px;
     --active-clue-pad-h: 10px;
     --active-clue-min-h: 52px;
     --stack-gap: 6px;
     --tray-tile-size: 2.3em;
-    --clue-list-pad: 5px 7px;
   }
 
   .solver-layout {
     grid-template-columns: 1fr;
+  }
+
+  .toolbar .toolbar-menu-toggle {
+    display: inline-flex;
+    width: var(--toolbar-btn-min-h);
+    height: var(--toolbar-btn-min-h);
+    min-height: var(--toolbar-btn-min-h);
+    padding: 0;
+  }
+
+  .toolbar-menu {
+    position: absolute;
+    inset-block-start: calc(100% + 6px);
+    inset-inline-end: 0;
+    z-index: 100;
+    display: none;
+    width: min(240px, calc(100vw - 20px));
+    padding: 6px;
+    border: 1px solid #bac3bc;
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: 0 10px 28px rgba(23, 32, 27, 0.2);
+  }
+
+  .toolbar-menu.toolbar-menu-open {
+    display: grid;
+    gap: 2px;
+  }
+
+  .toolbar .toolbar-menu button {
+    width: 100%;
+    min-height: 44px;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 0 12px;
+    border-color: transparent;
+    text-align: right;
+  }
+
+  .toolbar .toolbar-menu button span {
+    display: inline;
   }
 
   .board-with-labels {
@@ -1162,10 +1100,6 @@ select {
 
   .crossword-board {
     width: auto;
-  }
-
-  .clue-lists {
-    max-height: none;
   }
 
   .active-clue p {
@@ -1177,13 +1111,11 @@ select {
   :root {
     --shell-padding: 4px;
     --toolbar-btn-min-h: 32px;
-    --clue-tabs-min-h: 30px;
     --active-clue-pad-v: 6px;
     --active-clue-pad-h: 8px;
     --active-clue-min-h: 40px;
     --stack-gap: 4px;
     --tray-tile-size: 2.25em;
-    --clue-list-pad: 3px 5px;
     --font-h1: clamp(1.1rem, 5.4vw, 1.45rem);
   }
 
@@ -1196,9 +1128,9 @@ select {
 
   .app-header-meta {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
     flex: 1 1 auto;
     min-width: 0;
   }
@@ -1211,18 +1143,37 @@ select {
   }
 
   .app-header .puzzle-meta {
+    display: flex;
+    flex: 0 0 auto;
+    overflow: visible;
+    font-size: 0.82rem;
+  }
+
+  .app-header .puzzle-meta-item {
+    display: none;
+  }
+
+  .app-header .puzzle-meta-item-difficulty {
+    display: inline-flex;
+    padding: 1px 7px;
+    border: 1px solid #d3d8d2;
+    border-radius: 999px;
+    background: #f1f4f2;
+  }
+
+  .app-header .puzzle-meta-item-difficulty .puzzle-meta-icon,
+  .app-header .puzzle-meta-item-difficulty .puzzle-meta-label {
     display: none;
   }
 
   .toolbar {
     flex-wrap: nowrap;
     flex: 0 0 auto;
-    gap: 4px;
     width: auto;
     justify-content: flex-start;
   }
 
-  .toolbar button {
+  .toolbar > button {
     flex: 0 0 auto;
     padding: 0 8px;
   }

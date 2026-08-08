@@ -23,8 +23,12 @@ describe("Persian crossword UI", () => {
     render(<SolverPage id="sample-10x10-garden" json={json10} />);
 
     expect(screen.getByRole("heading", { name: /باغ.*۱۰ در ۱۰|sample-10x10-garden/i })).toBeInTheDocument();
+    expect(screen.getByText("easy").closest(".puzzle-meta-item")).toHaveClass("puzzle-meta-item-difficulty");
     expect(screen.getAllByRole("gridcell")).toHaveLength(100);
-    expect(within(screen.getByLabelText("پرسش فعال")).getByText("نمونه افقی 1، 2 حرف")).toBeInTheDocument();
+    const activeClue = within(screen.getByLabelText("پرسش فعال"));
+    expect(activeClue.getByText("۱ افقی")).toHaveClass("active-clue-label");
+    expect(activeClue.getByText("نمونه افقی 1، 2 حرف")).toBeInTheDocument();
+    expect(screen.queryByRole("tablist", { name: "نوع پرسش" })).not.toBeInTheDocument();
   });
 
   it("renders a different puzzle when a different id/json is given", () => {
@@ -87,8 +91,14 @@ describe("Persian crossword UI", () => {
 
     expect(screen.queryByRole("dialog", { name: "راهنمای استفاده" })).not.toBeInTheDocument();
 
+    const menuButton = screen.getByRole("button", { name: "منوی تنظیمات" });
+    expect(menuButton).toHaveAttribute("aria-expanded", "false");
+    await user.click(menuButton);
+    expect(menuButton).toHaveAttribute("aria-expanded", "true");
+
     await user.click(screen.getByRole("button", { name: "راهنمای استفاده" }));
 
+    expect(menuButton).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("dialog", { name: "راهنمای استفاده" })).toBeInTheDocument();
   });
 

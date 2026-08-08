@@ -12,6 +12,8 @@ import {
   Hash,
   Image,
   ChevronDown,
+  Menu,
+  Save,
 } from "lucide-react";
 import {
   useEffect,
@@ -29,7 +31,6 @@ import {
   CrosswordValidationError,
   type Coord,
   type CrosswordPuzzle,
-  type Direction,
   type Slot,
   type SlotId,
   type CrosswordJson,
@@ -59,7 +60,7 @@ import { navigate } from "../router";
 import { useNoBackGesture } from "../gestureExclusion";
 import { BoardWithLabels } from "../components/BoardWithLabels";
 import { CrosswordBoard } from "../components/CrosswordBoard";
-import { ActiveClue, CluePanel } from "../components/CluePanel";
+import { ActiveClue } from "../components/CluePanel";
 import { HelpTutorial } from "../components/HelpTutorial";
 
 interface SolverPageProps {
@@ -128,16 +129,18 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
       return undefined;
     }
   });
-  const [clueTab, setClueTab] = useState<Direction>("across");
   const [showHelp, setShowHelp] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
   const [checkMode, setCheckMode] = useState(loadCheckMode);
   const [sourceCollapsed, setSourceCollapsed] = useState(true);
   const [confirmAction, setConfirmAction] = useState<"reset" | "save" | null>(null);
+  const [isToolbarMenuOpen, setIsToolbarMenuOpen] = useState(false);
 
   const boardRef = useRef<HTMLDivElement>(null);
   const solutionBoardRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const toolbarMenuButtonRef = useRef<HTMLButtonElement>(null);
 
   function focusInput(): void {
     const el = inputRef.current;
@@ -193,7 +196,6 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     setSavedState(restored);
     const firstSlot = puzzle?.slots[0];
     setSelection(firstSlot ? selectSlot(firstSlot) : undefined);
-    setClueTab("across");
     setShowSolution(false);
     setClueOverrides({});
   }, [id, puzzle]);
@@ -201,6 +203,29 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
   useEffect(() => {
     saveCheckMode(checkMode);
   }, [checkMode]);
+
+  useEffect(() => {
+    if (!isToolbarMenuOpen) return;
+
+    function closeOnOutsidePointer(event: PointerEvent): void {
+      if (!toolbarRef.current?.contains(event.target as Node)) {
+        setIsToolbarMenuOpen(false);
+      }
+    }
+
+    function closeOnEscape(event: KeyboardEvent): void {
+      if (event.key !== "Escape") return;
+      setIsToolbarMenuOpen(false);
+      toolbarMenuButtonRef.current?.focus();
+    }
+
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isToolbarMenuOpen]);
 
   // Close the solution overlay with the Escape key.
   useEffect(() => {
@@ -269,15 +294,8 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
 
     setSelection((current) => {
       const next = handleCellSelection(puzzle, coord, current);
-      if (next) setClueTab(next.direction);
       return next;
     });
-    if (!isTouch) focusInput();
-  }
-
-  function selectClue(slot: Slot): void {
-    setSelection(selectSlot(slot));
-    setClueTab(slot.direction);
     if (!isTouch) focusInput();
   }
 
@@ -482,7 +500,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
           {puzzleMetaItems.length ? (
             <div className="puzzle-meta" aria-label="اطلاعات جدول">
               {puzzleMetaItems.map((item) => (
-                <span key={item.key} className="puzzle-meta-item">
+                <span key={item.key} className={`puzzle-meta-item puzzle-meta-item-${item.key}`}>
                   <span className="puzzle-meta-icon">{item.icon}</span>
                   <span className="puzzle-meta-label">{item.label}</span>
                   <span className="puzzle-meta-value">{item.value}</span>
@@ -491,75 +509,95 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
             </div>
           ) : null}
         </div>
-        <div className="toolbar">
+        <div className="toolbar" ref={toolbarRef}>
           <button
+            ref={toolbarMenuButtonRef}
             type="button"
-            className="btn-home"
-            onClick={() => navigate("#/")}
-            title="بازگشت به فهرست جدول‌ها"
-            aria-label="بازگشت به فهرست جدول‌ها"
+            className="toolbar-menu-toggle"
+            onClick={() => setIsToolbarMenuOpen((open) => !open)}
+            title="منوی تنظیمات"
+            aria-label="منوی تنظیمات"
+            aria-expanded={isToolbarMenuOpen}
+            aria-controls="solver-toolbar-menu"
           >
-            <ArrowRight size={18} aria-hidden="true" />
-            <span>بازگشت</span>
+            <Menu size={20} aria-hidden="true" />
           </button>
-          <button
-            type="button"
-            onClick={() => setConfirmAction("reset")}
-            title="پاک کردن پاسخ‌ها"
-            aria-label="پاک کردن پاسخ‌ها"
+          <div
+            id="solver-toolbar-menu"
+            className={`toolbar-menu${isToolbarMenuOpen ? " toolbar-menu-open" : ""}`}
+            aria-label="گزینه‌های جدول"
+            onClick={() => setIsToolbarMenuOpen(false)}
           >
-            <RotateCcw size={18} aria-hidden="true" />
-            <span>پاک کردن</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowHelp((v) => !v)}
-            title="راهنمای استفاده"
-            aria-label="راهنمای استفاده"
-            aria-haspopup="dialog"
-          >
-            <HelpCircle size={18} aria-hidden="true" />
-            <span>راهنما</span>
-          </button>
-          {solutionState ? (
             <button
               type="button"
-              onClick={() => setCheckMode((v) => !v)}
-              title="بررسی پاسخ‌ها"
-              aria-label="بررسی پاسخ‌ها"
-              aria-pressed={checkMode}
+              className="btn-home"
+              onClick={() => navigate("#/")}
+              title="بازگشت به فهرست جدول‌ها"
+              aria-label="بازگشت به فهرست جدول‌ها"
             >
-              <SpellCheck2 size={18} aria-hidden="true" />
-              <span>بررسی پاسخ‌ها</span>
+              <ArrowRight size={18} aria-hidden="true" />
+              <span>بازگشت</span>
             </button>
-          ) : null}
-          {(solutionImageUrl || solutionState) ? (
             <button
               type="button"
-              onClick={() => setShowSolution((v) => !v)}
-              title="نمایش پاسخ جدول"
-              aria-label={showSolution ? "پنهان کردن پاسخ" : "نمایش پاسخ"}
-              aria-expanded={showSolution}
+              onClick={() => setConfirmAction("reset")}
+              title="پاک کردن پاسخ‌ها"
+              aria-label="پاک کردن پاسخ‌ها"
             >
-              {showSolution ? (
-                <EyeOff size={18} aria-hidden="true" />
-              ) : (
-                <Eye size={18} aria-hidden="true" />
-              )}
-              <span>{showSolution ? "پنهان کردن پاسخ" : "نمایش پاسخ"}</span>
+              <RotateCcw size={18} aria-hidden="true" />
+              <span>پاک کردن</span>
             </button>
-          ) : null}
-          {isDebugMode ? (
             <button
               type="button"
-              onClick={() => setConfirmAction("save")}
-              disabled={isSaving}
-              title="ذخیره جدول (دیباگ)"
+              onClick={() => setShowHelp((v) => !v)}
+              title="راهنمای استفاده"
+              aria-label="راهنمای استفاده"
+              aria-haspopup="dialog"
+            >
+              <HelpCircle size={18} aria-hidden="true" />
+              <span>راهنما</span>
+            </button>
+            {solutionState ? (
+              <button
+                type="button"
+                onClick={() => setCheckMode((v) => !v)}
+                title="بررسی پاسخ‌ها"
+                aria-label="بررسی پاسخ‌ها"
+                aria-pressed={checkMode}
+              >
+                <SpellCheck2 size={18} aria-hidden="true" />
+                <span>بررسی پاسخ‌ها</span>
+              </button>
+            ) : null}
+            {(solutionImageUrl || solutionState) ? (
+              <button
+                type="button"
+                onClick={() => setShowSolution((v) => !v)}
+                title="نمایش پاسخ جدول"
+                aria-label={showSolution ? "پنهان کردن پاسخ" : "نمایش پاسخ"}
+                aria-expanded={showSolution}
+              >
+                {showSolution ? (
+                  <EyeOff size={18} aria-hidden="true" />
+                ) : (
+                  <Eye size={18} aria-hidden="true" />
+                )}
+                <span>{showSolution ? "پنهان کردن پاسخ" : "نمایش پاسخ"}</span>
+              </button>
+            ) : null}
+            {isDebugMode ? (
+              <button
+                type="button"
+                onClick={() => setConfirmAction("save")}
+                disabled={isSaving}
+                title="ذخیره جدول (دیباگ)"
               aria-label="ذخیره جدول"
             >
-              {isSaving ? "در حال ذخیره..." : "ذخیره"}
-            </button>
-          ) : null}
+                <Save size={18} aria-hidden="true" />
+                <span>{isSaving ? "در حال ذخیره..." : "ذخیره"}</span>
+              </button>
+            ) : null}
+          </div>
         </div>
       </header>
 
@@ -703,14 +741,6 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
                 onSaveClue={handleSaveClue}
                 checkMode={checkMode}
                 getSolutionValue={(c) => solutionState?.getCell(c)}
-              />
-              <CluePanel
-                acrossSlots={puzzle!.acrossSlots}
-                downSlots={puzzle!.downSlots}
-                activeSlots={cellSlots}
-                clueTab={clueTab}
-                onTabChange={setClueTab}
-                onClueClick={selectClue}
               />
             </div>
           </section>
