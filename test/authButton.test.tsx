@@ -76,6 +76,13 @@ describe("AuthButton", () => {
     nativeAuthMocks.signInWithGoogle.mockResolvedValue({ credential: { idToken: "native-token" } });
   });
 
+  it("explains that signing in syncs progress across devices", async () => {
+    await openDialog();
+
+    expect(screen.getByText(/وضعیت حل جدول‌های شما در فضای ابری ذخیره و همگام می‌شود/)).toBeInTheDocument();
+    expect(screen.getByText(/در هر دو دستگاه با یک حساب وارد شوید/)).toBeInTheDocument();
+  });
+
   it("uses the Firebase popup flow for Google sign-in on the web", async () => {
     const user = await openDialog();
     await user.click(screen.getByRole("button", { name: "ورود با گوگل" }));

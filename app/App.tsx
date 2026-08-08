@@ -3,11 +3,10 @@ import { getPuzzleById } from "./puzzleLibrary";
 import { useHashRoute, useHardwareBackButton, navigate } from "./router";
 import { HomePage } from "./pages/HomePage";
 import { SolverPage } from "./pages/SolverPage";
-import { AuthProvider, useAuth } from "./AuthContext";
+import { AuthProvider } from "./AuthContext";
 
 function AppRoutes() {
   const route = useHashRoute();
-  const { syncVersion } = useAuth();
   useHardwareBackButton(route);
 
   // Redirect unknown puzzle ids back to home
@@ -22,7 +21,6 @@ function AppRoutes() {
     if (puzzle) {
       return (
         <SolverPage
-          key={syncVersion}
           id={puzzle.id}
           json={puzzle.json}
           solutionImageUrl={puzzle.solutionImageUrl}

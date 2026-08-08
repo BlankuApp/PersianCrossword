@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SolverPage } from "../app/pages/SolverPage";
 import sample10 from "../samples/sample-10x10-garden.json";
 import sample11 from "../samples/sample-11x11-city.json";
@@ -11,12 +11,20 @@ import type { CrosswordJson } from "../src/index";
 const json10 = sample10 as CrosswordJson;
 const json11 = sample11 as CrosswordJson;
 
+const authState = vi.hoisted(() => ({ user: null, syncVersion: 0 }));
+
+vi.mock("../app/AuthContext", () => ({
+  useAuth: () => authState,
+}));
+
 describe("Persian crossword UI", () => {
   beforeEach(() => {
     window.localStorage.clear();
     // Prevent the first-run tutorial from auto-opening in unrelated tests.
     window.localStorage.setItem("persian-crossword-seen-tutorial", "true");
     window.location.hash = "";
+    authState.user = null;
+    authState.syncVersion = 0;
   });
 
   it("renders the puzzle title and active clue", () => {
@@ -111,6 +119,26 @@ describe("Persian crossword UI", () => {
     render(<SolverPage id="sample-10x10-garden" json={json10} />);
 
     expect(screen.getByLabelText("ردیف 1 ستون 10")).toHaveTextContent("س");
+  });
+
+  it("preserves the selected cell when cloud sync refreshes progress", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<SolverPage id="sample-10x10-garden" json={json10} />);
+
+    await user.click(screen.getByLabelText("ردیف 1 ستون 7"));
+    expect(screen.getByLabelText("ردیف 1 ستون 7")).toHaveClass("cell-selected");
+
+    window.localStorage.setItem(
+      "persian-crossword:sample-10x10-garden",
+      JSON.stringify({ cells: { "0,9": "س" } }),
+    );
+    authState.syncVersion = 1;
+    rerender(<SolverPage id="sample-10x10-garden" json={json10} />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("ردیف 1 ستون 10")).toHaveTextContent("س");
+    });
+    expect(screen.getByLabelText("ردیف 1 ستون 7")).toHaveClass("cell-selected");
   });
 });
 

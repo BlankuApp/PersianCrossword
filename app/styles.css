@@ -1359,6 +1359,28 @@ select {
   text-align: center;
 }
 
+.auth-sync-info {
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border: 1px solid #d4e8dc;
+  border-radius: 10px;
+  background: #f3faf6;
+  color: #405148;
+  font-size: 0.86rem;
+  line-height: 1.8;
+  text-align: right;
+}
+
+.auth-sync-info p {
+  margin: 0;
+}
+
+.auth-sync-info p + p {
+  margin-top: 6px;
+  color: #1e5c38;
+  font-weight: 600;
+}
+
 .auth-modal-close {
   position: absolute;
   top: 10px;

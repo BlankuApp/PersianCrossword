@@ -72,7 +72,7 @@ interface SolverPageProps {
 }
 
 export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePath }: SolverPageProps) {
-  const { user } = useAuth();
+  const { user, syncVersion } = useAuth();
   const normalizedJson = useMemo(() => normalizeGridDirection(json), [json]);
   const isDebugMode = import.meta.env.DEV && json.version === 3 && !!filePath;
   const isTouch = useMemo(() => isTouchDevice(), []);
@@ -199,6 +199,14 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     setShowSolution(false);
     setClueOverrides({});
   }, [id, puzzle]);
+
+  // Cloud sync can update localStorage while this puzzle is open. Refresh only
+  // the persisted grid data; keeping this component mounted preserves the
+  // selected cell, active direction, focus, and other transient UI state.
+  useEffect(() => {
+    if (syncVersion === 0) return;
+    setSavedState(loadProgress(id));
+  }, [id, syncVersion]);
 
   useEffect(() => {
     saveCheckMode(checkMode);
