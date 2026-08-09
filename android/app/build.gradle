@@ -44,8 +44,29 @@ android {
 }
 
 android.applicationVariants.all { variant ->
-    variant.outputs.all { output ->
-        outputFileName = "persian-crossword-${variant.versionName}-${variant.buildType.name}.apk"
+    // Capacitor's `cap run android` expects the debug artifact at the default
+    // app-debug.apk path. Keep that name for deployment; release artifacts can
+    // still use the human-friendly versioned filename.
+    if (variant.buildType.name != "debug") {
+        variant.outputs.all { output ->
+            outputFileName = "persian-crossword-${variant.versionName}-${variant.buildType.name}.apk"
+        }
+    }
+}
+
+def debugApkOutputDir = layout.buildDirectory.dir("outputs/apk/debug")
+tasks.register("copyVersionedDebugApk") {
+    doLast {
+        copy {
+            from(debugApkOutputDir.map { it.file("app-debug.apk") })
+            into(debugApkOutputDir)
+            rename { "persian-crossword-${android.defaultConfig.versionName}-debug.apk" }
+        }
+    }
+}
+afterEvaluate {
+    tasks.named("assembleDebug").configure {
+        finalizedBy("copyVersionedDebugApk")
     }
 }
 

@@ -156,7 +156,10 @@
     {
       "label": "Android: Run on Device/Emulator",
       "type": "shell",
-      "command": "npm run build && npx cap sync android && npx cap run android --target Medium_Phone",
+      "command": "npm run build && ./android/gradlew -p android clean && npx cap run android",
+      "windows": {
+        "command": "npm run build && .\\android\\gradlew.bat -p android clean && npx cap run android"
+      },
       "options": {
         "cwd": "${workspaceFolder}",
         "env": {
