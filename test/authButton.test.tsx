@@ -131,6 +131,16 @@ describe("AuthButton", () => {
     ));
   });
 
+  it("can open directly in sign-up mode with a custom label", async () => {
+    const user = userEvent.setup();
+    render(<AuthButton initialMode="signup" label="ثبت‌نام و دریافت لینک" />);
+
+    await user.click(screen.getByRole("button", { name: "ثبت‌نام و دریافت لینک" }));
+
+    expect(screen.getByRole("heading", { name: "ساخت حساب" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ورود" })).toBeInTheDocument();
+  });
+
   it("sends a password reset email and keeps the confirmation visible", async () => {
     const user = await openDialog();
     await user.click(screen.getByRole("button", { name: "رمز را فراموش کرده‌ام" }));

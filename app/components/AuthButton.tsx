@@ -15,6 +15,12 @@ import { useAuth } from "../AuthContext";
 
 type EmailMode = "signin" | "signup" | "reset";
 
+interface AuthButtonProps {
+  className?: string;
+  initialMode?: EmailMode;
+  label?: string;
+}
+
 const AUTH_ERRORS: Readonly<Record<string, string>> = {
   "auth/email-already-in-use": "این ایمیل قبلاً ثبت شده است.",
   "auth/invalid-credential": "ایمیل یا رمز عبور نادرست است.",
@@ -34,10 +40,14 @@ function authErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "ورود انجام نشد. دوباره امتحان کنید.";
 }
 
-export function AuthButton() {
+export function AuthButton({
+  className,
+  initialMode = "signin",
+  label = "ورود",
+}: AuthButtonProps = {}) {
   const { user, signOut } = useAuth();
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<EmailMode>("signin");
+  const [mode, setMode] = useState<EmailMode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -114,7 +124,16 @@ export function AuthButton() {
 
   return (
     <>
-      <button type="button" className="auth-btn" onClick={() => setOpen(true)}>ورود</button>
+      <button
+        type="button"
+        className={`auth-btn${className ? ` ${className}` : ""}`}
+        onClick={() => {
+          chooseMode(initialMode);
+          setOpen(true);
+        }}
+      >
+        {label}
+      </button>
 
       {open && (
         <div className="auth-modal-backdrop" onClick={() => setOpen(false)}>

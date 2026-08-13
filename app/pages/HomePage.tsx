@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Smartphone } from "lucide-react";
 import { listPuzzles, type PuzzleSummary } from "../puzzleLibrary";
 import { loadProgress, computeProgress, type ProgressInfo } from "../progress";
 import { navigate } from "../router";
@@ -31,7 +32,7 @@ function GitHubIcon(props: React.SVGProps<SVGSVGElement>) {
 
 export function HomePage() {
   const puzzles = useMemo(() => listPuzzles(), []);
-  const { syncVersion } = useAuth();
+  const { user, loading, syncVersion } = useAuth();
   const [sortKey, setSortKey] = useState<SortKey>("id");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [currentPage, setCurrentPage] = useState(1);
@@ -132,6 +133,26 @@ export function HomePage() {
           <AuthButton />
         </div>
       </header>
+
+      {!loading && !user && (
+        <aside className="android-announcement" aria-labelledby="android-announcement-title">
+          <div className="android-announcement-icon" aria-hidden="true">
+            <Smartphone size={28} strokeWidth={1.8} />
+          </div>
+          <div className="android-announcement-copy">
+            <h2 id="android-announcement-title">نسخهٔ اندروید جدول کلمات فارسی آماده است!</h2>
+            <p>
+              دوست دارید جدول‌ها را همیشه همراهتان داشته باشید؟ همین حالا یک حساب رایگان بسازید
+              تا لینک دریافت نسخهٔ اندروید برایتان ارسال شود.
+            </p>
+          </div>
+          <AuthButton
+            className="android-announcement-cta"
+            initialMode="signup"
+            label="ثبت‌نام و دریافت لینک"
+          />
+        </aside>
+      )}
 
       {puzzles.length === 0 ? (
         <div className="empty-state">
