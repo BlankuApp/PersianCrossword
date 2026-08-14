@@ -1695,6 +1695,33 @@ select {
   white-space: nowrap;
 }
 
+.difficulty-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.difficulty-badge-icon {
+  flex: 0 0 auto;
+}
+
+.difficulty-badge-normal {
+  border-color: #b8d9c5;
+  background: #edf8f1;
+  color: #2c7049;
+}
+
+.difficulty-badge-special {
+  border-color: #f0c4a6;
+  background: #fff1e8;
+  color: #b34b21;
+}
+
 .td-newspaper,
 .td-date {
   color: #6a766e;
