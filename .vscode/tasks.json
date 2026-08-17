@@ -32,7 +32,7 @@
       "label": "Grid Importer: Backend",
       "type": "shell",
       "command": "${workspaceFolder}/tools/grid-importer/backend/.venv/bin/uvicorn",
-      "args": ["app:app", "--reload"],
+      "args": ["app:app", "--reload", "--port", "8881"],
       "options": {
         "cwd": "${workspaceFolder}/tools/grid-importer/backend"
       },
@@ -63,7 +63,7 @@
       "label": "Grid Importer: Frontend",
       "type": "shell",
       "command": "npm",
-      "args": ["run", "dev"],
+      "args": ["run", "dev", "--", "--port", "8882"],
       "options": {
         "cwd": "${workspaceFolder}/tools/grid-importer/frontend"
       },
