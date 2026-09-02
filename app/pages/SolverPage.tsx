@@ -730,6 +730,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
                     onKeyDown={handleKeyDown}
                     onInputBeforeInput={handleInputBeforeInput}
                     onInputChange={handleInputChange}
+                    showCluesOnHover
                     checkMode={checkMode}
                     solutionState={solutionState}
                   />

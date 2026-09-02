@@ -793,6 +793,50 @@ select {
   cursor: pointer;
 }
 
+.cell-open:hover,
+.cell-open:focus-visible {
+  overflow: visible;
+  z-index: 20;
+}
+
+.cell-clue-tooltip {
+  position: absolute;
+  top: calc(100% + 6px);
+  display: grid;
+  gap: 2px;
+  width: max-content;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 7px 10px;
+  border: 1px solid #cdd4ce;
+  border-radius: 6px;
+  background: #fffdf7;
+  box-shadow: 0 4px 12px #17201b26;
+  color: #17201b;
+  direction: rtl;
+  font-size: 0.82rem;
+  font-weight: 400;
+  line-height: 1.55;
+  text-align: right;
+  white-space: normal;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cell-clue-tooltip-left {
+  left: 0;
+}
+
+.cell-clue-tooltip-right {
+  right: 0;
+}
+
+.cell-open:hover .cell-clue-tooltip,
+.cell-open:focus-visible .cell-clue-tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+
 .cell-block {
   background: #1e2a23;
 }

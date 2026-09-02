@@ -39,6 +39,16 @@ describe("Persian crossword UI", () => {
     expect(screen.queryByRole("tablist", { name: "نوع پرسش" })).not.toBeInTheDocument();
   });
 
+  it("adds both RTL clues to intersecting cells", () => {
+    render(<SolverPage id="sample-10x10-garden" json={json10} />);
+
+    const tooltip = screen.getByLabelText("ردیف 1 ستون 10").querySelector("[role=tooltip]");
+    expect(tooltip).toHaveAttribute("dir", "rtl");
+    expect(tooltip?.children).toHaveLength(2);
+    expect(tooltip).toHaveTextContent("۱ افقی نمونه افقی 1، 2 حرف");
+    expect(tooltip).toHaveTextContent("۱ عمودی نمونه عمودی 1، 4 حرف");
+  });
+
   it("renders a different puzzle when a different id/json is given", () => {
     render(<SolverPage id="sample-11x11-city" json={json11} />);
 
