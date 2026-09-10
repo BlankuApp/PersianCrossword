@@ -824,11 +824,11 @@ select {
 }
 
 .cell-clue-tooltip-left {
-  left: 0;
+  left: calc(100% + 6px);
 }
 
 .cell-clue-tooltip-right {
-  right: 0;
+  right: calc(100% + 6px);
 }
 
 .cell-open:hover .cell-clue-tooltip,
