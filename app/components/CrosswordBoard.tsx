@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   cellKey,
   compilePuzzle,
@@ -9,24 +10,9 @@ import {
 import { sameCoord, slotCellKeys, type Selection } from "../crosswordUi";
 import { LetterGlyph } from "./LetterGlyph";
 
-const BLOCK_ICONS = [
-  // 4-pointed star
-  "M12 2L13.5 10.5L22 12L13.5 13.5L12 22L10.5 13.5L2 12L10.5 10.5Z",
-  // 5-pointed star
-  "M12 2l2.9 8.9H23l-7.5 5.4 2.9 8.9L12 19.8l-7.4 5.4 2.9-8.9L0 10.9h8.1Z",
-  // Diamond
-  "M12 3L21 12L12 21L3 12Z",
-  // Plus / cross
-  "M11 3h2v8h8v2h-8v8h-2v-8H3v-2h8Z",
-  // Hexagon
-  "M12 2l9 5v10l-9 5-9-5V7Z",
-  // Circle with center dot
-  "M12 2a10 10 0 100 20A10 10 0 0012 2zm0 8a2 2 0 110 4 2 2 0 010-4z",
-  // 8-pointed star
-  "M12 2l2 7.6L21.6 7l-5.6 5.6L22 14.8l-7.8-1-2.2 7.2-2.2-7.2-7.8 1 6-2.2L2 7l7.6 2.6Z",
-  // Triangle up
-  "M12 3L22 21H2Z",
-];
+// DiceBear styles that render as a filled square — one is picked at random per mount,
+// so every visit to a puzzle dresses its block cells differently.
+const BLOCK_STYLES = ["blobs", "initial-face", "loops", "shapes", "line-face", "thumbs", "planets"];
 
 interface CrosswordBoardProps {
   readonly boardRef: React.RefObject<HTMLDivElement | null>;
@@ -63,6 +49,10 @@ export function CrosswordBoard({
   checkMode,
   solutionState,
 }: CrosswordBoardProps) {
+  const [blockStyle] = useState(
+    () => BLOCK_STYLES[Math.floor(Math.random() * BLOCK_STYLES.length)],
+  );
+
   return (
     <div
       ref={boardRef}
@@ -133,9 +123,12 @@ export function CrosswordBoard({
               onClick={() => onCellClick(coord)}
             >
               {isBlock ? (
-                <svg className="cell-block-icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d={BLOCK_ICONS[(row * puzzle.size.cols + col) % BLOCK_ICONS.length]} />
-                </svg>
+                <img
+                  className="cell-block-icon"
+                  src={`https://api.dicebear.com/10.x/${blockStyle}/svg?seed=${row}-${col}&animationVariant=slow`}
+                  alt=""
+                  loading="lazy"
+                />
               ) : (
                 <>
                   <LetterGlyph letter={value} />

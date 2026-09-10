@@ -41,7 +41,7 @@ function WhatsNewButton() {
       {open && (
         <div className="auth-modal-backdrop" onClick={() => setOpen(false)}>
           <div
-            className="auth-modal"
+            className="auth-modal whats-new-modal"
             role="dialog"
             aria-modal="true"
             aria-labelledby="whats-new-title"
@@ -57,12 +57,14 @@ function WhatsNewButton() {
             </button>
             <h2 id="whats-new-title">چه خبر؟</h2>
 
-            {WHATS_NEW.map((entry) => (
-              <div key={entry.date} className="auth-sync-info">
-                <p style={{ fontWeight: 600, color: "#1e5c38" }}>{formatDate(entry.date)} — {entry.title}</p>
-                <p style={{ fontWeight: 400, color: "#405148" }}>{entry.body}</p>
-              </div>
-            ))}
+            <div className="whats-new-list" tabIndex={0}>
+              {WHATS_NEW.map((entry) => (
+                <div key={`${entry.date}-${entry.title}`} className="auth-sync-info whats-new-entry">
+                  <p className="whats-new-entry-title">{formatDate(entry.date)} — {entry.title}</p>
+                  <p className="whats-new-entry-body">{entry.body}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}

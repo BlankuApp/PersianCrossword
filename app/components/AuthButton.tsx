@@ -68,7 +68,7 @@ function UserMenu() {
 
   const name = user.isAnonymous ? "مهمان" : (user.displayName ?? user.email ?? "کاربر");
   const seed = user.email ?? user.uid;
-  const avatar = `https://api.dicebear.com/10.x/critters/svg?seed=${encodeURIComponent(seed)}`;
+  const avatar = `https://api.dicebear.com/10.x/critters/svg?seed=${encodeURIComponent(seed)}&animationVariant=medium`;
   const isGoogle = user.providerData.some((p) => p.providerId === "google.com");
   const totals = stats.reduce(
     (acc, s) => ({
