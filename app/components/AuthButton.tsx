@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
@@ -10,10 +10,144 @@ import {
 } from "firebase/auth";
 import { Capacitor } from "@capacitor/core";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
+import { LogOut } from "lucide-react";
 import { auth } from "../firebase";
 import { useAuth } from "../AuthContext";
+import { listPuzzles } from "../puzzleLibrary";
+import { computeProgress, loadProgress } from "../progress";
 
 type EmailMode = "signin" | "signup" | "reset";
+
+const NO_DIFFICULTY = "بدون سطح";
+
+interface DifficultyStats {
+  readonly label: string;
+  readonly solved: number;
+  readonly inProgress: number;
+  readonly untouched: number;
+  readonly total: number;
+}
+
+function GoogleIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 48 48" width={size} height={size} aria-hidden="true">
+      <path fill="#4285f4" d="M45.1 24.5c0-1.6-.1-2.8-.4-4H24v7.3h12.1c-.2 2-1.6 5-4.5 7l-.1.3 6.5 5 .5.1c4.1-3.8 6.6-9.4 6.6-15.7Z" />
+      <path fill="#34a853" d="M24 46c5.9 0 10.9-2 14.5-5.3l-6.9-5.3c-1.8 1.3-4.3 2.2-7.6 2.2-5.8 0-10.7-3.8-12.5-9l-.3.1-6.7 5.2-.1.3C8 41.3 15.4 46 24 46Z" />
+      <path fill="#fbbc05" d="M11.5 28.6a13.6 13.6 0 0 1 0-9.2l-.1-.3-6.8-5.3-.2.1a22 22 0 0 0 0 20l7.1-5.3Z" />
+      <path fill="#ea4335" d="M24 9.5c4.1 0 6.9 1.8 8.5 3.3l6.2-6C34.9 3.3 29.9 1 24 1 15.4 1 8 5.7 4.4 12.6l7.1 5.5C13.3 13 18.2 9.5 24 9.5Z" />
+    </svg>
+  );
+}
+
+function computeDifficultyStats(): readonly DifficultyStats[] {
+  const byLabel = new Map<string, { solved: number; inProgress: number; untouched: number }>();
+  for (const puzzle of listPuzzles()) {
+    const label = puzzle.difficulty?.trim() || NO_DIFFICULTY;
+    const row = byLabel.get(label) ?? { solved: 0, inProgress: 0, untouched: 0 };
+    const { filled, completed } = computeProgress(puzzle.json, loadProgress(puzzle.id));
+    if (completed) row.solved++;
+    else if (filled > 0) row.inProgress++;
+    else row.untouched++;
+    byLabel.set(label, row);
+  }
+  return [...byLabel].map(([label, row]) => ({
+    label,
+    ...row,
+    total: row.solved + row.inProgress + row.untouched,
+  }));
+}
+
+function UserMenu() {
+  const { user, signOut, syncVersion } = useAuth();
+  const [open, setOpen] = useState(false);
+
+  // Scanning every puzzle isn't free — only do it while the menu is open.
+  const stats = useMemo(() => (open ? computeDifficultyStats() : []), [open, syncVersion]);
+
+  if (!user) return null;
+
+  const name = user.isAnonymous ? "مهمان" : (user.displayName ?? user.email ?? "کاربر");
+  const seed = user.email ?? user.uid;
+  const avatar = `https://api.dicebear.com/10.x/critters/svg?seed=${encodeURIComponent(seed)}`;
+  const isGoogle = user.providerData.some((p) => p.providerId === "google.com");
+  const totals = stats.reduce(
+    (acc, s) => ({
+      solved: acc.solved + s.solved,
+      inProgress: acc.inProgress + s.inProgress,
+      untouched: acc.untouched + s.untouched,
+      total: acc.total + s.total,
+    }),
+    { solved: 0, inProgress: 0, untouched: 0, total: 0 },
+  );
+
+  return (
+    <div className="auth-user" onKeyDown={(e) => e.key === "Escape" && setOpen(false)}>
+      <button
+        type="button"
+        className="auth-avatar-btn"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={`حساب کاربری: ${name}`}
+      >
+        <img className="auth-avatar" src={avatar} alt="" />
+      </button>
+
+      {open && (
+        <>
+          <div className="auth-menu-backdrop" onClick={() => setOpen(false)} />
+          <div className="auth-menu" role="dialog" aria-label="حساب کاربری">
+            <div className="auth-menu-head">
+              <img className="auth-avatar auth-avatar-lg" src={avatar} alt="" />
+              <div className="auth-menu-identity">
+                <strong>{name}</strong>
+                {user.email && <span className="auth-menu-email">{user.email}</span>}
+                <span className="auth-menu-provider">
+                  {isGoogle ? <GoogleIcon /> : null}
+                  {isGoogle ? "ورود با گوگل" : user.isAnonymous ? "حساب مهمان" : "ورود با ایمیل"}
+                </span>
+              </div>
+            </div>
+
+            <table className="auth-stats">
+              <thead>
+                <tr>
+                  <th>سطح</th>
+                  <th>حل‌شده</th>
+                  <th>نیمه‌کاره</th>
+                  <th>حل‌نشده</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.map((s) => (
+                  <tr key={s.label}>
+                    <th scope="row">{s.label}</th>
+                    <td>{s.solved.toLocaleString("fa-IR")}</td>
+                    <td>{s.inProgress.toLocaleString("fa-IR")}</td>
+                    <td>{s.untouched.toLocaleString("fa-IR")}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th scope="row">همه ({totals.total.toLocaleString("fa-IR")})</th>
+                  <td>{totals.solved.toLocaleString("fa-IR")}</td>
+                  <td>{totals.inProgress.toLocaleString("fa-IR")}</td>
+                  <td>{totals.untouched.toLocaleString("fa-IR")}</td>
+                </tr>
+              </tfoot>
+            </table>
+
+            <button type="button" className="auth-btn auth-btn-block auth-signout-btn" onClick={signOut}>
+              <LogOut size={16} strokeWidth={2} aria-hidden="true" />
+              خروج از حساب
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 interface AuthButtonProps {
   className?: string;
@@ -112,15 +246,7 @@ export function AuthButton({
     await runAuth(() => signInAnonymously(auth));
   }
 
-  if (user) {
-    const label = user.isAnonymous ? "مهمان" : (user.displayName ?? user.email ?? "کاربر");
-    return (
-      <div className="auth-user">
-        <span className="auth-user-name">{label}</span>
-        <button type="button" className="auth-btn" onClick={signOut}>خروج</button>
-      </div>
-    );
-  }
+  if (user) return <UserMenu />;
 
   return (
     <>

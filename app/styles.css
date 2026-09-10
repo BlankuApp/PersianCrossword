@@ -1422,18 +1422,124 @@ select {
 }
 
 .auth-user {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.auth-user-name {
-  font-size: 0.88rem;
-  color: #5a645d;
-  max-width: 140px;
+.auth-avatar-btn {
+  padding: 0;
+  border: 1px solid #bac3bc;
+  border-radius: 10px;
+  background: #ffffff;
+  line-height: 0;
+  cursor: pointer;
+}
+
+.auth-avatar-btn:hover {
+  border-color: #8cbca0;
+}
+
+.auth-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: #edf6f0;
+}
+
+.auth-avatar-lg {
+  width: 56px;
+  height: 56px;
+}
+
+.auth-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.auth-menu {
+  position: absolute;
+  z-index: 41;
+  top: calc(100% + 8px);
+  inset-inline-end: 0;
+  width: min(320px, 90vw);
+  padding: 16px;
+  border: 1px solid #d7e0d9;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+  text-align: start;
+}
+
+.auth-menu-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e6ece8;
+}
+
+.auth-menu-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.auth-menu-identity strong,
+.auth-menu-email {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.auth-menu-email {
+  font-size: 0.82rem;
+  color: #5a645d;
+}
+
+.auth-menu-provider {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #5a645d;
+}
+
+.auth-stats {
+  width: 100%;
+  margin: 12px 0;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.auth-stats th,
+.auth-stats td {
+  padding: 5px 4px;
+  text-align: center;
+  font-weight: 400;
+}
+
+.auth-stats thead th,
+.auth-stats tbody th {
+  color: #5a645d;
+}
+
+.auth-stats tbody th,
+.auth-stats tfoot th {
+  text-align: start;
+}
+
+.auth-stats tfoot th,
+.auth-stats tfoot td {
+  border-top: 1px solid #e6ece8;
+  font-weight: 600;
+}
+
+.auth-signout-btn {
+  gap: 8px;
 }
 
 .auth-modal-backdrop {

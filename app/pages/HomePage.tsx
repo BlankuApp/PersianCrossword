@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Flame, Smartphone, Sprout } from "lucide-react";
+import { Flame, HelpCircle, Smartphone, Sprout } from "lucide-react";
 import { listPuzzles, type PuzzleSummary } from "../puzzleLibrary";
 import { loadProgress, computeProgress, type ProgressInfo } from "../progress";
 import { navigate } from "../router";
 import { useAuth } from "../AuthContext";
 import { AuthButton } from "../components/AuthButton";
+import { WHATS_NEW } from "../whatsNew";
 
 type SortKey = "id" | "title" | "difficulty" | "author" | "newspaper" | "publishedAt" | "progress";
 type SortDir = "asc" | "desc";
@@ -20,6 +21,53 @@ function formatDate(iso: string): string {
   } catch {
     return iso;
   }
+}
+
+function WhatsNewButton() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        type="button"
+        className="auth-btn"
+        style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+        onClick={() => setOpen(true)}
+      >
+        <HelpCircle size={16} strokeWidth={2.2} aria-hidden="true" />
+        چه خبر؟
+      </button>
+
+      {open && (
+        <div className="auth-modal-backdrop" onClick={() => setOpen(false)}>
+          <div
+            className="auth-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="whats-new-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="auth-modal-close"
+              onClick={() => setOpen(false)}
+              aria-label="بستن"
+            >
+              ✕
+            </button>
+            <h2 id="whats-new-title">چه خبر؟</h2>
+
+            {WHATS_NEW.map((entry) => (
+              <div key={entry.date} className="auth-sync-info">
+                <p style={{ fontWeight: 600, color: "#1e5c38" }}>{formatDate(entry.date)} — {entry.title}</p>
+                <p style={{ fontWeight: 400, color: "#405148" }}>{entry.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  );
 }
 
 function GitHubIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -149,6 +197,7 @@ export function HomePage() {
           <h1>جدول کلمات فارسی</h1>
         </div>
         <div className="home-header-actions">
+          <WhatsNewButton />
           <AuthButton />
         </div>
       </header>
