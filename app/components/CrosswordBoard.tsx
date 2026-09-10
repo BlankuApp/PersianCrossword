@@ -150,13 +150,17 @@ export function CrosswordBoard({
                     >
                       {slots.across ? (
                         <span>
-                          <strong>{slots.across.groupNum.toLocaleString("fa-IR")} افقی</strong>{" "}
+                          <strong className="cell-clue-across">
+                            {slots.across.groupNum.toLocaleString("fa-IR")} افقی
+                          </strong>{" "}
                           {slots.across.clue}
                         </span>
                       ) : null}
                       {slots.down ? (
                         <span>
-                          <strong>{slots.down.groupNum.toLocaleString("fa-IR")} عمودی</strong>{" "}
+                          <strong className="cell-clue-down">
+                            {slots.down.groupNum.toLocaleString("fa-IR")} عمودی
+                          </strong>{" "}
                           {slots.down.clue}
                         </span>
                       ) : null}
