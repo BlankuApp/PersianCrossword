@@ -844,10 +844,16 @@ select {
   right: calc(100% + 6px);
 }
 
-.cell-open:hover .cell-clue-tooltip,
 .cell-open:focus-visible .cell-clue-tooltip {
   visibility: visible;
   opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cell-open:hover .cell-clue-tooltip {
+    visibility: visible;
+    opacity: 1;
+  }
 }
 
 .cell-block {
