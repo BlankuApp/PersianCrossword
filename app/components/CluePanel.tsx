@@ -2,6 +2,7 @@ import { Delete, Pencil, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { normalizePersianText, type Coord, type Direction, type Slot } from "../../src/index";
 import { buildLetterTray } from "../crosswordUi";
+import { ClueAiButton } from "./ClueAiDialog";
 import { LetterGlyph } from "./LetterGlyph";
 
 interface ActiveClueProps {
@@ -225,7 +226,13 @@ function ClueBlock({
             aria-label="جستجو در گوگل برای این پرسش"
           >
             🔍 جستجو در گوگل
-          </button>
+          </button>{" "}
+          <ClueAiButton
+            clue={slot.clue}
+            isSolved={cellValues.every(Boolean)}
+            cellValues={cellValues}
+            answer={slot.cells.map((c) => getSolutionValue?.(c) ?? "").join("")}
+          />
         </p>
         <div className="active-clue-head-actions">
           {isDebugMode ? (

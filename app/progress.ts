@@ -52,6 +52,19 @@ export function saveSeenTutorial(): void {
   window.localStorage.setItem(SEEN_TUTORIAL_KEY, "true");
 }
 
+// Dash, not the STORAGE_PREFIX colon — same reason as CHECK_MODE_KEY above.
+const GEMINI_KEY_KEY = "persian-crossword-gemini-key";
+
+export function loadGeminiKey(): string {
+  if (typeof window === "undefined") return "";
+  return window.localStorage.getItem(GEMINI_KEY_KEY) ?? "";
+}
+
+export function saveGeminiKey(value: string): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(GEMINI_KEY_KEY, value);
+}
+
 export interface ProgressInfo {
   readonly filled: number;
   readonly total: number;

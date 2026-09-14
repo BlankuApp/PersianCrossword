@@ -14,7 +14,7 @@ import { LogOut } from "lucide-react";
 import { auth } from "../firebase";
 import { useAuth } from "../AuthContext";
 import { listPuzzles } from "../puzzleLibrary";
-import { computeProgress, loadProgress } from "../progress";
+import { computeProgress, loadGeminiKey, loadProgress, saveGeminiKey } from "../progress";
 
 type EmailMode = "signin" | "signup" | "reset";
 
@@ -60,6 +60,7 @@ function computeDifficultyStats(): readonly DifficultyStats[] {
 function UserMenu() {
   const { user, signOut, syncVersion } = useAuth();
   const [open, setOpen] = useState(false);
+  const [geminiKey, setGeminiKey] = useState(loadGeminiKey);
 
   // Scanning every puzzle isn't free — only do it while the menu is open.
   const stats = useMemo(() => (open ? computeDifficultyStats() : []), [open, syncVersion]);
@@ -137,6 +138,28 @@ function UserMenu() {
                 </tr>
               </tfoot>
             </table>
+
+            <div className="auth-gemini-section">
+              <label htmlFor="auth-gemini-key">کلید هوشواره (Gemini)</label>
+              <input
+                id="auth-gemini-key"
+                type="password"
+                value={geminiKey}
+                onChange={(e) => {
+                  setGeminiKey(e.target.value);
+                  saveGeminiKey(e.target.value);
+                }}
+                placeholder="کلید API خود را این‌جا وارد کنید"
+                dir="ltr"
+              />
+              <p className="auth-gemini-hint">
+                برای پاسخ و توضیح هوشمند پرسش‌ها، یک کلید رایگان از{" "}
+                <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">
+                  Google AI Studio
+                </a>{" "}
+                بسازید و همین‌جا وارد کنید. این کلید فقط در همین مرورگر شما ذخیره می‌شود و به هیچ سروری ارسال نمی‌شود.
+              </p>
+            </div>
 
             <button type="button" className="auth-btn auth-btn-block auth-signout-btn" onClick={signOut}>
               <LogOut size={16} strokeWidth={2} aria-hidden="true" />

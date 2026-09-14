@@ -1541,6 +1541,83 @@ select {
   gap: 8px;
 }
 
+.auth-gemini-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0;
+  padding-top: 12px;
+  border-top: 1px solid #e6ece8;
+}
+
+.auth-gemini-section label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.auth-gemini-section input {
+  padding: 8px 10px;
+  border: 1px solid #bac3bc;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.auth-gemini-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #5a655e;
+  line-height: 1.6;
+}
+
+.clue-ai-modal {
+  max-width: min(95vw, 560px);
+}
+
+.clue-ai-key-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.clue-ai-key-form label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.clue-ai-key-form input {
+  padding: 8px 10px;
+  border: 1px solid #bac3bc;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.clue-ai-text {
+  line-height: 1.9;
+}
+
+.clue-ai-text p,
+.clue-ai-text ul,
+.clue-ai-text ol,
+.clue-ai-text h3 {
+  margin: 0 0 12px;
+}
+
+.clue-ai-text > :last-child {
+  margin-bottom: 0;
+}
+
+.clue-ai-text ul,
+.clue-ai-text ol {
+  padding-inline-start: 24px;
+}
+
+.clue-ai-text code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #e6ece8;
+  font-size: 0.9em;
+}
+
 .auth-modal-backdrop {
   position: fixed;
   inset: 0;
