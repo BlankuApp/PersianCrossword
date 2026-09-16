@@ -7,6 +7,11 @@ export interface WhatsNewEntry {
 // Newest first.
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
+    date: "2026-09-16",
+    title: "۱۲ جدول تازه",
+    body: "جدول‌های ۸۰۳۱ تا ۸۰۳۶ روزنامهٔ ایران، در دو سطح عادی و ویژه، اضافه شدند.",
+  },
+  {
     date: "2026-09-14",
     title: "پرسش و پاسخ با هوشواره",
     body:
