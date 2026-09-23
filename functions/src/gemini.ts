@@ -1,4 +1,4 @@
-const MODEL = "gemini-flash-lite-latest";
+const MODEL = "gemini-3.5-flash";
 
 export class GeminiHttpError extends Error {
   constructor(readonly status: number) {
