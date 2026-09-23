@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("../app/firebase", () => ({ functions: {} }));
+const callable = vi.hoisted(() => ({ stream: vi.fn() }));
 
-import { AI_GENERIC_ERROR, QuotaError, toAiError } from "../app/gemini";
+vi.mock("../app/firebase", () => ({ functions: {} }));
+vi.mock("firebase/functions", () => ({ httpsCallable: () => callable }));
+
+import { AI_GENERIC_ERROR, QuotaError, streamFreeAi, toAiError } from "../app/gemini";
 
 const fnError = (code: string, details?: unknown) => Object.assign(new Error("x"), { code, details });
 
@@ -29,5 +32,21 @@ describe("toAiError", () => {
       expect(err).not.toBeInstanceOf(QuotaError);
       expect(err.message).toBe(AI_GENERIC_ERROR);
     }
+  });
+});
+
+describe("streamFreeAi", () => {
+  it("rejects with QuotaError and leaves no unhandled rejection when the stream errors", async () => {
+    // The SDK errors the iterator and rejects `data` with the same error.
+    const err = fnError("functions/resource-exhausted", { reason: "shared" });
+    callable.stream.mockResolvedValue({
+      stream: (async function* () {
+        yield* [];
+        throw err;
+      })(),
+      data: Promise.reject(err),
+    });
+    await expect(streamFreeAi("p", () => {}, new AbortController().signal)).rejects.toBeInstanceOf(QuotaError);
+    await new Promise((r) => setTimeout(r, 0));
   });
 });

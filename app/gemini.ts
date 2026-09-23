@@ -105,6 +105,8 @@ export async function streamFreeAi(
 ): Promise<void> {
   try {
     const { stream, data } = await askAi.stream({ prompt }, { signal });
+    // On error the SDK rejects `data` too; the loop below throws first, so mark it handled.
+    data.catch(() => {});
     for await (const chunk of stream) onChunk(chunk);
     await data;
   } catch (e) {

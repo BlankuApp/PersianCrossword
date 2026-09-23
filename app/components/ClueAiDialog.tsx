@@ -1,6 +1,7 @@
-import { Fragment, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { signInAnonymously } from "firebase/auth";
+import { useAuth } from "../AuthContext";
 import { auth } from "../firebase";
 import {
   AI_GENERIC_ERROR,
@@ -81,6 +82,7 @@ export function ClueAiButton({ clue, isSolved, cellValues, answer }: ClueAiButto
   const [quota, setQuota] = useState<QuotaInfo | null>(null);
   const [controller, setController] = useState<AbortController | null>(null);
   const [keyInput, setKeyInput] = useState(loadGeminiKey);
+  const { user } = useAuth();
 
   const label = isSolved ? "توضیح با هوشواره" : "از هوشواره بپرس";
   const title = isSolved ? `توضیح هوشواره دربارهٔ «${answer}»` : "پاسخ پیشنهادی هوشواره";
@@ -102,6 +104,8 @@ export function ClueAiButton({ clue, isSolved, cellValues, answer }: ClueAiButto
       if (apiKey) {
         await streamGemini(prompt, apiKey, onChunk, ac.signal);
       } else {
+        // currentUser is null until the saved session is restored; don't replace an account with a guest.
+        await auth.authStateReady();
         if (!auth.currentUser) {
           await signInAnonymously(auth).catch(() => {
             throw new Error(AI_GENERIC_ERROR);
@@ -121,6 +125,13 @@ export function ClueAiButton({ clue, isSolved, cellValues, answer }: ClueAiButto
       setStatus("error");
     }
   }
+
+  // A guest who signs up from the quota message gets the account tier; retry without making them ask again.
+  const upgradedGuest =
+    status === "quota" && quota?.reason === "user" && quota.tier === "guest" && user !== null && !user.isAnonymous;
+  useEffect(() => {
+    if (upgradedGuest) void runRequest("");
+  }, [upgradedGuest]);
 
   function start(): void {
     setOpen(true);

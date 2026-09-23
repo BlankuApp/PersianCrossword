@@ -3,7 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-const fakeAuth = vi.hoisted(() => ({ currentUser: null as null | { uid: string } }));
+const fakeAuth = vi.hoisted(() => ({
+  currentUser: null as null | { uid: string },
+  authStateReady: async () => {},
+}));
+const authCtx = vi.hoisted(() => ({ user: null as null | { uid: string; isAnonymous: boolean } }));
 const mocks = vi.hoisted(() => ({
   streamGemini: vi.fn(),
   streamFreeAi: vi.fn(),
@@ -11,6 +15,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../app/firebase", () => ({ auth: fakeAuth, functions: {} }));
+vi.mock("../app/AuthContext", () => ({ useAuth: () => authCtx }));
 vi.mock("firebase/auth", () => ({ signInAnonymously: mocks.signInAnonymously }));
 vi.mock("../app/components/AuthButton", () => ({
   AuthButton: ({ label }: { label: string }) => <button type="button">{label}</button>,
@@ -23,9 +28,11 @@ vi.mock("../app/gemini", async (importOriginal) => {
 import { QuotaError } from "../app/gemini";
 import { ClueAiButton } from "../app/components/ClueAiDialog";
 
+const button = () => <ClueAiButton clue="پایتخت ایران" isSolved={false} cellValues={[undefined, undefined, undefined, undefined]} answer="تهران" />;
+
 function renderButton() {
-  render(<ClueAiButton clue="پایتخت ایران" isSolved={false} cellValues={[undefined, undefined, undefined, undefined]} answer="تهران" />);
-  return userEvent.setup();
+  const { rerender } = render(button());
+  return Object.assign(userEvent.setup(), { rerender: () => rerender(button()) });
 }
 
 describe("ClueAiButton", () => {
@@ -33,6 +40,8 @@ describe("ClueAiButton", () => {
     vi.clearAllMocks();
     localStorage.clear();
     fakeAuth.currentUser = null;
+    fakeAuth.authStateReady = async () => {};
+    authCtx.user = null;
     mocks.signInAnonymously.mockImplementation(async () => {
       fakeAuth.currentUser = { uid: "anon" };
     });
@@ -114,5 +123,29 @@ describe("ClueAiButton", () => {
     await user.click(screen.getByRole("button", { name: "بستن" }));
     await user.click(screen.getByRole("button", { name: /از هوشواره بپرس/ }));
     expect(await screen.findByText("تهران")).toBeInTheDocument();
+  });
+
+  it("waits for the saved session before deciding to sign in anonymously", async () => {
+    fakeAuth.authStateReady = async () => {
+      fakeAuth.currentUser = { uid: "u1" };
+    };
+    const user = renderButton();
+    await user.click(screen.getByRole("button", { name: /از هوشواره بپرس/ }));
+    await screen.findByText("تهران");
+    expect(mocks.signInAnonymously).not.toHaveBeenCalled();
+  });
+
+  it("retries by itself once a guest signs up from the quota message", async () => {
+    mocks.streamFreeAi.mockRejectedValueOnce(new QuotaError({ reason: "user", tier: "guest", limit: 10 }));
+    authCtx.user = { uid: "anon", isAnonymous: true };
+    const user = renderButton();
+    await user.click(screen.getByRole("button", { name: /از هوشواره بپرس/ }));
+    await screen.findByText(/\(۱۰ پرسش\) تمام شد/);
+
+    authCtx.user = { uid: "u1", isAnonymous: false };
+    fakeAuth.currentUser = { uid: "u1" };
+    user.rerender();
+    expect(await screen.findByText("تهران")).toBeInTheDocument();
+    expect(mocks.streamFreeAi).toHaveBeenCalledTimes(2);
   });
 });
