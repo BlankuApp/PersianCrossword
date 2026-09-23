@@ -27,11 +27,13 @@ export function saveProgress(id: string, state: SavedCrosswordState): void {
 
 // Note: deliberately not prefixed with STORAGE_PREFIX — cloudProgress.syncProgress()
 // treats every "persian-crossword:*" key as a puzzle id to sync to Firestore.
-const CHECK_MODE_KEY = "persian-crossword-check-mode";
+// "-v2": the old key held "false" for every browser that ever opened a puzzle
+// (SolverPage persists the value on mount), so the on-by-default change needs a fresh key.
+const CHECK_MODE_KEY = "persian-crossword-check-mode-v2";
 
 export function loadCheckMode(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.localStorage.getItem(CHECK_MODE_KEY) === "true";
+  if (typeof window === "undefined") return true;
+  return window.localStorage.getItem(CHECK_MODE_KEY) !== "false";
 }
 
 export function saveCheckMode(value: boolean): void {
