@@ -124,6 +124,15 @@ function ClueBlock({
       }),
     [slot, cellValues, checkMode, getSolutionValue],
   );
+  // Letters the AI may rely on: wrong ones (when the solution is known) are sent as unknown,
+  // so "solved" means filled in correctly and the explained answer is never empty.
+  const aiLetters = useMemo(() => {
+    const solution = slot.cells.map((c) => getSolutionValue?.(c));
+    const hasSolution = solution.every(Boolean);
+    return cellValues.map((v, i) =>
+      v && (!hasSolution || normalizePersianText(v) === normalizePersianText(solution[i]!)) ? v : undefined,
+    );
+  }, [slot, cellValues, getSolutionValue]);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [draftClue, setDraftClue] = useState("");
   const [isSavingClue, setIsSavingClue] = useState(false);
@@ -229,9 +238,9 @@ function ClueBlock({
           </button>{" "}
           <ClueAiButton
             clue={slot.clue}
-            isSolved={cellValues.every(Boolean)}
-            cellValues={cellValues}
-            answer={slot.cells.map((c) => getSolutionValue?.(c) ?? "").join("")}
+            isSolved={aiLetters.every(Boolean)}
+            cellValues={aiLetters}
+            answer={aiLetters.join("")}
           />
         </p>
         <div className="active-clue-head-actions">

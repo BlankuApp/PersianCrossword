@@ -27,6 +27,8 @@ vi.mock("../app/gemini", async (importOriginal) => {
 
 import { QuotaError } from "../app/gemini";
 import { ClueAiButton } from "../app/components/ClueAiDialog";
+import { ActiveClue } from "../app/components/CluePanel";
+import type { Slot } from "../src/types";
 
 const button = () => <ClueAiButton clue="پایتخت ایران" isSolved={false} cellValues={[undefined, undefined, undefined, undefined]} answer="تهران" />;
 
@@ -147,5 +149,49 @@ describe("ClueAiButton", () => {
     user.rerender();
     expect(await screen.findByText("تهران")).toBeInTheDocument();
     expect(mocks.streamFreeAi).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("ActiveClue AI letters", () => {
+  const slot = {
+    id: "C1-1",
+    direction: "down",
+    groupNum: 1,
+    clue: "پیچ و خم زلف",
+    cells: [0, 1, 2].map((row) => ({ row, col: 0 })),
+  } as unknown as Slot;
+  const solution = ["ش", "ک", "ن"];
+
+  function renderClue(values: (string | undefined)[], withSolution = true) {
+    render(
+      <ActiveClue
+        slots={{ down: slot }}
+        activeDirection="down"
+        getCellValue={(c) => values[c.row]}
+        getSolutionValue={(c) => (withSolution ? solution[c.row] : undefined)}
+      />,
+    );
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.setItem("persian-crossword-gemini-key", "k");
+  });
+
+  it("explains only when the word is filled in correctly", () => {
+    renderClue(["ش", "ک", "ن"]);
+    expect(screen.getByRole("button", { name: /توضیح با هوشواره/ })).toBeInTheDocument();
+  });
+
+  it("stays in ask mode and hides wrong letters when the word is filled in wrongly", async () => {
+    renderClue(["ش", "ک", "ه"]);
+    await userEvent.setup().click(screen.getByRole("button", { name: /از هوشواره بپرس/ }));
+    expect(mocks.streamGemini.mock.calls[0]?.[0]).toContain("حرف ۱: ش، حرف ۲: ک، حرف ۳: ؟");
+  });
+
+  it("explains the player's letters when the puzzle has no solution", async () => {
+    renderClue(["ش", "ک", "ن"], false);
+    await userEvent.setup().click(screen.getByRole("button", { name: /توضیح با هوشواره/ }));
+    expect(mocks.streamGemini.mock.calls[0]?.[0]).toContain("پاسخ: «شکن»");
   });
 });
