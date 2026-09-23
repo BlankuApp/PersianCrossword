@@ -1,7 +1,7 @@
 import { httpsCallable } from "firebase/functions";
 import { functions } from "./firebase";
 
-const MODEL = "gemini-3.5-flash";
+const MODEL = "gemini-3.5-flash-lite";
 
 const fa = (n: number) => n.toLocaleString("fa-IR");
 

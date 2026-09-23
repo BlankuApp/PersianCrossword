@@ -37,7 +37,7 @@ describe("streamGemini", () => {
     vi.stubGlobal("fetch", fetchMock);
     await streamGemini("پرسش", "secret-key", () => {});
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toContain("gemini-3.5-flash:streamGenerateContent?alt=sse");
+    expect(url).toContain("gemini-3.5-flash-lite:streamGenerateContent?alt=sse");
     expect(url).toContain("key=secret-key");
     expect(JSON.parse(String(init.body))).toEqual({ contents: [{ parts: [{ text: "پرسش" }] }] });
   });
