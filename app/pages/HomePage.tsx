@@ -5,7 +5,7 @@ import { loadProgress, computeProgress, type ProgressInfo } from "../progress";
 import { navigate } from "../router";
 import { useAuth } from "../AuthContext";
 import { AuthButton } from "../components/AuthButton";
-import { WHATS_NEW } from "../whatsNew";
+import { WHATS_NEW, loadWhatsNewSeen, markWhatsNewSeen } from "../whatsNew";
 
 type SortKey = "id" | "title" | "difficulty" | "author" | "newspaper" | "publishedAt" | "progress";
 type SortDir = "asc" | "desc";
@@ -25,17 +25,33 @@ function formatDate(iso: string): string {
 
 function WhatsNewButton() {
   const [open, setOpen] = useState(false);
+  const [seen, setSeen] = useState(loadWhatsNewSeen);
+  // Marker from before this opening, so new entries stay highlighted while the dialog is open.
+  const [seenBeforeOpen, setSeenBeforeOpen] = useState(seen);
+  const unseen = WHATS_NEW.filter((e) => e.date > seen).length;
+  const unseenLabel = unseen > 9 ? "۹+" : unseen.toLocaleString("fa-IR");
+
+  function openDialog(): void {
+    setSeenBeforeOpen(seen);
+    setSeen(markWhatsNewSeen());
+    setOpen(true);
+  }
 
   return (
     <>
       <button
         type="button"
-        className="auth-btn"
-        style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
-        onClick={() => setOpen(true)}
+        className={`auth-btn whats-new-btn${unseen ? " has-unseen" : ""}`}
+        onClick={openDialog}
+        aria-label={unseen ? `چه خبر؟ — ${unseenLabel} خبر تازه` : undefined}
       >
         <HelpCircle size={16} strokeWidth={2.2} aria-hidden="true" />
         چه خبر؟
+        {unseen > 0 && (
+          <span className="whats-new-badge" aria-hidden="true">
+            {unseenLabel}
+          </span>
+        )}
       </button>
 
       {open && (
@@ -58,12 +74,21 @@ function WhatsNewButton() {
             <h2 id="whats-new-title">چه خبر؟</h2>
 
             <div className="whats-new-list" tabIndex={0}>
-              {WHATS_NEW.map((entry) => (
-                <div key={`${entry.date}-${entry.title}`} className="auth-sync-info whats-new-entry">
-                  <p className="whats-new-entry-title">{formatDate(entry.date)} — {entry.title}</p>
-                  <p className="whats-new-entry-body">{entry.body}</p>
-                </div>
-              ))}
+              {WHATS_NEW.map((entry) => {
+                const isNew = entry.date > seenBeforeOpen;
+                return (
+                  <div
+                    key={`${entry.date}-${entry.title}`}
+                    className={`auth-sync-info whats-new-entry${isNew ? " whats-new-entry-new" : ""}`}
+                  >
+                    <p className="whats-new-entry-title">
+                      {formatDate(entry.date)} — {entry.title}
+                      {isNew && <span className="whats-new-tag">تازه</span>}
+                    </p>
+                    <p className="whats-new-entry-body">{entry.body}</p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

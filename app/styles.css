@@ -1675,6 +1675,77 @@ select {
   color: #405148;
 }
 
+.whats-new-btn {
+  position: relative;
+  gap: 6px;
+}
+
+.whats-new-btn.has-unseen {
+  border-color: #c4541f;
+  background: #fff1e8;
+  color: #b34b21;
+  font-weight: 600;
+  box-shadow: 0 0 0 3px rgba(196, 84, 31, 0.14);
+}
+
+.whats-new-btn.has-unseen:hover {
+  background: #ffe6d6;
+}
+
+.whats-new-badge {
+  position: absolute;
+  top: -8px;
+  inset-inline-end: -8px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: #c4541f;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  box-sizing: border-box;
+  animation: whats-new-pulse 2.4s ease-out 3;
+}
+
+@keyframes whats-new-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(196, 84, 31, 0.45);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 8px rgba(196, 84, 31, 0);
+  }
+}
+
+.whats-new-entry.whats-new-entry-new {
+  border-color: #f0c4a6;
+  border-inline-start: 4px solid #c4541f;
+  background: #fff7f1;
+}
+
+.whats-new-tag {
+  display: inline-block;
+  margin-inline-start: 8px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #c4541f;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.7;
+  vertical-align: middle;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .whats-new-badge {
+    animation: none;
+  }
+}
+
 .auth-modal h2 {
   margin: 0 0 18px;
   color: #1e5c38;

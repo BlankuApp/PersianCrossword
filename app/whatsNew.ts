@@ -4,6 +4,23 @@ export interface WhatsNewEntry {
   readonly body: string;
 }
 
+// Dash, not the "persian-crossword:" prefix — cloudProgress syncs every such key as a puzzle.
+const SEEN_KEY = "persian-crossword-whats-new-seen";
+
+// ponytail: tracks the newest *date* seen, so a second entry dated the same day but shipped
+// later won't count as new; give entries ids if same-day follow-ups become common.
+export function loadWhatsNewSeen(): string {
+  if (typeof window === "undefined") return "";
+  return window.localStorage.getItem(SEEN_KEY) ?? "";
+}
+
+/** Marks every current entry as seen and returns the new marker. */
+export function markWhatsNewSeen(): string {
+  const newest = WHATS_NEW[0]?.date ?? "";
+  if (typeof window !== "undefined") window.localStorage.setItem(SEEN_KEY, newest);
+  return newest;
+}
+
 // Newest first.
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
