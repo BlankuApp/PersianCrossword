@@ -1,3 +1,6 @@
+import { httpsCallable } from "firebase/functions";
+import { functions } from "./firebase";
+
 const MODEL = "gemini-flash-lite-latest";
 
 export function buildAskPrompt(clue: string, cellValues: readonly (string | undefined)[]): string {
@@ -39,7 +42,7 @@ export async function streamGemini(
   if (!res.ok || !res.body) {
     if (res.status === 400 || res.status === 403) throw new Error("کلید Gemini نامعتبر است.");
     if (res.status === 429) throw new Error("محدودیت درخواست به Gemini رسیده؛ کمی بعد دوباره امتحان کنید.");
-    throw new Error("ارتباط با هوشواره برقرار نشد.");
+    throw new Error(AI_GENERIC_ERROR);
   }
 
   const reader = res.body.getReader();
@@ -65,5 +68,46 @@ export async function streamGemini(
         // partial/malformed SSE chunk — skip
       }
     }
+  }
+}
+
+export const AI_GENERIC_ERROR = "ارتباط با هوشواره برقرار نشد.";
+
+// Keep in sync with LIMITS in functions/src/quota.ts.
+export const FREE_AI_LIMITS = { guest: 10, account: 100 } as const;
+
+export type QuotaInfo =
+  | { readonly reason: "shared" }
+  | { readonly reason: "user"; readonly tier: "guest" | "account"; readonly limit: number };
+
+export class QuotaError extends Error {
+  constructor(readonly info: QuotaInfo) {
+    super("AI quota exhausted");
+  }
+}
+
+export function toAiError(e: unknown): Error {
+  const code = typeof e === "object" && e !== null && "code" in e ? String(e.code) : "";
+  if (code !== "functions/resource-exhausted") return new Error(AI_GENERIC_ERROR);
+  const d = (e as { details?: { reason?: unknown; tier?: unknown; limit?: unknown } }).details;
+  if (d?.reason === "user" && (d.tier === "guest" || d.tier === "account") && typeof d.limit === "number") {
+    return new QuotaError({ reason: "user", tier: d.tier, limit: d.limit });
+  }
+  return new QuotaError({ reason: "shared" });
+}
+
+const askAi = httpsCallable<{ prompt: string }, { ok: true }, string>(functions, "askAi");
+
+export async function streamFreeAi(
+  prompt: string,
+  onChunk: (text: string) => void,
+  signal: AbortSignal,
+): Promise<void> {
+  try {
+    const { stream, data } = await askAi.stream({ prompt }, { signal });
+    for await (const chunk of stream) onChunk(chunk);
+    await data;
+  } catch (e) {
+    throw toAiError(e);
   }
 }

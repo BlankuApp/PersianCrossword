@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getAnalytics, isSupported } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
 
 // TODO: Replace with your Firebase project config from Firebase Console
 // https://console.firebase.google.com/ → Project Settings → Your apps → SDK setup
@@ -18,6 +19,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const functions = getFunctions(app, "us-central1");
+// `VITE_FUNCTIONS_EMULATOR=1 npm run dev` talks to `firebase emulators:start` instead of production.
+if (import.meta.env.VITE_FUNCTIONS_EMULATOR) connectFunctionsEmulator(functions, "127.0.0.1", 5001);
 
 // Analytics only runs where supported (not in jsdom tests or cookie-less contexts).
 isSupported().then((ok) => ok && getAnalytics(app)).catch(() => {});
