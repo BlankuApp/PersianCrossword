@@ -1,7 +1,19 @@
 import { Fragment, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
-import { buildAskPrompt, buildExplainPrompt, streamGemini } from "../gemini";
+import { signInAnonymously } from "firebase/auth";
+import { auth } from "../firebase";
+import {
+  AI_GENERIC_ERROR,
+  buildAskPrompt,
+  buildExplainPrompt,
+  FREE_AI_LIMITS,
+  QuotaError,
+  streamFreeAi,
+  streamGemini,
+  type QuotaInfo,
+} from "../gemini";
 import { loadGeminiKey, saveGeminiKey } from "../progress";
+import { AuthButton } from "./AuthButton";
 
 function renderInline(line: string): ReactNode {
   const parts = line.split(/(\*\*.+?\*\*|`.+?`)/g).filter(Boolean);
@@ -45,6 +57,16 @@ function renderMarkdown(text: string): ReactNode {
   });
 }
 
+const fa = (n: number) => n.toLocaleString("fa-IR");
+
+function quotaMessage(q: QuotaInfo): string {
+  if (q.reason === "shared") return "سهمیهٔ رایگانِ مشترکِ امروز برای همهٔ کاربران تمام شده.";
+  const used = `سهمیهٔ رایگان امروز شما (${fa(q.limit)} پرسش) تمام شد.`;
+  return q.tier === "guest"
+    ? `${used} با ساخت حساب، روزانه ${fa(FREE_AI_LIMITS.account)} پرسش رایگان دارید.`
+    : `${used} فردا دوباره شارژ می‌شود؛ یا کلید خودتان را وارد کنید.`;
+}
+
 interface ClueAiButtonProps {
   readonly clue: string;
   readonly isSolved: boolean;
@@ -55,7 +77,8 @@ interface ClueAiButtonProps {
 export function ClueAiButton({ clue, isSolved, cellValues, answer }: ClueAiButtonProps) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "done" | "error" | "no-key">("idle");
+  const [status, setStatus] = useState<"idle" | "loading" | "done" | "error" | "quota">("idle");
+  const [quota, setQuota] = useState<QuotaInfo | null>(null);
   const [controller, setController] = useState<AbortController | null>(null);
   const [keyInput, setKeyInput] = useState(loadGeminiKey);
 
@@ -67,17 +90,33 @@ export function ClueAiButton({ clue, isSolved, cellValues, answer }: ClueAiButto
     setOpen(false);
   }
 
+  // Empty apiKey → free tier via the askAi proxy.
   async function runRequest(apiKey: string): Promise<void> {
     setText("");
     const prompt = isSolved ? buildExplainPrompt(clue, answer) : buildAskPrompt(clue, cellValues);
     const ac = new AbortController();
     setController(ac);
     setStatus("loading");
+    const onChunk = (chunk: string) => setText((t) => t + chunk);
     try {
-      await streamGemini(prompt, apiKey, (chunk) => setText((t) => t + chunk), ac.signal);
+      if (apiKey) {
+        await streamGemini(prompt, apiKey, onChunk, ac.signal);
+      } else {
+        if (!auth.currentUser) {
+          await signInAnonymously(auth).catch(() => {
+            throw new Error(AI_GENERIC_ERROR);
+          });
+        }
+        await streamFreeAi(prompt, onChunk, ac.signal);
+      }
       setStatus("done");
     } catch (e) {
       if (ac.signal.aborted) return;
+      if (e instanceof QuotaError) {
+        setQuota(e.info);
+        setStatus("quota");
+        return;
+      }
       setText(e instanceof Error ? e.message : "خطایی رخ داد.");
       setStatus("error");
     }
@@ -85,12 +124,8 @@ export function ClueAiButton({ clue, isSolved, cellValues, answer }: ClueAiButto
 
   function start(): void {
     setOpen(true);
-    setKeyInput(loadGeminiKey());
     const apiKey = loadGeminiKey();
-    if (!apiKey) {
-      setStatus("no-key");
-      return;
-    }
+    setKeyInput(apiKey);
     void runRequest(apiKey);
   }
 
@@ -118,8 +153,12 @@ export function ClueAiButton({ clue, isSolved, cellValues, answer }: ClueAiButto
                 </button>
               </div>
             </div>
-            {status === "no-key" ? (
+            {status === "quota" && quota ? (
               <div className="clue-ai-key-form" dir="rtl">
+                <p>{quotaMessage(quota)}</p>
+                {quota.reason === "user" && quota.tier === "guest" ? (
+                  <AuthButton allowGuestUpgrade initialMode="signup" label="ساخت حساب" />
+                ) : null}
                 <label htmlFor="clue-ai-key">کلید هوشواره (Gemini)</label>
                 <input
                   id="clue-ai-key"
@@ -129,10 +168,9 @@ export function ClueAiButton({ clue, isSolved, cellValues, answer }: ClueAiButto
                   onKeyDown={(e) => e.key === "Enter" && submitKey()}
                   placeholder="کلید API خود را این‌جا وارد کنید"
                   dir="ltr"
-                  autoFocus
                 />
                 <p className="auth-gemini-hint">
-                  یک کلید رایگان از{" "}
+                  یا کلید Gemini خودتان را وارد کنید تا بدون محدودیت استفاده کنید. یک کلید رایگان از{" "}
                   <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">
                     Google AI Studio
                   </a>{" "}
