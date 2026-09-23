@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
+import { createPortal } from "react-dom";
 import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
@@ -15,10 +16,12 @@ import { auth } from "../firebase";
 import { useAuth } from "../AuthContext";
 import { listPuzzles } from "../puzzleLibrary";
 import { computeProgress, loadGeminiKey, loadProgress, saveGeminiKey } from "../progress";
+import { FREE_AI_LIMITS } from "../gemini";
 
 type EmailMode = "signin" | "signup" | "reset";
 
 const NO_DIFFICULTY = "بدون سطح";
+const fa = (n: number) => n.toLocaleString("fa-IR");
 
 interface DifficultyStats {
   readonly label: string;
@@ -153,12 +156,20 @@ function UserMenu() {
                 dir="ltr"
               />
               <p className="auth-gemini-hint">
-                برای پاسخ و توضیح هوشمند پرسش‌ها، یک کلید رایگان از{" "}
+                هوشواره روزانه تا {fa(user.isAnonymous ? FREE_AI_LIMITS.guest : FREE_AI_LIMITS.account)} پرسش رایگان
+                پاسخ می‌دهد. برای استفادهٔ بیشتر می‌توانید یک کلید رایگان از{" "}
                 <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">
                   Google AI Studio
                 </a>{" "}
-                بسازید و همین‌جا وارد کنید. این کلید فقط در همین مرورگر شما ذخیره می‌شود و به هیچ سروری ارسال نمی‌شود.
+                بسازید و این‌جا وارد کنید (اختیاری). این کلید فقط در همین مرورگر ذخیره می‌شود و به هیچ سروری ارسال
+                نمی‌شود.
               </p>
+              {user.isAnonymous ? (
+                <p className="auth-gemini-hint">
+                  ساخت حساب = {fa(FREE_AI_LIMITS.account)} پرسش در روز{" "}
+                  <AuthButton allowGuestUpgrade initialMode="signup" label="ساخت حساب" />
+                </p>
+              ) : null}
             </div>
 
             <button type="button" className="auth-btn auth-btn-block auth-signout-btn" onClick={signOut}>
@@ -176,6 +187,7 @@ interface AuthButtonProps {
   className?: string;
   initialMode?: EmailMode;
   label?: string;
+  allowGuestUpgrade?: boolean | undefined;
 }
 
 const AUTH_ERRORS: Readonly<Record<string, string>> = {
@@ -201,6 +213,7 @@ export function AuthButton({
   className,
   initialMode = "signin",
   label = "ورود",
+  allowGuestUpgrade,
 }: AuthButtonProps = {}) {
   const { user, signOut } = useAuth();
   const [open, setOpen] = useState(false);
@@ -269,7 +282,11 @@ export function AuthButton({
     await runAuth(() => signInAnonymously(auth));
   }
 
-  if (user) return <UserMenu />;
+  if (allowGuestUpgrade) {
+    if (user && !user.isAnonymous) return null;
+  } else if (user) {
+    return <UserMenu />;
+  }
 
   return (
     <>
@@ -284,115 +301,121 @@ export function AuthButton({
         {label}
       </button>
 
-      {open && (
-        <div className="auth-modal-backdrop" onClick={() => setOpen(false)}>
-          <div
-            className="auth-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="auth-modal-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <button
-              type="button"
-              className="auth-modal-close"
-              onClick={() => setOpen(false)}
-              aria-label="بستن"
-              disabled={busy}
+      {open &&
+        createPortal(
+          <div className="auth-modal-backdrop" onClick={() => setOpen(false)}>
+            <div
+              className="auth-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="auth-modal-title"
+              onClick={(event) => event.stopPropagation()}
             >
-              ✕
-            </button>
-            <h2 id="auth-modal-title">
-              {mode === "signup" ? "ساخت حساب" : mode === "reset" ? "بازیابی رمز عبور" : "ورود"}
-            </h2>
-
-            <div className="auth-sync-info">
-              <p>
-                با ورود یا ساخت حساب، وضعیت حل جدول‌های شما در فضای ابری ذخیره و همگام می‌شود؛
-                بنابراین می‌توانید در نسخهٔ وب یا دستگاه دیگری از همان‌جا ادامه دهید و هنگام
-                تعویض دستگاه، پیشرفت خود را بازیابی کنید.
-              </p>
-              <p>برای انتقال بین دستگاه‌ها، در هر دو دستگاه با یک حساب وارد شوید.</p>
-            </div>
-
-            <button
-              type="button"
-              className="auth-btn auth-btn-block auth-google-btn"
-              onClick={handleGoogleSignIn}
-              disabled={busy}
-            >
-              ورود با گوگل
-            </button>
-
-            <div className="auth-divider" aria-hidden="true"><span>یا</span></div>
-
-            <form className="auth-form" onSubmit={handleEmailSubmit}>
-              <label htmlFor="auth-email">ایمیل</label>
-              <input
-                id="auth-email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
+              <button
+                type="button"
+                className="auth-modal-close"
+                onClick={() => setOpen(false)}
+                aria-label="بستن"
                 disabled={busy}
-                required
-              />
-
-              {mode !== "reset" && (
-                <>
-                  <label htmlFor="auth-password">رمز عبور</label>
-                  <input
-                    id="auth-password"
-                    type="password"
-                    autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    disabled={busy}
-                    minLength={6}
-                    required
-                  />
-                </>
-              )}
-
-              <button type="submit" className="auth-btn auth-btn-block auth-primary-btn" disabled={busy}>
-                {busy
-                  ? "لطفاً صبر کنید…"
-                  : mode === "signup"
-                    ? "ساخت حساب"
-                    : mode === "reset"
-                      ? "ارسال پیوند بازنشانی"
-                      : "ورود با ایمیل"}
+              >
+                ✕
               </button>
-            </form>
+              <h2 id="auth-modal-title">
+                {mode === "signup" ? "ساخت حساب" : mode === "reset" ? "بازیابی رمز عبور" : "ورود"}
+              </h2>
 
-            {error && <p className="auth-error" role="alert">{error}</p>}
-            {notice && <p className="auth-notice" role="status">{notice}</p>}
+              <div className="auth-sync-info">
+                <p>
+                  با ورود یا ساخت حساب، وضعیت حل جدول‌های شما در فضای ابری ذخیره و همگام می‌شود؛
+                  بنابراین می‌توانید در نسخهٔ وب یا دستگاه دیگری از همان‌جا ادامه دهید و هنگام
+                  تعویض دستگاه، پیشرفت خود را بازیابی کنید.
+                </p>
+                <p>برای انتقال بین دستگاه‌ها، در هر دو دستگاه با یک حساب وارد شوید.</p>
+                <p>
+                  کاربران دارای حساب روزانه {fa(FREE_AI_LIMITS.account)} پرسش رایگان از هوشواره دارند (مهمان‌ها{" "}
+                  {fa(FREE_AI_LIMITS.guest)}).
+                </p>
+              </div>
 
-            <div className="auth-mode-actions">
-              {mode !== "signin" && (
-                <button type="button" onClick={() => chooseMode("signin")} disabled={busy}>ورود</button>
-              )}
-              {mode !== "signup" && (
-                <button type="button" onClick={() => chooseMode("signup")} disabled={busy}>ساخت حساب</button>
-              )}
-              {mode !== "reset" && (
-                <button type="button" onClick={() => chooseMode("reset")} disabled={busy}>
-                  رمز را فراموش کرده‌ام
+              <button
+                type="button"
+                className="auth-btn auth-btn-block auth-google-btn"
+                onClick={handleGoogleSignIn}
+                disabled={busy}
+              >
+                ورود با گوگل
+              </button>
+
+              <div className="auth-divider" aria-hidden="true"><span>یا</span></div>
+
+              <form className="auth-form" onSubmit={handleEmailSubmit}>
+                <label htmlFor="auth-email">ایمیل</label>
+                <input
+                  id="auth-email"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  disabled={busy}
+                  required
+                />
+
+                {mode !== "reset" && (
+                  <>
+                    <label htmlFor="auth-password">رمز عبور</label>
+                    <input
+                      id="auth-password"
+                      type="password"
+                      autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      disabled={busy}
+                      minLength={6}
+                      required
+                    />
+                  </>
+                )}
+
+                <button type="submit" className="auth-btn auth-btn-block auth-primary-btn" disabled={busy}>
+                  {busy
+                    ? "لطفاً صبر کنید…"
+                    : mode === "signup"
+                      ? "ساخت حساب"
+                      : mode === "reset"
+                        ? "ارسال پیوند بازنشانی"
+                        : "ورود با ایمیل"}
                 </button>
-              )}
-            </div>
+              </form>
 
-            <button
-              type="button"
-              className="auth-btn auth-btn-block auth-guest-btn"
-              onClick={handleGuestSignIn}
-              disabled={busy}
-            >
-              ادامه به‌عنوان مهمان
-            </button>
-          </div>
-        </div>
-      )}
+              {error && <p className="auth-error" role="alert">{error}</p>}
+              {notice && <p className="auth-notice" role="status">{notice}</p>}
+
+              <div className="auth-mode-actions">
+                {mode !== "signin" && (
+                  <button type="button" onClick={() => chooseMode("signin")} disabled={busy}>ورود</button>
+                )}
+                {mode !== "signup" && (
+                  <button type="button" onClick={() => chooseMode("signup")} disabled={busy}>ساخت حساب</button>
+                )}
+                {mode !== "reset" && (
+                  <button type="button" onClick={() => chooseMode("reset")} disabled={busy}>
+                    رمز را فراموش کرده‌ام
+                  </button>
+                )}
+              </div>
+
+              <button
+                type="button"
+                className="auth-btn auth-btn-block auth-guest-btn"
+                onClick={handleGuestSignIn}
+                disabled={busy}
+              >
+                ادامه به‌عنوان مهمان
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )}
     </>
   );
 }

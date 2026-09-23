@@ -34,7 +34,7 @@ vi.mock("../app/AuthContext", () => ({
   useAuth: () => ({ user: authState.user, signOut: authState.signOut }),
 }));
 
-vi.mock("../app/firebase", () => ({ auth: { name: "test-auth" } }));
+vi.mock("../app/firebase", () => ({ auth: { name: "test-auth" }, functions: {} }));
 
 vi.mock("@capacitor/core", () => ({
   Capacitor: { isNativePlatform: () => platform.native },
@@ -187,5 +187,28 @@ describe("AuthButton", () => {
     await user.click(screen.getByRole("button", { name: "حساب کاربری: کاربر آزمایشی" }));
     await user.click(screen.getByRole("button", { name: "خروج از حساب" }));
     expect(authState.signOut).toHaveBeenCalledOnce();
+  });
+
+  it("lets an anonymous guest open sign-in when allowGuestUpgrade", async () => {
+    authState.user = { uid: "g1", isAnonymous: true, displayName: null, email: null, providerData: [] };
+    const user = userEvent.setup();
+    render(<AuthButton allowGuestUpgrade initialMode="signup" label="ساخت حساب" />);
+    await user.click(screen.getByRole("button", { name: "ساخت حساب" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent("روزانه ۱۰۰ پرسش رایگان");
+  });
+
+  it("renders nothing for a full account when allowGuestUpgrade", () => {
+    authState.user = { uid: "u1", isAnonymous: false, displayName: "کاربر", email: null, providerData: [] };
+    const { container } = render(<AuthButton allowGuestUpgrade label="ساخت حساب" />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("shows the account upsell in a guest's user menu", async () => {
+    authState.user = { uid: "g1", isAnonymous: true, displayName: null, email: null, providerData: [] };
+    const user = userEvent.setup();
+    render(<AuthButton />);
+    await user.click(screen.getByRole("button", { name: "حساب کاربری: مهمان" }));
+    expect(screen.getByText(/ساخت حساب = ۱۰۰ پرسش در روز/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ساخت حساب" })).toBeInTheDocument();
   });
 });
