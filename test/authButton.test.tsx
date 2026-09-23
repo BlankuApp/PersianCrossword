@@ -3,8 +3,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+interface MockUser {
+  uid: string;
+  isAnonymous: boolean;
+  displayName: string | null;
+  email: string | null;
+  providerData: { providerId: string }[];
+}
+
 const authState = vi.hoisted(() => ({
-  user: null as null | { isAnonymous: boolean; displayName: string | null; email: string | null },
+  user: null as null | MockUser,
   signOut: vi.fn(),
 }));
 
@@ -173,10 +181,11 @@ describe("AuthButton", () => {
   });
 
   it("signs out the current user", async () => {
-    authState.user = { isAnonymous: false, displayName: "کاربر آزمایشی", email: null };
+    authState.user = { uid: "u1", isAnonymous: false, displayName: "کاربر آزمایشی", email: null, providerData: [] };
     const user = userEvent.setup();
     render(<AuthButton />);
-    await user.click(screen.getByRole("button", { name: "خروج" }));
+    await user.click(screen.getByRole("button", { name: "حساب کاربری: کاربر آزمایشی" }));
+    await user.click(screen.getByRole("button", { name: "خروج از حساب" }));
     expect(authState.signOut).toHaveBeenCalledOnce();
   });
 });
