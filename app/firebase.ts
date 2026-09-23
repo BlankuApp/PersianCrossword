@@ -1,4 +1,5 @@
 import { initializeApp } from "firebase/app";
+import { getAnalytics, isSupported } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
@@ -17,3 +18,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+// Analytics only runs where supported (not in jsdom tests or cookie-less contexts).
+isSupported().then((ok) => ok && getAnalytics(app)).catch(() => {});
