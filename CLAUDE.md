@@ -23,12 +23,24 @@ cd tools/grid-importer/frontend
 npm install && npm run dev
 ```
 
+### Firebase Functions (AI proxy)
+
+```bash
+npm --prefix functions test                         # quota + Gemini client unit tests
+npm --prefix functions run build                    # tsc → functions/lib
+npx firebase-tools emulators:start --only functions,firestore   # needs functions/.secret.local (Java 21)
+VITE_FUNCTIONS_EMULATOR=1 npm run dev               # app → local askAi emulator
+npx firebase-tools functions:secrets:set GEMINI_KEY # owner's free-tier key (separate GCP project, no billing)
+npx firebase-tools deploy --only functions          # manual deploy; requires Blaze plan
+```
+
 ## Architecture
 
 ```
 src/          Core TS library (grid, puzzle, state, text, validation, types)
 app/          React SPA (Vite): auth, routing, solver UI, puzzle library
 test/         Vitest tests for the core library
+functions/    Firebase Functions: askAi — Gemini proxy with per-user daily quota (Firestore aiUsage/{uid})
 tools/
   grid-importer/
     backend/  Python FastAPI — image → 0/1 grid matrix (OpenCV + LlamaCloud OCR)
