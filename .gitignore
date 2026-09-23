@@ -9,3 +9,9 @@ node_modules/.vite/
 tools/grid-importer/backend/__pycache__/
 .venv/
 android/.idea/
+functions/lib/
+functions/node_modules/
+functions/.secret.local
+.firebase/
+firebase-debug.log
+firestore-debug.log

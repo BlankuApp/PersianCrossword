@@ -1,7 +1,7 @@
 import react from "@vitejs/plugin-react";
 import { writeFileSync } from "fs";
 import { resolve } from "path";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 function devPuzzleSaverPlugin() {
   return {
@@ -42,5 +42,6 @@ export default defineConfig({
   test: {
     environment: "node",
     setupFiles: ["./test/setup.ts"],
+    exclude: [...configDefaults.exclude, "functions/**"],
   },
 });
