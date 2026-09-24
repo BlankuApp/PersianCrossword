@@ -48,21 +48,39 @@ function applyGap(container: Element): void {
 
   const column = cs.flexDirection.startsWith("column");
   const reverse = cs.flexDirection.endsWith("reverse");
-  // The side facing the previous item: top for columns, the inline-start side for rows.
   const rtl = cs.direction === "rtl";
-  const side = column
-    ? reverse ? "marginBottom" : "marginTop"
-    : rtl !== reverse ? "marginRight" : "marginLeft";
-  const wraps = cs.flexWrap !== "nowrap";
+  // `start` faces the previous item, `end` the next: top/bottom for columns, inline sides for rows.
+  const [start, end] = column
+    ? reverse ? ["marginBottom", "marginTop"] as const : ["marginTop", "marginBottom"] as const
+    : rtl !== reverse ? ["marginRight", "marginLeft"] as const : ["marginLeft", "marginRight"] as const;
+  const gap = column ? rowGap : columnGap;
+  const wraps = !column && cs.flexWrap !== "nowrap";
 
-  let first = true;
-  for (const child of container.children) {
-    if (!(child instanceof HTMLElement)) continue;
-    const ccs = getComputedStyle(child);
-    if (ccs.display === "none" || ccs.position === "absolute" || ccs.position === "fixed") continue;
-    // Leave authored margins (e.g. `margin-left: auto`) alone.
-    if (!first && (child.style[side] || ccs[side] === "0px")) child.style[side] = column ? rowGap : columnGap;
-    if (wraps && !column && (child.style.marginBottom || ccs.marginBottom === "0px")) child.style.marginBottom = rowGap;
-    first = false;
+  // Flex items: displayed in-flow elements (icons are SVG, not HTML) and non-blank text runs.
+  const items: (Styled | Text)[] = [];
+  for (const node of container.childNodes) {
+    if (node instanceof Text) {
+      if (node.data.trim()) items.push(node);
+    } else if (node instanceof HTMLElement || node instanceof SVGElement) {
+      const ncs = getComputedStyle(node);
+      if (ncs.display !== "none" && ncs.position !== "absolute" && ncs.position !== "fixed") items.push(node);
+    }
   }
+
+  items.forEach((item, i) => {
+    if (wraps && !(item instanceof Text)) setMargin(item, "marginBottom", rowGap);
+    if (i === 0) return;
+    // Each gap goes on the later item; a text run can't take a margin, so then on the earlier one.
+    const prev = items[i - 1]!;
+    if (!(item instanceof Text)) setMargin(item, start, gap);
+    else if (!(prev instanceof Text)) setMargin(prev, end, gap);
+  });
+}
+
+type Styled = HTMLElement | SVGElement;
+type Side = "marginTop" | "marginBottom" | "marginLeft" | "marginRight";
+
+function setMargin(el: Styled, side: Side, value: string): void {
+  // Leave authored margins (e.g. `margin-left: auto`) alone; our own inline value is re-set.
+  if (el.style[side] || getComputedStyle(el)[side] === "0px") el.style[side] = value;
 }
