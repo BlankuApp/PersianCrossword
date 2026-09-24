@@ -1,4 +1,5 @@
 import { httpsCallable } from "firebase/functions";
+import { TRAY_DECOY_COUNT } from "./crosswordUi";
 import { functions } from "./firebase";
 
 const MODEL = "gemini-3.5-flash-lite";
@@ -6,30 +7,37 @@ const MODEL = "gemini-3.5-flash-lite";
 const fa = (n: number) => n.toLocaleString("fa-IR");
 
 // Letters are numbered rather than laid out as "ک _ ت" so the model can't misread RTL order.
-export function buildAskPrompt(clue: string, cellValues: readonly (string | undefined)[]): string {
+export function buildAskPrompt(
+  clue: string,
+  cellValues: readonly (string | undefined)[],
+  trayLetters: readonly string[] = [],
+): string {
   const known = cellValues.some(Boolean)
     ? `حروف معلوم به ترتیب: ${cellValues.map((v, i) => `حرف ${fa(i + 1)}: ${v ?? "؟"}`).join("، ")}`
     : "هنوز هیچ حرفی معلوم نیست.";
   return [
-    "تو در حل جدول کلمات متقاطع فارسی مهارت داری.",
+    "تو در حل جدول کلمات متقاطع فارسی استادی.",
     `پرسش: «${clue}»`,
-    `طول پاسخ: ${fa(cellValues.length)} حرف (هر خانه یک حرف؛ پاسخ چندکلمه‌ای بدون فاصله نوشته می‌شود).`,
+    `طول پاسخ: ${fa(cellValues.length)} حرف (پاسخ چندکلمه‌ای بی‌فاصله نوشته می‌شود).`,
     known,
+    ...(trayLetters.length
+      ? [`حروف پاسخ از میان این‌هاست (با امکان تکرار؛ ${fa(TRAY_DECOY_COUNT)} تا اضافی‌اند): ${trayLetters.join("، ")}`]
+      : []),
     "پاسخ ممکن است مخفف، نام خاص، واژهٔ عربی یا کهن، یا وارونهٔ یک کلمه (وقتی در پرسش «برعکس» آمده) باشد.",
-    "هر گزینه را با طول و حروف معلوم بسنج؛ گزینهٔ ناسازگار ننویس.",
-    "- اگر مطمئنی: فقط پاسخ را **پررنگ** بنویس.",
-    "- اگر مطمئن نیستی: حداکثر ۳ گزینهٔ سازگار را فهرست کن، هر کدام با یک توضیح خیلی کوتاه.",
-    "- اگر گزینهٔ سازگاری نیافتی: بنویس «پاسخی پیدا نکردم؛ با دکمهٔ جستجو در گوگل امتحان کنید.»",
+    "اول پرسش را در گوگل جستجو کن (مثلاً «جواب جدول» + پرسش).",
+    "حروف هر گزینه را جدا بنویس و بشمار؛ گزینه‌ای که با طول یا حروف معلوم نخواند، ننویس.",
+    "هرگز «نمی‌دانم» ننویس؛ ۱ تا ۳ حدس سازگار بده؛ اطمینان «زیاد» فقط با تأیید جستجو.",
+    "بدون مقدمه، هر گزینه یک خط:",
+    "**گزینه** (حروف جدا) — اطمینان: زیاد/متوسط/کم — توضیح خیلی کوتاه",
+    "در پایان یکی دو جمله دربارهٔ منظور پرسش و نوع پاسخ (شخص، مکان، واژهٔ کهن، …) بنویس.",
   ].join("\n");
 }
 
 export function buildExplainPrompt(clue: string, answer: string): string {
   return [
     `پرسش جدول: «${clue}» — پاسخ: «${answer}»`,
-    "به فارسی و کوتاه (۳ تا ۵ جمله) توضیح بده:",
-    "- پاسخ چیست و چرا با این پرسش جور است (اگر مخفف، وارونه یا ترکیبی است، بگو چطور).",
-    "- چند نکتهٔ اطلاعات عمومی جالب و درست دربارهٔ آن که دانش عمومی خواننده را بیشتر کند (برای شخص: دوره و کار مهمش؛ برای مکان: کجاست و به چه مشهور است؛ برای واژه: معنی و ریشه).",
-    "مثال جمله‌ای نیاور. چیزی را که از درستی‌اش مطمئن نیستی ننویس.",
+    "به فارسی و کوتاه (5 تا 7 جمله) توضیح بده:",
+    "- چند نکتهٔ اطلاعات عمومی جالب و درست دربارهٔ آن که دانش عمومی خواننده را بیشتر کند (برای مثال برای شخص: دوره و کار مهمش؛ برای مکان: کجاست و به چه مشهور است؛ برای واژه: معنی و ریشه).",
   ].join("\n");
 }
 
@@ -44,7 +52,7 @@ export async function streamGemini(
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], tools: [{ google_search: {} }] }),
       signal,
     },
   );
@@ -59,7 +67,7 @@ export async function streamGemini(
   const decoder = new TextDecoder();
   let buffer = "";
 
-  for (;;) {
+  for (; ;) {
     const { done, value } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
@@ -116,7 +124,7 @@ export async function streamFreeAi(
   try {
     const { stream, data } = await askAi.stream({ prompt }, { signal });
     // On error the SDK rejects `data` too; the loop below throws first, so mark it handled.
-    data.catch(() => {});
+    data.catch(() => { });
     for await (const chunk of stream) onChunk(chunk);
     await data;
   } catch (e) {

@@ -5,6 +5,7 @@ import {
   DEMO_BLOCKS,
   DEMO_COLS,
   DEMO_ROWS,
+  DEMO_SOLUTION,
   DEMO_TRAYS,
   DOWN_CELLS,
   TUTORIAL_STEPS,
@@ -14,8 +15,8 @@ import {
 } from "../app/tutorialSteps";
 
 describe("tutorial step data", () => {
-  it("has 4 steps, each with at least one frame and positive hold times", () => {
-    expect(TUTORIAL_STEPS).toHaveLength(4);
+  it("has 6 steps, each with at least one frame and positive hold times", () => {
+    expect(TUTORIAL_STEPS).toHaveLength(6);
     for (const step of TUTORIAL_STEPS) {
       expect(step.frames.length).toBeGreaterThan(0);
       for (const frame of step.frames) {
@@ -81,26 +82,41 @@ describe("tutorial step data", () => {
     expect(selectedFrame.showClues).toBe(true);
   });
 
-  it("demonstrates a drop in each direction and synchronizes the crossing letter", () => {
-    const placeStep = TUTORIAL_STEPS.find((step) => step.id === "place")!;
-    const dragDirections = new Set(
-      placeStep.frames.flatMap((frame) => (frame.drag ? [frame.drag.direction] : [])),
-    );
-    expect(dragDirections).toEqual(new Set<DemoDirection>(["across", "down"]));
-
-    const finalFrame = placeStep.frames.at(-1)!;
-    expect(finalFrame.letters[CROSSING_CELL]).toBe("م");
-    expect(finalFrame.letters["1-1"]).toBe("ا");
-    expect(ACROSS_CELLS).toContain(CROSSING_CELL);
-    expect(DOWN_CELLS).toContain(CROSSING_CELL);
+  it("never moves the selection off the crossing cell once it is selected", () => {
+    for (const step of TUTORIAL_STEPS.slice(1)) {
+      for (const frame of step.frames) {
+        expect(frame.selected).toBe(CROSSING_CELL);
+      }
+    }
   });
 
-  it("ends the clear step with an empty grid", () => {
-    const lastStep = TUTORIAL_STEPS[TUTORIAL_STEPS.length - 1]!;
-    const lastFrame = lastStep.frames[lastStep.frames.length - 1]!;
-    expect(Object.keys(lastFrame.letters)).toHaveLength(0);
-    expect(lastFrame.showHighlights).toBe(false);
-    expect(lastFrame.showClues).toBe(false);
+  it("taps the whole across word in, then drags one letter into a chosen box", () => {
+    const tap = TUTORIAL_STEPS.find((step) => step.id === "tap")!;
+    expect(tap.frames.some((frame) => frame.drag)).toBe(false);
+    expect(tap.frames.at(-1)!.letters).toEqual({ "0-1": "م", "0-2": "ر", "0-3": "ز" });
+
+    const drag = TUTORIAL_STEPS.find((step) => step.id === "drag")!;
+    expect(drag.frames.some((frame) => frame.drag && frame.dropTarget)).toBe(true);
+  });
+
+  it("switches check mode on while a wrong letter is showing", () => {
+    const help = TUTORIAL_STEPS.find((step) => step.id === "help")!;
+    const last = help.frames.at(-1)!;
+    expect(last.checkOn).toBe(true);
+    const wrong = Object.entries(last.letters).filter(
+      ([cell, letter]) => letter !== DEMO_SOLUTION[cell as DemoCellId],
+    );
+    expect(wrong.length).toBeGreaterThan(0);
+  });
+
+  it("ends solved: every demo cell holds its answer letter", () => {
+    const lastFrame = TUTORIAL_STEPS.at(-1)!.frames.at(-1)!;
+    expect(lastFrame.letters).toEqual(DEMO_SOLUTION);
+  });
+
+  it("spells the demo answers in the solution", () => {
+    expect(ACROSS_CELLS.map((cell) => DEMO_SOLUTION[cell]).join("")).toBe("مرز");
+    expect(DOWN_CELLS.map((cell) => DEMO_SOLUTION[cell]).join("")).toBe("مادر");
   });
 });
 

@@ -12,7 +12,6 @@ import {
   Newspaper,
   PencilLine,
   Search,
-  Smartphone,
   Sprout,
   type LucideIcon,
 } from "lucide-react";
@@ -242,7 +241,7 @@ function openPuzzle(id: string): void {
 
 export function HomePage() {
   const puzzles = useMemo(() => listPuzzles(), []);
-  const { user, loading, syncVersion } = useAuth();
+  const { syncVersion } = useAuth();
   const [query, setQuery] = useState<ListQuery>(() => parseListQuery(window.location.hash));
   const [progressMap, setProgressMap] = useState<Record<string, ProgressInfo>>({});
   const listTopRef = useRef<HTMLDivElement>(null);
@@ -310,26 +309,6 @@ export function HomePage() {
           <AuthButton />
         </div>
       </header>
-
-      {!loading && !user && (
-        <aside className="android-announcement" aria-labelledby="android-announcement-title">
-          <div className="android-announcement-icon" aria-hidden="true">
-            <Smartphone size={28} strokeWidth={1.8} />
-          </div>
-          <div className="android-announcement-copy">
-            <h2 id="android-announcement-title">نسخهٔ اندروید جدول کلمات فارسی آماده است!</h2>
-            <p>
-              دوست دارید جدول‌ها را همیشه همراهتان داشته باشید؟ همین حالا یک حساب رایگان بسازید
-              تا لینک دریافت نسخهٔ اندروید برایتان ارسال شود.
-            </p>
-          </div>
-          <AuthButton
-            className="android-announcement-cta"
-            initialMode="signup"
-            label="ثبت‌نام و دریافت لینک"
-          />
-        </aside>
-      )}
 
       {continueList.length > 0 && (
         <section className="continue-strip" aria-labelledby="continue-title">

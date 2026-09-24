@@ -1,4 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { Avatar, Style } from "@dicebear/core";
+import blobs from "@dicebear/styles/blobs.json";
+import initialFace from "@dicebear/styles/initial-face.json";
+import lineFace from "@dicebear/styles/line-face.json";
+import loops from "@dicebear/styles/loops.json";
+import planets from "@dicebear/styles/planets.json";
+import shapes from "@dicebear/styles/shapes.json";
+import thumbs from "@dicebear/styles/thumbs.json";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   cellKey,
   compilePuzzle,
@@ -11,10 +19,14 @@ import { sameCoord, slotCellKeys, type Selection } from "../crosswordUi";
 import { LetterGlyph } from "./LetterGlyph";
 
 // DiceBear styles that render as a filled square — one is picked at random per mount,
-// so every visit to a puzzle dresses its block cells differently.
-const BLOCK_STYLES = ["blobs", "initial-face", "loops", "shapes", "line-face", "thumbs", "planets"];
+// so every visit to a puzzle dresses its block cells differently. Generated locally
+// (no network), so blocks appear with the board and work offline.
+const BLOCK_STYLES = [blobs, initialFace, loops, shapes, lineFace, thumbs, planets];
 
-const SHAKE_FRAMES: Keyframe[] = [
+// Check-mode colors ripple out from the selected cell: each ring waits this much longer.
+const RIPPLE_STEP_MS = 20;
+
+export const SHAKE_FRAMES: Keyframe[] = [
   { transform: "translateX(0)" },
   { transform: "translateX(-3px)" },
   { transform: "translateX(3px)" },
@@ -59,29 +71,55 @@ export function CrosswordBoard({
   solutionState,
 }: CrosswordBoardProps) {
   const [blockStyle] = useState(
-    () => BLOCK_STYLES[Math.floor(Math.random() * BLOCK_STYLES.length)],
+    () => new Style(BLOCK_STYLES[Math.floor(Math.random() * BLOCK_STYLES.length)]!),
   );
+  const blockIcons = useMemo(() => {
+    const icons = new Map<string, string>();
+    for (let row = 0; row < puzzle.size.rows; row++) {
+      for (let col = 0; col < puzzle.size.cols; col++) {
+        if (!puzzle.isBlock({ row, col })) continue;
+        const avatar = new Avatar(blockStyle, { seed: `${row}-${col}`, animationVariant: "slow" });
+        icons.set(cellKey({ row, col }), avatar.toDataUri());
+      }
+    }
+    return icons;
+  }, [blockStyle, puzzle]);
 
-  // Shake cells that just received a wrong letter. Driven by value changes (not by the
-  // red class) so turning check mode on, or opening a puzzle, doesn't shake every wrong cell.
-  const prevRef = useRef({ puzzle, state });
+  // Rings of distance from the selected cell; drives the check-mode color ripple (CSS --ripple).
+  function rippleRing(coord: Coord): number | undefined {
+    if (!selection) return undefined;
+    return Math.round(Math.hypot(coord.row - selection.coord.row, coord.col - selection.coord.col));
+  }
+
+  // Shake wrong letters: a cell that just received one, or — in step with the color
+  // ripple — every wrong cell when check mode is switched on. Opening a puzzle with
+  // check mode already on shakes nothing.
+  const prevRef = useRef({ puzzle, state, checkMode });
   useEffect(() => {
     const prev = prevRef.current;
-    prevRef.current = { puzzle, state };
-    if (!checkMode || !solutionState || prev.puzzle !== puzzle || prev.state === state) return;
+    prevRef.current = { puzzle, state, checkMode };
+    const justEnabled = !prev.checkMode;
+    if (!checkMode || !solutionState || prev.puzzle !== puzzle) return;
+    if (!justEnabled && prev.state === state) return;
     // Optional calls: jsdom (tests) has neither matchMedia nor Element.animate.
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
     for (let row = 0; row < puzzle.size.rows; row++) {
       for (let col = 0; col < puzzle.size.cols; col++) {
         const coord = { row, col };
         const value = state.getCell(coord);
-        if (!value || value === prev.state.getCell(coord)) continue;
+        if (!value || (!justEnabled && value === prev.state.getCell(coord))) continue;
         if (normalizePersianText(value) === normalizePersianText(solutionState.getCell(coord) ?? "")) continue;
         boardRef.current
           ?.querySelector(`[data-cell-key="${cellKey(coord)}"]`)
-          ?.animate?.(SHAKE_FRAMES, { duration: 320, easing: "cubic-bezier(0.36, 0.07, 0.19, 0.97)" });
+          ?.animate?.(SHAKE_FRAMES, {
+            duration: 320,
+            delay: justEnabled ? (rippleRing(coord) ?? 0) * RIPPLE_STEP_MS : 0,
+            easing: "cubic-bezier(0.36, 0.07, 0.19, 0.97)",
+          });
       }
     }
+    // rippleRing reads the current selection; re-running on selection moves would be wrong.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [puzzle, state, checkMode, solutionState, boardRef]);
 
   return (
@@ -126,6 +164,7 @@ export function CrosswordBoard({
           const value = state.getCell(coord);
           const slots = showCluesOnHover && !isBlock ? puzzle.getSlotsForCell(coord) : {};
           const tooltipId = `cell-clues-${row}-${col}`;
+          const ring = isBlock ? undefined : rippleRing(coord);
           const correctness =
             checkMode && solutionState && !isBlock && value
               ? normalizePersianText(value) === normalizePersianText(solutionState.getCell(coord) ?? "")
@@ -151,15 +190,11 @@ export function CrosswordBoard({
               aria-label={`ردیف ${row + 1} ستون ${col + 1}`}
               aria-describedby={slots.across || slots.down ? tooltipId : undefined}
               disabled={isBlock && !clickableBlocks}
+              style={ring === undefined ? undefined : ({ "--ripple": ring } as React.CSSProperties)}
               onClick={() => onCellClick(coord)}
             >
               {isBlock ? (
-                <img
-                  className="cell-block-icon"
-                  src={`https://api.dicebear.com/10.x/${blockStyle}/svg?seed=${row}-${col}&animationVariant=slow`}
-                  alt=""
-                  loading="lazy"
-                />
+                <img className="cell-block-icon" src={blockIcons.get(key)} alt="" />
               ) : (
                 <>
                   <LetterGlyph letter={value} />

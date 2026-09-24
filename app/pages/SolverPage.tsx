@@ -12,7 +12,7 @@ import {
   Hash,
   Image,
   ChevronDown,
-  Menu,
+  EllipsisVertical,
   Save,
 } from "lucide-react";
 import {
@@ -506,6 +506,15 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
   return (
     <main className="app-shell" dir="rtl">
       <header className="app-header">
+        <button
+          type="button"
+          className="header-back"
+          onClick={goHome}
+          title="بازگشت به فهرست جدول‌ها"
+          aria-label="بازگشت به فهرست جدول‌ها"
+        >
+          <ArrowRight size={20} aria-hidden="true" />
+        </button>
         <div className="app-header-meta">
           <h1>{title}</h1>
           {puzzleMetaItems.length ? (
@@ -521,17 +530,50 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
           ) : null}
         </div>
         <div className="toolbar" ref={toolbarRef}>
+          {solutionState ? (
+            <button
+              type="button"
+              role="switch"
+              className="check-switch"
+              onClick={() => setCheckMode((v) => !v)}
+              title="بررسی خودکار"
+              aria-label="بررسی خودکار"
+              aria-checked={checkMode}
+            >
+              <SpellCheck2 size={18} aria-hidden="true" />
+              <span>بررسی خودکار</span>
+              <span className="switch-track" aria-hidden="true">
+                <span className="switch-thumb" />
+              </span>
+            </button>
+          ) : null}
+          {(solutionImageUrl || solutionState) ? (
+            <button
+              type="button"
+              onClick={() => setShowSolution((v) => !v)}
+              title="نمایش پاسخ جدول"
+              aria-label={showSolution ? "پنهان کردن پاسخ" : "نمایش پاسخ"}
+              aria-expanded={showSolution}
+            >
+              {showSolution ? (
+                <EyeOff size={18} aria-hidden="true" />
+              ) : (
+                <Eye size={18} aria-hidden="true" />
+              )}
+              <span>{showSolution ? "پنهان کردن پاسخ" : "نمایش پاسخ"}</span>
+            </button>
+          ) : null}
           <button
             ref={toolbarMenuButtonRef}
             type="button"
             className="toolbar-menu-toggle"
             onClick={() => setIsToolbarMenuOpen((open) => !open)}
-            title="منوی تنظیمات"
-            aria-label="منوی تنظیمات"
+            title="گزینه‌های بیشتر"
+            aria-label="گزینه‌های بیشتر"
             aria-expanded={isToolbarMenuOpen}
             aria-controls="solver-toolbar-menu"
           >
-            <Menu size={20} aria-hidden="true" />
+            <EllipsisVertical size={20} aria-hidden="true" />
           </button>
           <div
             id="solver-toolbar-menu"
@@ -539,25 +581,6 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
             aria-label="گزینه‌های جدول"
             onClick={() => setIsToolbarMenuOpen(false)}
           >
-            <button
-              type="button"
-              className="btn-home"
-              onClick={goHome}
-              title="بازگشت به فهرست جدول‌ها"
-              aria-label="بازگشت به فهرست جدول‌ها"
-            >
-              <ArrowRight size={18} aria-hidden="true" />
-              <span>بازگشت</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setConfirmAction("reset")}
-              title="پاک کردن پاسخ‌ها"
-              aria-label="پاک کردن پاسخ‌ها"
-            >
-              <RotateCcw size={18} aria-hidden="true" />
-              <span>پاک کردن</span>
-            </button>
             <button
               type="button"
               onClick={() => setShowHelp((v) => !v)}
@@ -568,42 +591,24 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
               <HelpCircle size={18} aria-hidden="true" />
               <span>راهنما</span>
             </button>
-            {solutionState ? (
-              <button
-                type="button"
-                onClick={() => setCheckMode((v) => !v)}
-                title="بررسی پاسخ‌ها"
-                aria-label="بررسی پاسخ‌ها"
-                aria-pressed={checkMode}
-              >
-                <SpellCheck2 size={18} aria-hidden="true" />
-                <span>بررسی پاسخ‌ها</span>
-              </button>
-            ) : null}
-            {(solutionImageUrl || solutionState) ? (
-              <button
-                type="button"
-                onClick={() => setShowSolution((v) => !v)}
-                title="نمایش پاسخ جدول"
-                aria-label={showSolution ? "پنهان کردن پاسخ" : "نمایش پاسخ"}
-                aria-expanded={showSolution}
-              >
-                {showSolution ? (
-                  <EyeOff size={18} aria-hidden="true" />
-                ) : (
-                  <Eye size={18} aria-hidden="true" />
-                )}
-                <span>{showSolution ? "پنهان کردن پاسخ" : "نمایش پاسخ"}</span>
-              </button>
-            ) : null}
+            <button
+              type="button"
+              className="toolbar-menu-danger"
+              onClick={() => setConfirmAction("reset")}
+              title="پاک کردن پاسخ‌ها"
+              aria-label="پاک کردن پاسخ‌ها"
+            >
+              <RotateCcw size={18} aria-hidden="true" />
+              <span>پاک کردن پاسخ‌ها</span>
+            </button>
             {isDebugMode ? (
               <button
                 type="button"
                 onClick={() => setConfirmAction("save")}
                 disabled={isSaving}
                 title="ذخیره جدول (دیباگ)"
-              aria-label="ذخیره جدول"
-            >
+                aria-label="ذخیره جدول"
+              >
                 <Save size={18} aria-hidden="true" />
                 <span>{isSaving ? "در حال ذخیره..." : "ذخیره"}</span>
               </button>
@@ -748,7 +753,6 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
                 showTray={normalizedJson.version === 3}
                 getCellValue={(c) => crosswordState?.getCell(c)}
                 onCellChange={updateCell}
-                onBackspace={backspaceCell}
                 isDebugMode={isDebugMode}
                 onSaveClue={handleSaveClue}
                 checkMode={checkMode}

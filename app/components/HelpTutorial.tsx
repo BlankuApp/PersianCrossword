@@ -1,9 +1,10 @@
-import { Delete, Pointer, X } from "lucide-react";
+import { Delete, Pointer, Search, Sparkles, SpellCheck2, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   ACROSS_CELLS,
   ACROSS_CLUE,
   DEMO_BLOCKS,
+  DEMO_SOLUTION,
   DEMO_TRAYS,
   DOWN_CELLS,
   DOWN_CLUE,
@@ -39,9 +40,10 @@ function handTargetKey(target: HandTarget): string {
     case "word-cell":
       return `word-cell:${target.direction}:${target.index}`;
     case "backspace":
-      return `backspace:${target.direction}`;
+    case "search":
+    case "ai":
     case "clue":
-      return `clue:${target.direction}`;
+      return `${target.kind}:${target.direction}`;
     default:
       return target.kind;
   }
@@ -65,6 +67,12 @@ export function HelpTutorial({ onClose }: HelpTutorialProps) {
 
   const step = TUTORIAL_STEPS[pos.stepIndex] ?? TUTORIAL_STEPS[0]!;
   const frame = reducedMotion ? step.frames[step.frames.length - 1]! : step.frames[pos.frameIndex]!;
+
+  function correctness(cellId: DemoCellId): string {
+    const letter = frame.letters[cellId];
+    if (!frame.checkOn || !letter) return "";
+    return letter === DEMO_SOLUTION[cellId] ? "correct" : "incorrect";
+  }
 
   const stageRef = useRef<HTMLDivElement>(null);
   const targetsRef = useRef<Record<string, HTMLElement | null>>({});
@@ -151,6 +159,24 @@ export function HelpTutorial({ onClose }: HelpTutorialProps) {
         </p>
 
         <div className="tutorial-stage" ref={stageRef} aria-hidden="true" dir="rtl">
+          {/* Same markup and classes as the real toolbar switch, so it looks the same at every size. */}
+          <div className="toolbar tutorial-toolbar">
+            <button
+              type="button"
+              tabIndex={-1}
+              role="switch"
+              className="check-switch"
+              aria-checked={!!frame.checkOn}
+              ref={setTarget("check-switch")}
+            >
+              <SpellCheck2 size={18} aria-hidden="true" />
+              <span>بررسی خودکار</span>
+              <span className="switch-track">
+                <span className="switch-thumb" />
+              </span>
+            </button>
+          </div>
+
           <div className="tutorial-grid" ref={gridRef}>
             {DEMO_BLOCKS.flatMap((row, rowIndex) =>
               // DOM order is right→left within each row (the stage is dir="rtl"),
@@ -168,6 +194,7 @@ export function HelpTutorial({ onClose }: HelpTutorialProps) {
                   classes.push("cell-down-word");
                 }
                 if (frame.selected === cellId) classes.push("cell-selected");
+                if (correctness(cellId)) classes.push(`cell-${correctness(cellId)}`);
                 return (
                   <div key={cellId} ref={setTarget(`cell:${cellId}`)} className={classes.join(" ")}>
                     <LetterGlyph letter={frame.letters[cellId]} />
@@ -193,25 +220,35 @@ export function HelpTutorial({ onClose }: HelpTutorialProps) {
                     <span className="tutorial-direction-label">{DIRECTION_LABELS[direction]}</span>
                     <span className="tutorial-clue-text">{CLUES[direction]}</span>
                   </span>
-                  <span
-                    className="clue-backspace-btn tutorial-backspace"
-                    ref={setTarget(`backspace:${direction}`)}
-                  >
-                    <Delete size={20} aria-hidden="true" />
+                  <span className="tutorial-clue-actions">
+                    <span className="clue-icon-btn clue-icon-search" ref={setTarget(`search:${direction}`)}>
+                      <Search size={16} aria-hidden="true" />
+                    </span>
+                    <span className="clue-icon-btn clue-icon-ai" ref={setTarget(`ai:${direction}`)}>
+                      <Sparkles size={16} aria-hidden="true" />
+                    </span>
+                    <span className="clue-backspace-btn" ref={setTarget(`backspace:${direction}`)}>
+                      <Delete size={16} aria-hidden="true" />
+                    </span>
                   </span>
                 </div>
 
                 <div className="word-cells-row tutorial-word-row">
-                  {WORD_CELLS[direction].map((cellId, index) => {
+                  {WORD_CELLS[direction].map((cellId, index, cells) => {
                     const isDropTarget =
                       frame.dropTarget?.direction === direction && frame.dropTarget.index === index;
+                    const isTarget = cells.findIndex((c) => !frame.letters[c]) === index;
                     return (
                       <div
                         key={cellId}
                         ref={setTarget(`word-cell:${direction}:${index}`)}
-                        className={`word-cell${frame.letters[cellId] ? " word-cell-filled" : ""}${
-                          isDropTarget ? " word-cell-drop-hover" : ""
-                        }`}
+                        className={[
+                          "word-cell",
+                          frame.letters[cellId] ? "word-cell-filled" : "",
+                          isTarget ? "word-cell-target" : "",
+                          isDropTarget ? "word-cell-drop-hover" : "",
+                          correctness(cellId) ? `word-cell-${correctness(cellId)}` : "",
+                        ].join(" ")}
                       >
                         <LetterGlyph letter={frame.letters[cellId]} />
                       </div>

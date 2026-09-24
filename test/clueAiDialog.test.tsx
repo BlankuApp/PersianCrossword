@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const fakeAuth = vi.hoisted(() => ({
@@ -193,5 +193,48 @@ describe("ActiveClue AI letters", () => {
     renderClue(["ش", "ک", "ن"], false);
     await userEvent.setup().click(screen.getByRole("button", { name: /توضیح با هوشواره/ }));
     expect(mocks.streamGemini.mock.calls[0]?.[0]).toContain("پاسخ: «شکن»");
+  });
+});
+
+describe("ActiveClue tap-to-place tiles", () => {
+  const slot = {
+    id: "C1-1",
+    direction: "down",
+    groupNum: 1,
+    clue: "پیچ و خم زلف",
+    answer: "شکن",
+    cells: [0, 1, 2].map((row) => ({ row, col: 0 })),
+  } as unknown as Slot;
+
+  function renderTray(values: (string | undefined)[]) {
+    const onCellChange = vi.fn();
+    render(
+      <ActiveClue
+        slots={{ down: slot }}
+        activeDirection="down"
+        showTray
+        getCellValue={(c) => values[c.row]}
+        onCellChange={onCellChange}
+      />,
+    );
+    return onCellChange;
+  }
+
+  it("fills empty boxes in order, skipping filled ones, without a drag", () => {
+    const onCellChange = renderTray(["ش", undefined, undefined]);
+    fireEvent.click(screen.getByRole("button", { name: "حرف ک" }));
+    fireEvent.click(screen.getByRole("button", { name: "حرف ن" }));
+    expect(onCellChange.mock.calls).toEqual([
+      [{ row: 1, col: 0 }, "ک"],
+      [{ row: 2, col: 0 }, "ن"],
+    ]);
+  });
+
+  it("does nothing when the row is full; ⌫ clears the row's last letter", () => {
+    const onCellChange = renderTray(["ش", "ک", "ن"]);
+    fireEvent.click(screen.getByRole("button", { name: "حرف ک" }));
+    expect(onCellChange).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "پاک کردن آخرین حرف این پاسخ" }));
+    expect(onCellChange).toHaveBeenCalledWith({ row: 2, col: 0 }, null);
   });
 });

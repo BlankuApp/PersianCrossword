@@ -39,7 +39,7 @@ describe("streamGemini", () => {
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toContain("gemini-3.5-flash-lite:streamGenerateContent?alt=sse");
     expect(url).toContain("key=secret-key");
-    expect(JSON.parse(String(init.body))).toEqual({ contents: [{ parts: [{ text: "پرسش" }] }] });
+    expect(JSON.parse(String(init.body))).toEqual({ contents: [{ parts: [{ text: "پرسش" }] }], tools: [{ google_search: {} }] });
   });
 
   it("throws GeminiHttpError with the status on failure", async () => {

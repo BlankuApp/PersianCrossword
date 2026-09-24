@@ -66,13 +66,19 @@ describe("buildAskPrompt", () => {
     expect(prompt).toContain("حرف ۱: ت، حرف ۲: ؟، حرف ۳: ر، حرف ۴: ؟");
   });
 
+  it("lists the letter tray only when it is shown", () => {
+    expect(buildAskPrompt("پایتخت ایران", [undefined, undefined], ["ت", "ه", "ز"])).toContain("ت، ه، ز");
+    expect(buildAskPrompt("پایتخت ایران", [undefined, undefined])).not.toContain("حروف پاسخ از میان");
+  });
+
   it("says no letters are known when the answer is empty", () => {
     expect(buildAskPrompt("پایتخت ایران", [undefined, undefined])).toContain("هنوز هیچ حرفی معلوم نیست.");
   });
 
   it("stays under the free proxy's prompt cap for a long clue and answer", () => {
     const clue = "پرسش ".repeat(20);
-    expect(buildAskPrompt(clue, Array.from({ length: 15 }, () => "ب")).length).toBeLessThanOrEqual(MAX_PROMPT_LENGTH);
+    const tray = Array.from({ length: 18 }, () => "ب");
+    expect(buildAskPrompt(clue, Array.from({ length: 15 }, () => "ب"), tray).length).toBeLessThanOrEqual(MAX_PROMPT_LENGTH);
     expect(buildExplainPrompt(clue, "ب".repeat(15)).length).toBeLessThanOrEqual(MAX_PROMPT_LENGTH);
   });
 });

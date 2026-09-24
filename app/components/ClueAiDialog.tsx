@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState, type ReactNode } from "react";
-import { X } from "lucide-react";
+import { Sparkles, X } from "lucide-react";
 import { signInAnonymously } from "firebase/auth";
 import { useAuth } from "../AuthContext";
 import { auth } from "../firebase";
@@ -73,9 +73,10 @@ interface ClueAiButtonProps {
   readonly isSolved: boolean;
   readonly cellValues: readonly (string | undefined)[];
   readonly answer: string;
+  readonly trayLetters?: readonly string[];
 }
 
-export function ClueAiButton({ clue, isSolved, cellValues, answer }: ClueAiButtonProps) {
+export function ClueAiButton({ clue, isSolved, cellValues, answer, trayLetters = [] }: ClueAiButtonProps) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error" | "quota">("idle");
@@ -95,7 +96,7 @@ export function ClueAiButton({ clue, isSolved, cellValues, answer }: ClueAiButto
   // Empty apiKey → free tier via the askAi proxy.
   async function runRequest(apiKey: string): Promise<void> {
     setText("");
-    const prompt = isSolved ? buildExplainPrompt(clue, answer) : buildAskPrompt(clue, cellValues);
+    const prompt = isSolved ? buildExplainPrompt(clue, answer) : buildAskPrompt(clue, cellValues, trayLetters);
     const ac = new AbortController();
     setController(ac);
     setStatus("loading");
@@ -149,8 +150,8 @@ export function ClueAiButton({ clue, isSolved, cellValues, answer }: ClueAiButto
 
   return (
     <>
-      <button type="button" onClick={start} className="clue-search-link" title={label}>
-        ✨ {label}
+      <button type="button" onClick={start} className="clue-icon-btn clue-icon-ai" title={label} aria-label={label}>
+        <Sparkles size={20} aria-hidden="true" />
       </button>
 
       {open ? (
