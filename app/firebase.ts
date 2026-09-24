@@ -27,6 +27,12 @@ if (import.meta.env.VITE_FUNCTIONS_EMULATOR) {
   connectFirestoreEmulator(db, "127.0.0.1", 8080);
 }
 
+// Public download URL for a file in the storage bucket (read access comes from storage.rules).
+export function storageFileUrl(path: string): string {
+  const host = import.meta.env.VITE_FUNCTIONS_EMULATOR ? "http://127.0.0.1:9199" : "https://firebasestorage.googleapis.com";
+  return `${host}/v0/b/${firebaseConfig.storageBucket}/o/${encodeURIComponent(path)}?alt=media`;
+}
+
 // Analytics only runs where supported (not in jsdom tests or cookie-less contexts).
 const analytics = isSupported()
   .then((ok) => (ok ? getAnalytics(app) : null))

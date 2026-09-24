@@ -3,9 +3,11 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { upgradeLocalProgress } from "./cloudProgress";
 import { installFlexGapFallback } from "./flexGapFallback";
+import { startPuzzleSync } from "./puzzleSync";
 import "./styles.css";
 
 upgradeLocalProgress();
+void startPuzzleSync();
 
 const root = document.getElementById("root");
 

@@ -15,7 +15,7 @@ import {
   Sprout,
   type LucideIcon,
 } from "lucide-react";
-import { listPuzzles, type PuzzleSummary } from "../puzzleLibrary";
+import { usePuzzleLibrary, type PuzzleSummary } from "../puzzleLibrary";
 import { loadMirror, type ProgressInfo } from "../progress";
 import { navigate, setHomeQuery } from "../router";
 import { useAuth } from "../AuthContext";
@@ -240,7 +240,7 @@ function openPuzzle(id: string): void {
 }
 
 export function HomePage() {
-  const puzzles = useMemo(() => listPuzzles(), []);
+  const { puzzles } = usePuzzleLibrary();
   const { syncVersion } = useAuth();
   const [query, setQuery] = useState<ListQuery>(() => parseListQuery(window.location.hash));
   const listTopRef = useRef<HTMLDivElement>(null);
