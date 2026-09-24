@@ -939,7 +939,7 @@ select {
 .cell-clue-tooltip {
   position: absolute;
   top: calc(100% + 6px);
-  display: grid;
+  display: none; /* not visibility: hidden, which still takes up space and grows the page on mobile */
   gap: 4px;
   width: max-content;
   max-width: min(420px, calc(100vw - 32px));
@@ -955,8 +955,6 @@ select {
   line-height: 1.55;
   text-align: right;
   white-space: normal;
-  visibility: hidden;
-  opacity: 0;
   pointer-events: none;
 }
 
@@ -977,14 +975,12 @@ select {
 }
 
 .cell-open:focus-visible .cell-clue-tooltip {
-  visibility: visible;
-  opacity: 1;
+  display: grid;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .cell-open:hover .cell-clue-tooltip {
-    visibility: visible;
-    opacity: 1;
+    display: grid;
   }
 }
 
