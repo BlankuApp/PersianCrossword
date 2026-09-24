@@ -1049,31 +1049,6 @@ select {
   white-space: nowrap;
 }
 
-.clue-action-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-inline-start: 6px;
-  padding: 2px 10px;
-  border: 1px solid #d3d8d2;
-  border-radius: 999px;
-  background: #f4f7f5;
-  color: #486151;
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 600;
-  line-height: 1.6;
-  vertical-align: middle;
-  cursor: pointer;
-  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
-}
-
-.clue-action-pill:hover {
-  border-color: #8cbca0;
-  background: #edf6f0;
-  color: #1e5c38;
-}
-
 .letter-tray {
   display: flex;
   flex-wrap: wrap;
@@ -1148,48 +1123,61 @@ select {
 
 .active-clue-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
 }
 
+/* Same top margin as the clue text, so the icons line up with its first line when it wraps. */
 .active-clue-head-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  margin-top: 8px;
   flex-shrink: 0;
 }
 
-.clue-edit-btn {
+/* Per-clue actions: round, each tinted in its own color. */
+.clue-icon-btn,
+.clue-backspace-btn {
+  --icon-fg: #486151;
+  --icon-bg: #eef3ef;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
+  padding: 5px;
   border: none;
-  background: none;
-  color: #486151;
+  border-radius: 999px;
+  background: var(--icon-bg);
+  color: var(--icon-fg);
   cursor: pointer;
+  transition: filter 0.15s, transform 0.1s;
 }
 
-.clue-edit-btn:hover {
-  color: #1e5c38;
+.clue-icon-btn:hover,
+.clue-backspace-btn:hover {
+  filter: brightness(0.94) saturate(1.2);
+}
+
+.clue-icon-btn:active,
+.clue-backspace-btn:active {
+  transform: scale(0.92);
+}
+
+.clue-icon-search {
+  --icon-fg: #1a73e8;
+  --icon-bg: #e8f0fe;
+}
+
+.clue-icon-ai {
+  --icon-fg: #7c3aed;
+  --icon-bg: #f1eafe;
 }
 
 .clue-backspace-btn {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: none;
-  background: none;
-  color: #8b1a1a;
-  cursor: pointer;
-}
-
-.clue-backspace-btn:hover {
-  color: #5c1010;
+  --icon-fg: #c62828;
+  --icon-bg: #fdecec;
 }
 
 @media (max-width: 1024px) {
@@ -1242,7 +1230,8 @@ select {
     width: auto;
   }
 
-  .active-clue p {
+  .active-clue p,
+  .active-clue-head-actions {
     margin: 6px 0 0;
   }
 }
@@ -1335,7 +1324,8 @@ select {
     margin-inline: -2px;
   }
 
-  .active-clue p {
+  .active-clue p,
+  .active-clue-head-actions {
     margin: 4px 0 0;
   }
 }

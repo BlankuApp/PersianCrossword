@@ -150,9 +150,8 @@ export function ClueAiButton({ clue, isSolved, cellValues, answer, trayLetters =
 
   return (
     <>
-      <button type="button" onClick={start} className="clue-action-pill" title={label}>
-        <Sparkles size={14} aria-hidden="true" />
-        {label}
+      <button type="button" onClick={start} className="clue-icon-btn clue-icon-ai" title={label} aria-label={label}>
+        <Sparkles size={20} aria-hidden="true" />
       </button>
 
       {open ? (

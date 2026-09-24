@@ -279,20 +279,19 @@ function ClueBlock({
           <span className="active-clue-label">
             {slot.groupNum.toLocaleString("fa-IR")} {slot.direction === "across" ? "افقی" : "عمودی"}
           </span>{" "}
-          <span>{slot.clue}</span>{" "}
+          <span>{slot.clue}</span>
+        </p>
+        <div className="active-clue-head-actions">
           {isSolved ? null : (
-            <>
-              <button
-                type="button"
-                onClick={handleGoogleSearch}
-                className="clue-action-pill"
-                title="جستجو در گوگل"
-                aria-label="جستجو در گوگل برای این پرسش"
-              >
-                <Search size={14} aria-hidden="true" />
-                جستجو در گوگل
-              </button>{" "}
-            </>
+            <button
+              type="button"
+              onClick={handleGoogleSearch}
+              className="clue-icon-btn clue-icon-search"
+              title="جستجو در گوگل"
+              aria-label="جستجو در گوگل برای این پرسش"
+            >
+              <Search size={20} aria-hidden="true" />
+            </button>
           )}
           <ClueAiButton
             clue={slot.clue}
@@ -301,13 +300,11 @@ function ClueBlock({
             answer={aiLetters.join("")}
             trayLetters={trayTiles.map((t) => t.letter)}
           />
-        </p>
-        <div className="active-clue-head-actions">
           {isDebugMode ? (
             <button
               type="button"
               onClick={openEditModal}
-              className="clue-edit-btn"
+              className="clue-icon-btn"
               title="ویرایش متن پرسش (دیباگ)"
               aria-label="ویرایش متن پرسش"
             >
@@ -321,7 +318,7 @@ function ClueBlock({
             title="پاک کردن حرف"
             aria-label="پاک کردن آخرین حرف این پاسخ"
           >
-            <Delete size={24} aria-hidden="true" />
+            <Delete size={20} aria-hidden="true" />
           </button>
         </div>
       </div>
