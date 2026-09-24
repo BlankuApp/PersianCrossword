@@ -753,7 +753,6 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
                 showTray={normalizedJson.version === 3}
                 getCellValue={(c) => crosswordState?.getCell(c)}
                 onCellChange={updateCell}
-                onBackspace={backspaceCell}
                 isDebugMode={isDebugMode}
                 onSaveClue={handleSaveClue}
                 checkMode={checkMode}

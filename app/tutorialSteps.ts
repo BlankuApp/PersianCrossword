@@ -180,7 +180,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   },
   {
     id: "place",
-    message: "هر حرف را بکشید و در خانهٔ درستِ پاسخ رها کنید.",
+    message: "روی هر حرف بزنید تا در خانهٔ خالی بعدی بنشیند، یا آن را بکشید و در خانهٔ دلخواه رها کنید.",
     frames: [
       {
         holdMs: 450,

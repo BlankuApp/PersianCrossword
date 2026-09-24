@@ -26,7 +26,7 @@ const BLOCK_STYLES = [blobs, initialFace, loops, shapes, lineFace, thumbs, plane
 // Check-mode colors ripple out from the selected cell: each ring waits this much longer.
 const RIPPLE_STEP_MS = 20;
 
-const SHAKE_FRAMES: Keyframe[] = [
+export const SHAKE_FRAMES: Keyframe[] = [
   { transform: "translateX(0)" },
   { transform: "translateX(-3px)" },
   { transform: "translateX(3px)" },
