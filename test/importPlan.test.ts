@@ -17,7 +17,6 @@ describe("planImport", () => {
     const draft = plan.drafts[0]!;
     expect(draft.id).toBe("301");
     expect(draft.file).toBe("admin/301.json");
-    expect(draft.issues).toEqual([]);
     expect(draft.images.map((i) => [i.kind, i.name, i.file.name])).toEqual([
       ["solution", "301.png", "301.png"],
       ["source", "9100.webp", "9100.WEBP"],
@@ -44,9 +43,10 @@ describe("planImport", () => {
     expect(plan.problems).toHaveLength(4);
   });
 
-  it("still creates a draft with validation issues, listing them", () => {
+  it("refuses a puzzle that fails validation, since the solver couldn't open it", () => {
     const broken = { name: "7.json", bytes: encode(JSON.stringify({ version: 3, meta: { id: "7" }, grid: [["ا", "ب"], ["پ"]], clues: { horizontal: {}, vertical: {} } })) };
     const plan = planImport([broken], new Set());
-    expect(plan.drafts[0]?.issues.length).toBeGreaterThan(0);
+    expect(plan.drafts).toEqual([]);
+    expect(plan.problems[0]).toMatch(/^7\.json: /);
   });
 });

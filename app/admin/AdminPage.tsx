@@ -191,7 +191,6 @@ function ImportSection({ takenIds }: { takenIds: ReadonlySet<string> }) {
               {plan.drafts.map((d) => (
                 <li key={d.id}>
                   <strong>{d.title}</strong> — شناسه {d.id}، {fa(d.images.length)} تصویر
-                  {d.issues.length ? <span className="admin-draft-status-todo"> — {fa(d.issues.length)} ایراد برای اصلاح</span> : null}
                 </li>
               ))}
             </ul>

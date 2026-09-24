@@ -16,8 +16,6 @@ export interface PlannedDraft {
   readonly jsonText: string;
   readonly title: string;
   readonly images: readonly { readonly kind: ImageKind; readonly name: string; readonly file: ImportFile }[];
-  // Validation issues: the draft is still created, to be fixed in the editor.
-  readonly issues: readonly string[];
 }
 
 export interface ImportPlan {
@@ -49,6 +47,13 @@ export function planImport(files: readonly ImportFile[], takenIds: ReadonlySet<s
       problems.push(`${file.name}: فایل JSON معتبر نیست.`);
       continue;
     }
+    // The solver can't open a puzzle that fails validation, and the editor fixes answers and
+    // clue wording, not structure: such a file has to be fixed and picked again.
+    const validation = validatePuzzleJson(json);
+    if (!validation.valid) {
+      problems.push(`${file.name}: ${validation.issues.map((i) => i.message).join("؛ ")}`);
+      continue;
+    }
     const slug = file.name.replace(/\.json$/i, "");
     const id = String(json.meta?.id ?? slug);
     if (takenIds.has(id) || seen.has(id)) {
@@ -74,15 +79,7 @@ export function planImport(files: readonly ImportFile[], takenIds: ReadonlySet<s
       }
     }
 
-    const validation = validatePuzzleJson(json);
-    drafts.push({
-      id,
-      file: `admin/${file.name}`,
-      jsonText,
-      title: json.meta?.title ?? slug,
-      images: draftImages,
-      issues: validation.valid ? [] : validation.issues.map((i) => i.message),
-    });
+    drafts.push({ id, file: `admin/${file.name}`, jsonText, title: json.meta?.title ?? slug, images: draftImages });
   }
 
   for (const image of images.values()) {

@@ -157,6 +157,9 @@ async function commitPuzzle(
 }
 
 export async function saveDraft(draft: Draft, json: CrosswordJson): Promise<void> {
+  // A draft that fails validation could no longer be opened in the solver.
+  const problems = validatePuzzleJson(json).issues.map((i) => i.message);
+  if (problems.length) throw new Error(problems.join("\n"));
   await setDoc(draftRef(draft.id), { json: toJsonText(json), updatedAt: Date.now() }, { merge: true });
 }
 
@@ -173,7 +176,15 @@ export async function publishDraft(draft: Draft, json: CrosswordJson = draft.jso
     json: toJsonText(json),
     images: Object.fromEntries(Object.entries(draft.images).map(([kind, image]) => [kind, image.path])),
   };
-  await commitPuzzle(draft.id, async () => entry, (tx) => tx.delete(draftRef(draft.id)));
+  await commitPuzzle(
+    draft.id,
+    async (current) => {
+      // A draft made from an unpublished puzzle reuses its id; a different live puzzle is never replaced.
+      if (current) throw new Error(`جدول دیگری با شناسهٔ «${draft.id}» منتشر شده است.`);
+      return entry;
+    },
+    (tx) => tx.delete(draftRef(draft.id)),
+  );
 }
 
 // A fix to a published puzzle goes straight to players.
@@ -231,5 +242,12 @@ export async function createDraft(planned: PlannedDraft): Promise<void> {
   const images: Partial<Record<ImageKind, DraftImage>> = {};
   for (const image of planned.images) images[image.kind] = await uploadImage(planned.id, image.file, image.name);
   const now = Date.now();
-  await setDoc(draftRef(planned.id), { schema: 1, json: planned.jsonText, file: planned.file, images, createdAt: now, updatedAt: now } satisfies DraftDoc);
+  const doc: DraftDoc = { schema: 1, json: planned.jsonText, file: planned.file, images, createdAt: now, updatedAt: now };
+  // The panel's lists can be stale (startup, another tab): re-check the id where it's written.
+  await runTransaction(db, async (tx) => {
+    const [draftSnap, catalogSnap] = [await tx.get(draftRef(planned.id)), await tx.get(catalogRef)];
+    const packs = (catalogSnap.data() as CatalogDoc | undefined)?.packs ?? {};
+    if (draftSnap.exists() || packOf(packs, planned.id)) throw new Error(`شناسهٔ «${planned.id}» قبلاً استفاده شده است.`);
+    tx.set(draftRef(planned.id), doc);
+  });
 }

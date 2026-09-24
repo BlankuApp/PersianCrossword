@@ -137,9 +137,11 @@ export function retryPuzzleSync(): void {
   void check();
 }
 
-// After an admin publishes a change: bring this device up to date right away.
-export function refreshPuzzleCatalog(): Promise<void> {
-  return check();
+// After an admin publishes a change: bring this device up to date right away. A check already
+// running may have read the catalog before the change, so a fresh one follows it.
+export async function refreshPuzzleCatalog(): Promise<void> {
+  if (_running) await _running;
+  await check();
 }
 
 // Loads this device's puzzles, then checks for new ones now, whenever the device comes back
