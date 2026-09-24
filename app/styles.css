@@ -904,9 +904,11 @@ select {
   overflow: hidden;
   appearance: none;
   -webkit-appearance: none;
-  /* Old WebViews ring a tapped cell in orange, and the ring also wraps its hidden clue
-     tooltip. Keyboard focus has its own style below (.cell-open:focus-visible). */
+  /* Android's tap highlight (and the orange focus ring on old WebViews) also covers the
+     hidden clue tooltip, so it flashes on tap. Keyboard focus has its own style below
+     (.cell-open:focus-visible); the selected-cell color is the tap feedback. */
   outline: none;
+  -webkit-tap-highlight-color: transparent;
   /* --ripple = rings from the selected cell, so check-mode colors spread outward. */
   transition: color 200ms ease calc(var(--ripple, 0) * 20ms);
 }
