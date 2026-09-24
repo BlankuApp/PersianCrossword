@@ -40,6 +40,8 @@
     "@capacitor/app": "^8.1.1",
     "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
+    "@dicebear/core": "^10.7.0",
+    "@dicebear/styles": "^10.6.0",
     "canvas-confetti": "^1.9.4",
     "firebase": "^12.17.0",
     "lucide-react": "^1.11.0",

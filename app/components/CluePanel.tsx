@@ -1,4 +1,4 @@
-import { Delete, Pencil, X } from "lucide-react";
+import { Delete, Pencil, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { normalizePersianText, type Coord, type Direction, type Slot } from "../../src/index";
 import { buildLetterTray } from "../crosswordUi";
@@ -234,11 +234,12 @@ function ClueBlock({
               <button
                 type="button"
                 onClick={handleGoogleSearch}
-                className="clue-search-link"
+                className="clue-action-pill"
                 title="جستجو در گوگل"
                 aria-label="جستجو در گوگل برای این پرسش"
               >
-                🔍 جستجو در گوگل
+                <Search size={14} aria-hidden="true" />
+                جستجو در گوگل
               </button>{" "}
             </>
           )}

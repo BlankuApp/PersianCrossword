@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState, type ReactNode } from "react";
-import { X } from "lucide-react";
+import { Sparkles, X } from "lucide-react";
 import { signInAnonymously } from "firebase/auth";
 import { useAuth } from "../AuthContext";
 import { auth } from "../firebase";
@@ -150,8 +150,9 @@ export function ClueAiButton({ clue, isSolved, cellValues, answer, trayLetters =
 
   return (
     <>
-      <button type="button" onClick={start} className="clue-search-link" title={label}>
-        ✨ {label}
+      <button type="button" onClick={start} className="clue-action-pill" title={label}>
+        <Sparkles size={14} aria-hidden="true" />
+        {label}
       </button>
 
       {open ? (

@@ -109,7 +109,7 @@ describe("Persian crossword UI", () => {
 
     expect(screen.queryByRole("dialog", { name: "راهنمای استفاده" })).not.toBeInTheDocument();
 
-    const menuButton = screen.getByRole("button", { name: "منوی تنظیمات" });
+    const menuButton = screen.getByRole("button", { name: "گزینه‌های بیشتر" });
     expect(menuButton).toHaveAttribute("aria-expanded", "false");
     await user.click(menuButton);
     expect(menuButton).toHaveAttribute("aria-expanded", "true");

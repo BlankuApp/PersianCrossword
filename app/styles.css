@@ -73,9 +73,28 @@ select {
 
 .app-header-meta {
   display: flex;
+  flex: 1 1 auto;
   align-items: baseline;
   gap: 14px;
   min-width: 0;
+}
+
+.header-back {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  width: var(--toolbar-btn-min-h);
+  height: var(--toolbar-btn-min-h);
+  padding: 0;
+  border: 1px solid #8cbca0;
+  border-radius: 8px;
+  background: #edf6f0;
+  color: #1e5c38;
+  cursor: pointer;
+}
+
+.header-back:hover {
+  background: #dff0e2;
 }
 
 .app-header h1 {
@@ -97,16 +116,53 @@ select {
   display: flex;
   align-items: end;
   flex-wrap: nowrap;
-}
-
-.toolbar-menu {
-  display: flex;
-  align-items: end;
   gap: 10px;
 }
 
+/* Overflow (⋮) menu: secondary and destructive actions, at every breakpoint. */
 .toolbar .toolbar-menu-toggle {
+  width: var(--toolbar-btn-min-h);
+  padding: 0;
+}
+
+.toolbar-menu {
+  position: absolute;
+  inset-block-start: calc(100% + 6px);
+  inset-inline-end: 0;
+  z-index: 100;
   display: none;
+  width: min(240px, calc(100vw - 20px));
+  padding: 6px;
+  border: 1px solid #bac3bc;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(23, 32, 27, 0.2);
+}
+
+.toolbar-menu.toolbar-menu-open {
+  display: grid;
+  gap: 2px;
+}
+
+.toolbar .toolbar-menu button {
+  width: 100%;
+  min-height: 44px;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 0 12px;
+  border-color: transparent;
+  text-align: right;
+}
+
+.toolbar .toolbar-menu button span {
+  display: inline;
+}
+
+.toolbar .toolbar-menu .toolbar-menu-danger {
+  margin-top: 4px;
+  border-top: 1px solid #e3e7e3;
+  border-radius: 0 0 8px 8px;
+  color: #8b1a1a;
 }
 
 .toolbar button {
@@ -127,17 +183,48 @@ select {
   background: #f0f4f2;
 }
 
-.btn-home {
-  background: #edf6f0 !important;
-  border-color: #8cbca0 !important;
-  color: #1e5c38 !important;
-  font-weight: 600;
+/* Check-mode switch: the thumb slides, the track fills; cell colors then ripple (see .cell). */
+.toolbar .check-switch {
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
 
-.toolbar button[aria-pressed="true"] {
+.toolbar .check-switch[aria-checked="true"] {
   background: #edf6f0;
   border-color: #8cbca0;
   color: #1e5c38;
+}
+
+.toolbar .switch-track {
+  position: relative;
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 18px;
+  border-radius: 999px;
+  background: #c9d0cb;
+  transition: background-color 150ms ease;
+}
+
+.toolbar .switch-thumb {
+  position: absolute;
+  inset-block-start: 2px;
+  inset-inline-start: 2px;
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(23, 32, 27, 0.3);
+  transition: transform 150ms ease;
+}
+
+.toolbar .check-switch[aria-checked="true"] .switch-track {
+  background: #1e5c38;
+}
+
+/* RTL: the thumb starts on the right, so "on" slides it left. */
+.toolbar .check-switch[aria-checked="true"] .switch-thumb {
+  transform: translateX(-12px);
 }
 
 /* ---- Animated راهنما tutorial modal ---- */
@@ -786,6 +873,15 @@ select {
   overflow: hidden;
   appearance: none;
   -webkit-appearance: none;
+  /* --ripple = rings from the selected cell, so check-mode colors spread outward. */
+  transition: color 200ms ease calc(var(--ripple, 0) * 20ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cell,
+  .toolbar .switch-thumb {
+    transition: none;
+  }
 }
 
 .cell-open {
@@ -953,20 +1049,28 @@ select {
   white-space: nowrap;
 }
 
-.clue-search-link {
+.clue-action-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   margin-inline-start: 6px;
-  padding: 0;
-  border: none;
-  background: none;
+  padding: 2px 10px;
+  border: 1px solid #d3d8d2;
+  border-radius: 999px;
+  background: #f4f7f5;
   color: #486151;
-  font-size: 0.9rem;
-  font-weight: 700;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.6;
+  vertical-align: middle;
   cursor: pointer;
-  text-decoration: underline;
-  transition: color 0.2s;
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 
-.clue-search-link:hover {
+.clue-action-pill:hover {
+  border-color: #8cbca0;
+  background: #edf6f0;
   color: #1e5c38;
 }
 
@@ -1005,7 +1109,7 @@ select {
   border: 1px solid #d3d8d2;
   border-radius: 4px;
   background: #f4f7f2;
-  transition: background-color 0.15s, border-color 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, color 0.2s;
 }
 
 .word-cell-filled {
@@ -1087,10 +1191,6 @@ select {
     gap: 6px;
   }
 
-  .toolbar-menu {
-    gap: 6px;
-  }
-
   .toolbar button {
     padding: 0 10px;
     gap: 0;
@@ -1098,6 +1198,15 @@ select {
 
   .toolbar button span {
     display: none;
+  }
+
+  .toolbar .check-switch {
+    gap: 6px;
+  }
+
+  .toolbar .switch-track,
+  .toolbar .switch-thumb {
+    display: block;
   }
 }
 
@@ -1113,47 +1222,6 @@ select {
 
   .solver-layout {
     grid-template-columns: 1fr;
-  }
-
-  .toolbar .toolbar-menu-toggle {
-    display: inline-flex;
-    width: var(--toolbar-btn-min-h);
-    height: var(--toolbar-btn-min-h);
-    min-height: var(--toolbar-btn-min-h);
-    padding: 0;
-  }
-
-  .toolbar-menu {
-    position: absolute;
-    inset-block-start: calc(100% + 6px);
-    inset-inline-end: 0;
-    z-index: 100;
-    display: none;
-    width: min(240px, calc(100vw - 20px));
-    padding: 6px;
-    border: 1px solid #bac3bc;
-    border-radius: 10px;
-    background: #ffffff;
-    box-shadow: 0 10px 28px rgba(23, 32, 27, 0.2);
-  }
-
-  .toolbar-menu.toolbar-menu-open {
-    display: grid;
-    gap: 2px;
-  }
-
-  .toolbar .toolbar-menu button {
-    width: 100%;
-    min-height: 44px;
-    justify-content: flex-start;
-    gap: 10px;
-    padding: 0 12px;
-    border-color: transparent;
-    text-align: right;
-  }
-
-  .toolbar .toolbar-menu button span {
-    display: inline;
   }
 
   .board-with-labels {
