@@ -1,3 +1,4 @@
+import legacy from "@vitejs/plugin-legacy";
 import react from "@vitejs/plugin-react";
 import { writeFileSync } from "fs";
 import { resolve } from "path";
@@ -35,9 +36,15 @@ export default defineConfig({
   server: {
     port: 5567,
   },
-  plugins: [devPuzzleSaverPlugin(), react()],
+  plugins: [
+    devPuzzleSaverPlugin(),
+    react(),
+    // Old phones keep their factory WebView (no Play Store updates); 55 is Capacitor's own floor.
+    legacy({ targets: ["chrome >= 55"], modernPolyfills: true }),
+  ],
   build: {
     outDir: "app-dist",
+    cssTarget: "chrome55",
   },
   test: {
     environment: "node",
