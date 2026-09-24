@@ -165,5 +165,35 @@ describe("Persian crossword UI", () => {
     });
     expect(screen.getByLabelText("ردیف 1 ستون 7")).toHaveClass("cell-selected");
   });
+
+  it("shows the editing tools only with an editor, and keeps every saved clue fix", async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<SolverPage id="sample-10x10-garden" json={json10} />);
+    expect(screen.queryByTitle("ویرایش متن پرسش (دیباگ)")).not.toBeInTheDocument();
+    unmount();
+
+    const saved: CrosswordJson[] = [];
+    const editor = { kind: "draft" as const, save: vi.fn(async (json: CrosswordJson) => void saved.push(json)) };
+    render(<SolverPage id="sample-10x10-garden" json={json10} editor={editor} />);
+
+    async function editClue(pencil: HTMLElement, text: string): Promise<void> {
+      await user.click(pencil);
+      const box = screen.getByRole("textbox", { name: "" });
+      await user.clear(box);
+      await user.type(box, text);
+      await user.click(screen.getByRole("button", { name: "ذخیره" }));
+      await waitFor(() => expect(screen.queryByRole("dialog", { name: "ویرایش متن پرسش" })).not.toBeInTheDocument());
+    }
+
+    const pencils = screen.getAllByTitle("ویرایش متن پرسش (دیباگ)");
+    await editClue(pencils[0]!, "اول");
+    await editClue(screen.getAllByTitle("ویرایش متن پرسش (دیباگ)")[1]!, "دوم");
+
+    expect(editor.save).toHaveBeenCalledTimes(2);
+    // The second save still carries the first fix, although the page's json prop never changed.
+    const clues = JSON.stringify(saved[1]!.clues);
+    expect(clues).toContain("اول");
+    expect(clues).toContain("دوم");
+  });
 });
 

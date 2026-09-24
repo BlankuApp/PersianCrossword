@@ -333,7 +333,7 @@ describe("sign-out", () => {
         <Probe />
       </AuthProvider>,
     );
-    await act(async () => authMock.listener?.({ uid: "uid1", isAnonymous: false }));
+    await act(async () => authMock.listener?.({ uid: "uid1", isAnonymous: false, getIdTokenResult: async () => ({ claims: {} }) }));
     expect(screen.getByRole("button")).toHaveTextContent("offline");
   }
 

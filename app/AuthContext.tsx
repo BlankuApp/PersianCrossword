@@ -13,6 +13,8 @@ export interface SyncStatus {
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
+  // Signed in with the `admin` claim (scripts/grantAdmin.ts): admin panel and editing tools.
+  isAdmin: boolean;
   // Bumped whenever sync changed letters on this device, so open views reload them.
   syncVersion: number;
   syncStatus: SyncStatus;
@@ -25,6 +27,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue>({
   user: null,
   loading: true,
+  isAdmin: false,
   syncVersion: 0,
   syncStatus: { kind: "synced", unsent: 0 },
   syncNow: async () => {},
@@ -37,6 +40,7 @@ const fa = (n: number) => n.toLocaleString("fa-IR");
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [syncVersion, setSyncVersion] = useState(0);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({ kind: "synced", unsent: 0 });
   const userRef = useRef<User | null>(null);
@@ -63,8 +67,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userRef.current = nextUser;
       if (nextUser) claimDevice(nextUser.uid, nextUser.isAnonymous);
       setUser(nextUser);
+      setIsAdmin(false);
       setLoading(false);
       if (nextUser) void syncNow();
+      if (nextUser && !nextUser.isAnonymous) {
+        // A fresh token picks up a claim granted since the last sign-in; offline, the cached one.
+        nextUser
+          .getIdTokenResult(true)
+          .catch(() => nextUser.getIdTokenResult())
+          .then((token) => {
+            if (userRef.current === nextUser) setIsAdmin(token.claims.admin === true);
+          })
+          .catch(() => {});
+      }
     });
   }, [syncNow]);
 
@@ -106,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, syncVersion, syncStatus, syncNow, pushChanges, signOut }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin, syncVersion, syncStatus, syncNow, pushChanges, signOut }}>
       {children}
     </AuthContext.Provider>
   );

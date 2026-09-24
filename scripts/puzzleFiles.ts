@@ -1,15 +1,12 @@
 // Reads a local puzzle folder (default: puzzles/, kept out of git) and fingerprints each
-// puzzle. Used by the upload script (run with tsx) and the dev server.
-import { createHash } from "node:crypto";
+// puzzle the same way the admin panel does (shared/cloudPuzzles.ts). Runs with tsx.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, extname, join, relative } from "node:path";
+import { imageHash, puzzleHash, type ImageKind, type ImageRef } from "../shared/cloudPuzzles.ts";
 import { validatePuzzleJson, type CrosswordJson } from "../src/index.ts";
 
-export interface PuzzleImageFile {
-  readonly kind: "solution" | "source";
-  readonly name: string;
+export interface PuzzleImageFile extends ImageRef {
   readonly absPath: string;
-  readonly hash: string;
 }
 
 export interface PuzzleFile {
@@ -21,8 +18,6 @@ export interface PuzzleFile {
   readonly hash: string;
 }
 
-export const sha256 = (data: string | Buffer): string => createHash("sha256").update(data).digest("hex");
-
 function listJsonFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const path = join(dir, name);
@@ -31,12 +26,9 @@ function listJsonFiles(dir: string): string[] {
   });
 }
 
-function imageFile(kind: PuzzleImageFile["kind"], absPath: string): PuzzleImageFile | undefined {
-  try {
-    return { kind, name: basename(absPath), absPath, hash: sha256(readFileSync(absPath)).slice(0, 16) };
-  } catch {
-    return undefined;
-  }
+async function imageFile(kind: ImageKind, absPath: string): Promise<PuzzleImageFile | undefined> {
+  if (!existsSync(absPath)) return undefined;
+  return { kind, name: basename(absPath), absPath, hash: await imageHash(readFileSync(absPath)) };
 }
 
 // Where a puzzle's images sit next to its JSON: {slug}.png (solution) and meta.sourceFile.
@@ -50,33 +42,28 @@ export function imagePaths(jsonPath: string, json: unknown): { solution: string;
   };
 }
 
-// The fingerprint covers the parsed JSON (formatting-only edits don't count) and the images'
-// contents, so replacing a picture also counts as a change.
-export function puzzleHash(json: unknown, images: readonly Pick<PuzzleImageFile, "kind" | "name" | "hash">[]): string {
-  const imagePart = images.map((i) => `${i.kind}:${i.name}:${i.hash}`).join("|");
-  return sha256(`${JSON.stringify(json)}\n${imagePart}`).slice(0, 16);
-}
-
-export function readPuzzleFiles(puzzlesDir: string): PuzzleFile[] {
+export async function readPuzzleFiles(puzzlesDir: string): Promise<PuzzleFile[]> {
   if (!existsSync(puzzlesDir)) return [];
-  return listJsonFiles(puzzlesDir)
-    .sort()
-    .map((absPath) => {
-      const jsonText = readFileSync(absPath, "utf8");
-      const json = JSON.parse(jsonText) as { meta?: { id?: unknown } };
-      const paths = imagePaths(absPath, json);
-      const images = [
-        imageFile("solution", paths.solution),
-        paths.source ? imageFile("source", paths.source) : undefined,
-      ].filter((i): i is PuzzleImageFile => i !== undefined);
-      return {
-        id: String(json.meta?.id ?? basename(absPath, extname(absPath))),
-        relPath: relative(puzzlesDir, absPath).split("\\").join("/"),
-        jsonText,
-        images,
-        hash: puzzleHash(json, images),
-      };
-    });
+  return Promise.all(
+    listJsonFiles(puzzlesDir)
+      .sort()
+      .map(async (absPath) => {
+        const jsonText = readFileSync(absPath, "utf8");
+        const json = JSON.parse(jsonText) as { meta?: { id?: unknown } };
+        const paths = imagePaths(absPath, json);
+        const images = [
+          await imageFile("solution", paths.solution),
+          paths.source ? await imageFile("source", paths.source) : undefined,
+        ].filter((i): i is PuzzleImageFile => i !== undefined);
+        return {
+          id: String(json.meta?.id ?? basename(absPath, extname(absPath))),
+          relPath: relative(puzzlesDir, absPath).split("\\").join("/"),
+          jsonText,
+          images,
+          hash: await puzzleHash(json, images),
+        };
+      }),
+  );
 }
 
 // The same check the app runs on every puzzle; a puzzle failing it would show as a broken row.

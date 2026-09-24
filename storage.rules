@@ -3,9 +3,14 @@ rules_version = '2';
 // Deploy: npx firebase-tools deploy --only storage
 service firebase.storage {
   match /b/{bucket}/o {
-    // Puzzle images are public; only scripts/uploadPuzzles.ts (admin SDK) writes them.
-    match /puzzles/{allPaths=**} {
-      allow read: if true;
+    // Puzzle images: anyone can fetch one by its path, nobody can list them, so a draft's
+    // images (uploaded under the same content-addressed names) stay unlisted until published.
+    // Admins upload from the app (custom claim, scripts/grantAdmin.ts); scripts use the admin SDK.
+    match /puzzles/{id}/{file} {
+      allow get: if true;
+      allow create: if request.auth != null && request.auth.token.admin == true
+        && request.resource.size < 20 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
     }
     // Everything else is denied by default.
   }

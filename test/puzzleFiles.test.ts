@@ -1,13 +1,12 @@
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { findInvalidPuzzles, puzzleHash, readPuzzleFiles } from "../scripts/puzzleFiles";
+import { findInvalidPuzzles, readPuzzleFiles } from "../scripts/puzzleFiles";
 
 const folder = resolve(import.meta.dirname, "puzzle-folder");
 
 describe("readPuzzleFiles", () => {
-  const files = readPuzzleFiles(folder);
-
-  it("reads every puzzle with its id, path and images", () => {
+  it("reads every puzzle with its id, path and images", async () => {
+    const files = await readPuzzleFiles(folder);
     expect(files.map((f) => [f.id, f.relPath])).toEqual([
       ["1", "1-50/1.json"],
       ["no-id", "1-50/no-id.json"],
@@ -19,25 +18,19 @@ describe("readPuzzleFiles", () => {
     expect(files[1]!.images).toEqual([]);
   });
 
-  it("returns nothing for a missing folder", () => {
-    expect(readPuzzleFiles(resolve(folder, "missing"))).toEqual([]);
+  it("keeps the fingerprints already published (changing them would re-send every puzzle)", async () => {
+    const files = await readPuzzleFiles(folder);
+    expect(files.map((f) => f.hash)).toEqual(["6b14d66fd5e57cf9", "2ad9c5b18c919133"]);
   });
-});
 
-describe("puzzleHash", () => {
-  it("ignores formatting but not content or image changes", () => {
-    const json = { meta: { id: "1" }, grid: [["ا"]] };
-    const image = { kind: "source" as const, name: "1.webp", hash: "aaaa" };
-    const base = puzzleHash(json, [image]);
-    expect(puzzleHash(JSON.parse(JSON.stringify(json, null, 4)), [image])).toBe(base);
-    expect(puzzleHash({ ...json, grid: [["ب"]] }, [image])).not.toBe(base);
-    expect(puzzleHash(json, [{ ...image, hash: "bbbb" }])).not.toBe(base);
+  it("returns nothing for a missing folder", async () => {
+    expect(await readPuzzleFiles(resolve(folder, "missing"))).toEqual([]);
   });
 });
 
 describe("findInvalidPuzzles", () => {
-  it("passes valid puzzles and names the broken ones", () => {
-    const [valid] = readPuzzleFiles(folder);
+  it("passes valid puzzles and names the broken ones", async () => {
+    const [valid] = await readPuzzleFiles(folder);
     const broken = { relPath: "x/broken.json", jsonText: JSON.stringify({ version: 3, grid: [] }) };
     const notJson = { relPath: "x/not-json.json", jsonText: "{" };
     const problems = findInvalidPuzzles([valid!, broken, notJson]);

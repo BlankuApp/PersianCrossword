@@ -20,7 +20,8 @@
     "test": "vitest run --pool=threads",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.app.json --noEmit",
     "puzzles:upload": "tsx scripts/uploadPuzzles.ts",
-    "puzzles:download": "tsx scripts/downloadPuzzles.ts"
+    "puzzles:download": "tsx scripts/downloadPuzzles.ts",
+    "admin:grant": "tsx scripts/grantAdmin.ts"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",

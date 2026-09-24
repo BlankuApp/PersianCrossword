@@ -1,5 +1,5 @@
 // Downloads every published puzzle and its images from Firebase into a local folder: a backup,
-// or a fresh working copy for editing and re-uploading.
+// or a fresh working copy for editing and re-uploading. Drafts (admin panel) aren't included.
 //
 //   npm run puzzles:download -- [--dir puzzles] [--force]
 //
@@ -7,7 +7,8 @@
 // files with different content are left alone unless --force is given.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
-import { initAdmin, parseArgs, type CatalogDoc, type PackEntry } from "./firebaseAdmin.ts";
+import type { CatalogDoc, PackEntry } from "../shared/cloudPuzzles.ts";
+import { initAdmin, parseArgs } from "./firebaseAdmin.ts";
 import { imagePaths } from "./puzzleFiles.ts";
 
 function writeIfChanged(path: string, data: Buffer, force: boolean, skipped: string[]): void {

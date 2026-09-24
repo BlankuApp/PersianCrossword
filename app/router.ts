@@ -2,14 +2,24 @@ import { useEffect, useRef, useState } from "react";
 import { App as CapacitorApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 
-export type Route = { readonly name: "home" } | { readonly name: "puzzle"; readonly id: string };
+export type Route =
+  | { readonly name: "home" }
+  | { readonly name: "puzzle"; readonly id: string }
+  // Admin panel and one of its drafts (app/admin).
+  | { readonly name: "admin" }
+  | { readonly name: "draft"; readonly id: string };
 
-function parseHash(hash: string): Route {
-  const path = hash.replace(/^#\/?/, "");
+export function parseHash(hash: string): Route {
+  const path = hash.replace(/^#\/?/, "").split("?")[0]!;
   if (path.startsWith("puzzle/")) {
     const id = path.slice("puzzle/".length).trim();
     if (id) return { name: "puzzle", id };
   }
+  if (path.startsWith("admin/draft/")) {
+    const id = decodeURIComponent(path.slice("admin/draft/".length).trim());
+    if (id) return { name: "draft", id };
+  }
+  if (path === "admin") return { name: "admin" };
   return { name: "home" };
 }
 
@@ -57,8 +67,11 @@ export function useHardwareBackButton(route: Route): void {
     if (!Capacitor.isNativePlatform()) return;
 
     const listenerPromise = CapacitorApp.addListener("backButton", () => {
-      if (routeRef.current.name === "puzzle") {
+      const { name } = routeRef.current;
+      if (name === "puzzle" || name === "admin") {
         goHome();
+      } else if (name === "draft") {
+        navigate("#/admin");
       } else {
         CapacitorApp.exitApp();
       }

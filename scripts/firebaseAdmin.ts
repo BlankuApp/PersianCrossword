@@ -1,41 +1,20 @@
-// Admin SDK access for the puzzle scripts, plus the cloud layout they share with the app
-// (app/puzzleSync.ts):
+// Admin SDK access for the puzzle scripts. Cloud layout: shared/cloudPuzzles.ts.
 //
-//   catalog/index      { schema: 2, packs: { [packId]: { hash, puzzles: { [id]: puzzleHash } } }, updatedAt }
-//                      — the one document every app reads per check
-//   puzzlePacks/{pack} { schema: 2, hash, puzzles: { [id]: PackEntry } }
-//                      — up to PACK_SIZE puzzles; JSON is stored as text (Firestore can't hold nested arrays)
-//   Storage puzzles/{id}/{imageHash}.{ext} — images; the name changes with the content
-//
-// Credentials: GOOGLE_APPLICATION_CREDENTIALS=<service-account.json>, or
-// FIRESTORE_EMULATOR_HOST + FIREBASE_STORAGE_EMULATOR_HOST for the local emulators.
+// Credentials: GOOGLE_APPLICATION_CREDENTIALS=<service-account.json>, or the emulator variables
+// (FIRESTORE_EMULATOR_HOST, FIREBASE_STORAGE_EMULATOR_HOST, FIREBASE_AUTH_EMULATOR_HOST).
 import { applicationDefault, initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { resolve } from "node:path";
-import type { CatalogPack } from "./puzzlePacks.ts";
-
-export interface PackEntry {
-  readonly hash: string;
-  // Path inside the puzzle folder ("1-50/14.json"), so a download restores the same layout.
-  readonly file: string;
-  readonly json: string;
-  readonly images: { readonly solution?: string; readonly source?: string };
-}
-
-export interface CatalogDoc {
-  readonly schema: 2;
-  readonly packs: Record<string, CatalogPack>;
-  readonly updatedAt: number;
-}
 
 export function initAdmin() {
   const app = initializeApp({
     projectId: "persiancrossword",
     storageBucket: "persiancrossword.firebasestorage.app",
-    ...(process.env.FIRESTORE_EMULATOR_HOST ? {} : { credential: applicationDefault() }),
+    ...(process.env.FIRESTORE_EMULATOR_HOST || process.env.FIREBASE_AUTH_EMULATOR_HOST ? {} : { credential: applicationDefault() }),
   });
-  return { db: getFirestore(app), bucket: getStorage(app).bucket() };
+  return { db: getFirestore(app), bucket: getStorage(app).bucket(), auth: getAuth(app) };
 }
 
 // Minimal flag parsing: `--name` booleans and `--dir <path>`.

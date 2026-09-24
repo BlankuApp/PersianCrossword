@@ -13,10 +13,8 @@ import {
 import {
   listPuzzles,
   markPuzzleLibraryReady,
-  setPuzzleSources,
   setPuzzleSyncState,
   setStoredCatalog,
-  type PuzzleSource,
 } from "./puzzleLibrary";
 import { readStoredCatalog, writeStoredCatalog } from "./puzzleStore";
 
@@ -139,37 +137,14 @@ export function retryPuzzleSync(): void {
   void check();
 }
 
-interface LocalPuzzle {
-  readonly slug: string;
-  readonly hash: string;
-  readonly filePath: string;
-  readonly json: CrosswordJson;
-  readonly solutionImageUrl?: string;
-  readonly sourceImageUrl?: string;
-}
-
-// `npm run dev`: the local puzzles/ folder (served by vite.config.ts), editable in debug mode.
-async function loadLocalPuzzles(): Promise<void> {
-  try {
-    const res = await fetch("/dev/local-puzzles");
-    const list = (await res.json()) as LocalPuzzle[];
-    setPuzzleSources(list satisfies readonly PuzzleSource[]);
-    setPuzzleSyncState("ok");
-  } catch (error) {
-    console.error("[puzzleSync] could not load local puzzles", error);
-    setPuzzleSyncState("error");
-  }
-  markPuzzleLibraryReady();
+// After an admin publishes a change: bring this device up to date right away.
+export function refreshPuzzleCatalog(): Promise<void> {
+  return check();
 }
 
 // Loads this device's puzzles, then checks for new ones now, whenever the device comes back
 // online, and when the app returns to the foreground after a while.
 export async function startPuzzleSync(): Promise<void> {
-  // The dev server edits local files in place (debug mode); VITE_PUZZLE_SYNC=1 tests the cloud path.
-  if (import.meta.env.DEV && !import.meta.env.VITE_PUZZLE_SYNC) {
-    await loadLocalPuzzles();
-    return;
-  }
   _stored = await readStoredCatalog();
   setStoredCatalog(_stored);
   window.addEventListener("online", () => void check());
