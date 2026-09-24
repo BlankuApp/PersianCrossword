@@ -13,6 +13,7 @@ import {
   SYNC_KEY,
   type ProgressEntry,
   type ProgressInfo,
+  type SyncMirror,
 } from "./progress";
 import { getPuzzleById } from "./puzzleLibrary";
 
@@ -50,6 +51,14 @@ function report(stage: string, error: unknown): never {
   throw error;
 }
 
+// Sign-in can hand the device to another account while a sync for the previous one is still
+// running. From then on that sync must leave the mirror alone, or it would upload the new
+// owner's entries to the old account and mark them sent.
+function ownMirror(uid: string): SyncMirror | null {
+  const mirror = loadMirror();
+  return mirror.owner === uid ? mirror : null;
+}
+
 export function isOfflineError(error: unknown): boolean {
   return (error as { code?: unknown } | null)?.code === "unavailable" || !navigator.onLine;
 }
@@ -63,7 +72,8 @@ async function pull(uid: string, board: Readonly<Record<string, CloudEntry>>): P
 
   const snaps = await Promise.all(stale.map(([id]) => getDoc(progressRef(uid, id))));
   // Re-read: the player may have typed while the downloads were running.
-  const mirror = loadMirror();
+  const mirror = ownMirror(uid);
+  if (!mirror) return false;
   const entries = { ...mirror.entries };
   stale.forEach(([id, cloud], i) => {
     const cells = (snaps[i]!.data()?.cells ?? {}) as Cells;
@@ -87,7 +97,8 @@ async function pull(uid: string, board: Readonly<Record<string, CloudEntry>>): P
 // Old letters are folded into local progress and uploaded by the push that follows.
 async function importOldProgress(uid: string): Promise<boolean> {
   const old = await getDocs(collection(db, "users", uid, "puzzles"));
-  const mirror = loadMirror();
+  const mirror = ownMirror(uid);
+  if (!mirror) return false;
   const entries = { ...mirror.entries };
   let changed = false;
   for (const snap of old.docs) {
@@ -101,11 +112,18 @@ async function importOldProgress(uid: string): Promise<boolean> {
     changed = true;
   }
   if (changed) saveMirror({ ...mirror, entries });
+  // Nothing to upload means no push will create the scoreboard, and every later sync would
+  // repeat this import. Create it empty (unless another device just did) to mark it done.
+  if (!Object.values(entries).some((entry) => entry.dirty)) {
+    await runTransaction(db, async (tx) => {
+      if (!(await tx.get(scoreboardRef(uid))).exists()) tx.set(scoreboardRef(uid), { schema: 1, puzzles: {} });
+    });
+  }
   return changed;
 }
 
 async function pushOnce(uid: string): Promise<boolean> {
-  const ids = Object.entries(loadMirror().entries)
+  const ids = Object.entries(ownMirror(uid)?.entries ?? {})
     .filter(([, entry]) => entry.dirty)
     .map(([id]) => id);
   let changed = false;
@@ -115,7 +133,7 @@ async function pushOnce(uid: string): Promise<boolean> {
       const snap = await tx.get(scoreboardRef(uid));
       const board: Record<string, CloudEntry> = { ...(snap.data()?.puzzles ?? {}) };
       // Letters and entries are read together, synchronously, so they match each other.
-      const local = loadMirror().entries;
+      const local = ownMirror(uid)?.entries ?? {};
       const sent: Record<string, ProgressEntry> = {};
       const newer: Record<string, CloudEntry> = {};
       for (const id of chunk) {
@@ -138,7 +156,8 @@ async function pushOnce(uid: string): Promise<boolean> {
       return { sent, newer };
     });
 
-    const mirror = loadMirror();
+    const mirror = ownMirror(uid);
+    if (!mirror) return changed;
     const entries = { ...mirror.entries };
     for (const [id, pushed] of Object.entries(sent)) {
       const now = entries[id];
@@ -164,15 +183,17 @@ async function pushRounds(uid: string): Promise<boolean> {
   return changed;
 }
 
-let pushing: Promise<boolean> | null = null;
+const pushing = new Map<string, Promise<boolean>>();
 
-// Uploads every puzzle changed on this device; concurrent callers share one run.
-// Returns true when local letters changed (a clash was merged).
+// Uploads every puzzle changed on this device; concurrent callers for the same account share
+// one run. Returns true when local letters changed (a clash was merged).
 export function pushDirty(uid: string): Promise<boolean> {
-  pushing ??= pushRounds(uid).finally(() => {
-    pushing = null;
-  });
-  return pushing;
+  let run = pushing.get(uid);
+  if (!run) {
+    run = pushRounds(uid).finally(() => pushing.delete(uid));
+    pushing.set(uid, run);
+  }
+  return run;
 }
 
 // Launch, sign-in, back in focus, back online: one scoreboard read, then only what changed.

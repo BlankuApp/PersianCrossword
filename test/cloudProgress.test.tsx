@@ -12,6 +12,7 @@ const fake = vi.hoisted(() => ({
   reads: 0,
   writes: 0,
   offline: false,
+  hold: null as Promise<void> | null, // set to pause the next transaction until it resolves
 }));
 
 vi.mock("firebase/firestore", () => {
@@ -44,6 +45,8 @@ vi.mock("firebase/firestore", () => {
     },
     runTransaction: async (_db: unknown, body: (tx: unknown) => Promise<unknown>) => {
       guard();
+      const hold = fake.hold;
+      if (hold) await hold;
       const writes: Array<[string, Data]> = [];
       const result = await body({
         get: async (ref: { path: string }) => read(ref.path),
@@ -124,6 +127,7 @@ beforeEach(() => {
   window.localStorage.clear();
   fake.store.clear();
   fake.offline = false;
+  fake.hold = null;
   resetCounts();
   vi.restoreAllMocks();
   authMock.signOut.mockReset();
@@ -231,6 +235,37 @@ describe("syncProgress", () => {
     await syncProgress("uid1");
     expect(fake.reads).toBe(1);
     expect(fake.writes).toBe(0);
+  });
+
+  it("records an import that found nothing, so later syncs cost one read", async () => {
+    fake.store.set("users/uid1/puzzles/p2", { cells: {} }); // merely opened in the old app
+    seedLocal({});
+
+    await syncProgress("uid1");
+
+    expect(fake.store.get("users/uid1/meta/scoreboard")).toEqual({ schema: 1, puzzles: {} });
+    resetCounts();
+    await syncProgress("uid1");
+    expect(fake.reads).toBe(1);
+    expect(fake.writes).toBe(0);
+  });
+
+  it("uploads to the new account when sign-in happens during the guest's upload", async () => {
+    saveProgress("p1", { cells: { "0,0": "م" } });
+    saveMirror({ owner: "guest", ownerAnonymous: true, entries: { p1: entry({ v: 0, dirty: true }) } });
+    let release!: () => void;
+    fake.hold = new Promise((resolve) => (release = resolve));
+    const guestPush = pushDirty("guest");
+    fake.hold = null;
+
+    claimDevice("uid1", false);
+    const accountSync = syncProgress("uid1");
+    release();
+    await Promise.all([guestPush, accountSync]);
+
+    expect(cloudCells("p1")).toEqual({ "0,0": "م" });
+    expect(fake.store.get("users/guest/progress/p1")).toBeUndefined();
+    expect(loadMirror().entries.p1).toMatchObject({ v: 1, dirty: false });
   });
 
   it("keeps changes queued while offline", async () => {
