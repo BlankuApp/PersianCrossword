@@ -338,8 +338,24 @@ select {
   white-space: nowrap;
 }
 
-.tutorial-backspace {
+.tutorial-toolbar {
+  align-self: stretch;
+  justify-content: center;
+}
+
+.tutorial-toolbar button,
+.tutorial-clue-actions {
   pointer-events: none;
+}
+
+.tutorial-clue-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.tutorial-clue-actions > span {
+  padding: 4px;
 }
 
 .tutorial-clue-highlight {
@@ -496,6 +512,16 @@ select {
 
   .tutorial-clue-text {
     font-size: 0.78rem;
+  }
+
+  /* Cards are ~165px wide: the icons take their own line so the clue stays readable. */
+  .tutorial-clue-head {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .tutorial-clue-actions > span {
+    padding: 3px;
   }
 
   .tutorial-clue .word-cell,

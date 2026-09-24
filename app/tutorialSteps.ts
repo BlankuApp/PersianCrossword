@@ -21,6 +21,16 @@ export const ACROSS_CELLS: readonly DemoCellId[] = ["0-1", "0-2", "0-3"]; // م 
 export const DOWN_CELLS: readonly DemoCellId[] = ["0-1", "1-1", "2-1", "3-1"]; // م ا د ر
 export const CROSSING_CELL: DemoCellId = "0-1";
 
+// The demo's answers, for the check-mode colors.
+export const DEMO_SOLUTION: Readonly<Partial<Record<DemoCellId, string>>> = {
+  "0-1": "م",
+  "0-2": "ر",
+  "0-3": "ز",
+  "1-1": "ا",
+  "2-1": "د",
+  "3-1": "ر",
+};
+
 export const ACROSS_CLUE = "سرحد";
 export const DOWN_CLUE = "والده";
 
@@ -35,8 +45,8 @@ export type HandTarget =
   | { readonly kind: "cell"; readonly cell: DemoCellId }
   | { readonly kind: "tray"; readonly direction: DemoDirection; readonly index: number }
   | { readonly kind: "word-cell"; readonly direction: DemoDirection; readonly index: number }
-  | { readonly kind: "backspace"; readonly direction: DemoDirection }
-  | { readonly kind: "clue"; readonly direction: DemoDirection }
+  | { readonly kind: "backspace" | "search" | "ai" | "clue"; readonly direction: DemoDirection }
+  | { readonly kind: "check-switch" }
   | { readonly kind: "rest" };
 
 export interface DemoDrag {
@@ -44,8 +54,11 @@ export interface DemoDrag {
   readonly direction: DemoDirection;
 }
 
+type DemoLetters = Readonly<Partial<Record<DemoCellId, string>>>;
+
 // Every frame is an absolute snapshot of the whole visual state, so jumping
 // to any step via a dot is just {stepIndex, frameIndex: 0} — nothing accumulates.
+// Each answer row's target box (outlined) is derived: its first empty box, as in the app.
 export interface DemoFrame {
   readonly holdMs: number;
   readonly hand: HandTarget;
@@ -53,8 +66,9 @@ export interface DemoFrame {
   readonly showHighlights: boolean;
   readonly showClues: boolean;
   readonly selected: DemoCellId | null;
-  readonly letters: Partial<Record<DemoCellId, string>>;
+  readonly letters: DemoLetters;
   readonly highlightClues?: boolean;
+  readonly checkOn?: boolean;
   readonly drag?: DemoDrag;
   readonly dropTarget?: {
     readonly direction: DemoDirection;
@@ -75,14 +89,7 @@ export interface PlaybackPos {
 
 const REST: HandTarget = { kind: "rest" };
 const CROSS: HandTarget = { kind: "cell", cell: CROSSING_CELL };
-
-function cell(cellId: DemoCellId): HandTarget {
-  return { kind: "cell", cell: cellId };
-}
-
-function clue(direction: DemoDirection): HandTarget {
-  return { kind: "clue", direction };
-}
+const CHECK_SWITCH: HandTarget = { kind: "check-switch" };
 
 function tray(direction: DemoDirection, index: number): HandTarget {
   return { kind: "tray", direction, index };
@@ -92,279 +99,99 @@ function wordCell(direction: DemoDirection, index: number): HandTarget {
   return { kind: "word-cell", direction, index };
 }
 
-function backspace(direction: DemoDirection): HandTarget {
-  return { kind: "backspace", direction };
+function onClue(kind: "backspace" | "search" | "ai" | "clue", direction: DemoDirection): HandTarget {
+  return { kind, direction };
 }
 
-const NO_LETTERS: Partial<Record<DemoCellId, string>> = {};
-const M: Partial<Record<DemoCellId, string>> = { "0-1": "م" };
-const MA: Partial<Record<DemoCellId, string>> = { "0-1": "م", "1-1": "ا" };
+// A frame after the first step: crossing cell selected, both clues showing. The selection
+// never moves while letters are placed — just like the real clue panel.
+function frame(holdMs: number, hand: HandTarget, letters: DemoLetters, extra: Partial<DemoFrame> = {}): DemoFrame {
+  return { holdMs, hand, tap: false, showHighlights: true, showClues: true, selected: CROSSING_CELL, letters, ...extra };
+}
+
+// Hover over a target, then press it. The press's effect shows in the frame after.
+function press(hand: HandTarget, letters: DemoLetters, extra: Partial<DemoFrame> = {}): DemoFrame[] {
+  return [frame(450, hand, letters, extra), frame(300, hand, letters, { ...extra, tap: true })];
+}
+
+const EMPTY: DemoLetters = {};
+const M: DemoLetters = { "0-1": "م" };
+const MR: DemoLetters = { ...M, "0-2": "ر" };
+const ACROSS_DONE: DemoLetters = { ...MR, "0-3": "ز" };
+const DRAGGED: DemoLetters = { ...ACROSS_DONE, "2-1": "د" };
+const WRONG_SECOND: DemoLetters = { ...DRAGGED, "1-1": "س" };
+const FIXED_SECOND: DemoLetters = { ...DRAGGED, "1-1": "ا" };
+const WRONG_LAST: DemoLetters = { ...FIXED_SECOND, "3-1": "ب" };
+const SOLVED: DemoLetters = { ...FIXED_SECOND, "3-1": "ر" };
+
+const INTRO = { showHighlights: false, showClues: false, selected: null } as const;
+const CHECK = { checkOn: true } as const;
 
 export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   {
     id: "select",
     message: "روی یک خانهٔ سفید بزنید تا کلمه‌های افقی و عمودی آن مشخص شوند.",
     frames: [
-      {
-        holdMs: 650,
-        hand: REST,
-        tap: false,
-        showHighlights: false,
-        showClues: false,
-        selected: null,
-        letters: NO_LETTERS,
-      },
-      {
-        holdMs: 500,
-        hand: CROSS,
-        tap: false,
-        showHighlights: false,
-        showClues: false,
-        selected: null,
-        letters: NO_LETTERS,
-      },
-      {
-        holdMs: 400,
-        hand: CROSS,
-        tap: true,
-        showHighlights: false,
-        showClues: false,
-        selected: null,
-        letters: NO_LETTERS,
-      },
-      {
-        holdMs: 1800,
-        hand: CROSS,
-        tap: false,
-        showHighlights: true,
-        showClues: true,
-        selected: CROSSING_CELL,
-        letters: NO_LETTERS,
-      },
+      frame(650, REST, EMPTY, INTRO),
+      frame(500, CROSS, EMPTY, INTRO),
+      frame(400, CROSS, EMPTY, { ...INTRO, tap: true }),
+      frame(1800, CROSS, EMPTY),
     ],
   },
   {
     id: "clues",
     message: "پرسش‌های افقی و عمودی این خانه هم‌زمان نمایش داده می‌شوند.",
     frames: [
-      {
-        holdMs: 600,
-        hand: clue("across"),
-        tap: false,
-        showHighlights: true,
-        showClues: true,
-        selected: CROSSING_CELL,
-        letters: NO_LETTERS,
-      },
-      {
-        holdMs: 700,
-        hand: clue("down"),
-        tap: false,
-        showHighlights: true,
-        showClues: true,
-        selected: CROSSING_CELL,
-        letters: NO_LETTERS,
-        highlightClues: true,
-      },
-      {
-        holdMs: 1700,
-        hand: REST,
-        tap: false,
-        showHighlights: true,
-        showClues: true,
-        selected: CROSSING_CELL,
-        letters: NO_LETTERS,
-        highlightClues: true,
-      },
+      frame(600, onClue("clue", "across"), EMPTY),
+      frame(700, onClue("clue", "down"), EMPTY, { highlightClues: true }),
+      frame(1700, REST, EMPTY, { highlightClues: true }),
     ],
   },
   {
-    id: "place",
-    message: "روی هر حرف بزنید تا در خانهٔ خالی بعدی بنشیند، یا آن را بکشید و در خانهٔ دلخواه رها کنید.",
+    id: "tap",
+    message: "روی حرف‌ها بزنید؛ هر حرف در خانهٔ خالیِ مشخص‌شده می‌نشیند و در جدول هم نوشته می‌شود.",
     frames: [
-      {
-        holdMs: 450,
-        hand: REST,
-        tap: false,
-        showHighlights: true,
-        showClues: true,
-        selected: CROSSING_CELL,
-        letters: NO_LETTERS,
-      },
-      {
-        holdMs: 450,
-        hand: tray("across", 2),
-        tap: false,
-        showHighlights: true,
-        showClues: true,
-        selected: CROSSING_CELL,
-        letters: NO_LETTERS,
-      },
-      {
-        holdMs: 300,
-        hand: tray("across", 2),
-        tap: true,
-        showHighlights: true,
-        showClues: true,
-        selected: CROSSING_CELL,
-        letters: NO_LETTERS,
-        drag: { letter: "م", direction: "across" },
-      },
-      {
-        holdMs: 750,
-        hand: wordCell("across", 0),
-        tap: false,
-        showHighlights: true,
-        showClues: true,
-        selected: CROSSING_CELL,
-        letters: NO_LETTERS,
-        drag: { letter: "م", direction: "across" },
-        dropTarget: { direction: "across", index: 0 },
-      },
-      {
-        holdMs: 650,
-        hand: wordCell("across", 0),
-        tap: false,
-        showHighlights: true,
-        showClues: true,
-        selected: CROSSING_CELL,
-        letters: M,
-      },
-      {
-        holdMs: 450,
-        hand: tray("down", 4),
-        tap: false,
-        showHighlights: true,
-        showClues: true,
-        selected: CROSSING_CELL,
-        letters: M,
-      },
-      {
-        holdMs: 300,
-        hand: tray("down", 4),
-        tap: true,
-        showHighlights: true,
-        showClues: true,
-        selected: CROSSING_CELL,
-        letters: M,
-        drag: { letter: "ا", direction: "down" },
-      },
-      {
-        holdMs: 750,
-        hand: wordCell("down", 1),
-        tap: false,
-        showHighlights: true,
-        showClues: true,
-        selected: CROSSING_CELL,
-        letters: M,
-        drag: { letter: "ا", direction: "down" },
-        dropTarget: { direction: "down", index: 1 },
-      },
-      {
-        holdMs: 1700,
-        hand: wordCell("down", 1),
-        tap: false,
-        showHighlights: true,
-        showClues: true,
-        selected: "1-1",
-        letters: MA,
-      },
+      frame(450, REST, EMPTY),
+      ...press(tray("across", 2), EMPTY),
+      ...press(tray("across", 4), M),
+      ...press(tray("across", 0), MR),
+      frame(1600, tray("across", 0), ACROSS_DONE),
     ],
   },
   {
-    id: "clear",
-    message: "برای پاک کردن حرف، خانهٔ پُر را انتخاب کنید و دکمهٔ پاک کردن را بزنید.",
+    id: "drag",
+    message: "یا حرف را بکشید و در هر خانه‌ای که می‌خواهید رها کنید.",
     frames: [
-      {
-        holdMs: 500,
-        hand: cell("1-1"),
-        tap: false,
-        showHighlights: true,
-        showClues: true,
-        selected: "1-1",
-        letters: MA,
-      },
-      {
-        holdMs: 350,
-        hand: cell("1-1"),
-        tap: true,
-        showHighlights: true,
-        showClues: true,
-        selected: "1-1",
-        letters: MA,
-      },
-      {
-        holdMs: 500,
-        hand: backspace("down"),
-        tap: false,
-        showHighlights: true,
-        showClues: true,
-        selected: "1-1",
-        letters: MA,
-      },
-      {
-        holdMs: 350,
-        hand: backspace("down"),
-        tap: true,
-        showHighlights: true,
-        showClues: true,
-        selected: "1-1",
-        letters: MA,
-      },
-      {
-        holdMs: 650,
-        hand: cell(CROSSING_CELL),
-        tap: false,
-        showHighlights: true,
-        showClues: true,
-        selected: CROSSING_CELL,
-        letters: M,
-      },
-      {
-        holdMs: 350,
-        hand: cell(CROSSING_CELL),
-        tap: true,
-        showHighlights: true,
-        showClues: true,
-        selected: CROSSING_CELL,
-        letters: M,
-      },
-      {
-        holdMs: 500,
-        hand: backspace("across"),
-        tap: false,
-        showHighlights: true,
-        showClues: true,
-        selected: CROSSING_CELL,
-        letters: M,
-      },
-      {
-        holdMs: 350,
-        hand: backspace("across"),
-        tap: true,
-        showHighlights: true,
-        showClues: true,
-        selected: CROSSING_CELL,
-        letters: M,
-      },
-      {
-        holdMs: 600,
-        hand: backspace("across"),
-        tap: false,
-        showHighlights: true,
-        showClues: true,
-        selected: CROSSING_CELL,
-        letters: NO_LETTERS,
-      },
-      {
-        holdMs: 1700,
-        hand: REST,
-        tap: false,
-        showHighlights: false,
-        showClues: false,
-        selected: null,
-        letters: NO_LETTERS,
-      },
+      frame(450, tray("down", 5), ACROSS_DONE),
+      frame(300, tray("down", 5), ACROSS_DONE, { tap: true, drag: { letter: "د", direction: "down" } }),
+      frame(750, wordCell("down", 2), ACROSS_DONE, {
+        drag: { letter: "د", direction: "down" },
+        dropTarget: { direction: "down", index: 2 },
+      }),
+      frame(1600, wordCell("down", 2), DRAGGED),
+    ],
+  },
+  {
+    id: "help",
+    message: "گیر کردید؟ در گوگل جستجو کنید یا از هوشواره بپرسید. «بررسی خودکار» حرف‌های اشتباه را قرمز می‌کند.",
+    frames: [
+      ...press(tray("down", 3), DRAGGED),
+      frame(1000, onClue("search", "down"), WRONG_SECOND),
+      frame(1000, onClue("ai", "down"), WRONG_SECOND),
+      ...press(CHECK_SWITCH, WRONG_SECOND),
+      frame(1900, CHECK_SWITCH, WRONG_SECOND, CHECK),
+    ],
+  },
+  {
+    id: "fix",
+    message: "برای پاک کردن، روی خانهٔ پُر بزنید. دکمهٔ ⌫ آخرین حرفِ همان پاسخ را پاک می‌کند.",
+    frames: [
+      ...press(wordCell("down", 1), WRONG_SECOND, CHECK),
+      ...press(tray("down", 4), DRAGGED, CHECK),
+      ...press(tray("down", 1), FIXED_SECOND, CHECK),
+      ...press(onClue("backspace", "down"), WRONG_LAST, CHECK),
+      ...press(tray("down", 0), FIXED_SECOND, CHECK),
+      frame(1900, tray("down", 0), SOLVED, CHECK),
     ],
   },
 ];

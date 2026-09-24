@@ -92,7 +92,7 @@ describe("Persian crossword UI", () => {
     expect(within(dialog).getByText("عمودی")).toBeInTheDocument();
     expect(within(dialog).getByText("سرحد")).toBeInTheDocument();
     expect(within(dialog).getByText("والده")).toBeInTheDocument();
-    expect(within(dialog).getAllByRole("button", { name: /مرحله/ })).toHaveLength(4);
+    expect(within(dialog).getAllByRole("button", { name: /مرحله/ })).toHaveLength(6);
     expect(within(dialog).queryByText("راهنمای صفحه‌کلید")).not.toBeInTheDocument();
     expect(dialog.querySelectorAll(".tutorial-stage .cell-value svg").length).toBeGreaterThan(0);
 
