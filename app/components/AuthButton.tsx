@@ -11,7 +11,7 @@ import {
 } from "firebase/auth";
 import { Capacitor } from "@capacitor/core";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
-import { LogOut } from "lucide-react";
+import { LogOut, ShieldCheck } from "lucide-react";
 import { auth } from "../firebase";
 import { useAuth, type SyncStatus } from "../AuthContext";
 import { listPuzzles } from "../puzzleLibrary";
@@ -71,7 +71,7 @@ function syncStatusText({ kind, unsent }: SyncStatus): string {
 }
 
 function UserMenu() {
-  const { user, signOut, syncVersion, syncStatus, syncNow } = useAuth();
+  const { user, isAdmin, signOut, syncVersion, syncStatus, syncNow } = useAuth();
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [geminiKey, setGeminiKey] = useState(loadGeminiKey);
@@ -203,6 +203,13 @@ function UserMenu() {
                 </p>
               ) : null}
             </div>
+
+            {isAdmin ? (
+              <a className="auth-btn auth-btn-block auth-admin-link" href="#/admin" onClick={() => setOpen(false)}>
+                <ShieldCheck size={16} strokeWidth={2} aria-hidden="true" />
+                پنل مدیریت
+              </a>
+            ) : null}
 
             <button
               type="button"

@@ -4,8 +4,7 @@ import type { CrosswordJson } from "../src/index";
 import { storedPuzzles, type StoredCatalog } from "./puzzleCatalog";
 
 // Puzzles come from Firebase (app/puzzleSync.ts), kept on the device between visits. The app
-// ships none; under `npm run dev` they come from the local puzzles/ folder instead
-// (app/puzzleSync.ts → /dev/local-puzzles), which also enables debug editing.
+// ships none. Unpublished drafts live apart, in the admin panel (app/admin).
 
 export interface PuzzleSummary {
   readonly id: string;
@@ -19,8 +18,6 @@ export interface PuzzleSummary {
   readonly json: CrosswordJson;
   // Content hash; changes whenever the puzzle or its images change.
   readonly hash: string;
-  // Local source file ("../puzzles/1-50/14.json"), only under the dev server: enables debug editing.
-  readonly filePath: string | undefined;
   readonly solutionImageUrl: string | undefined;
   readonly sourceImageUrl: string | undefined;
   readonly error?: string | undefined;
@@ -31,7 +28,6 @@ export interface PuzzleSource {
   readonly slug: string;
   readonly hash: string;
   readonly json: CrosswordJson;
-  readonly filePath?: string | undefined;
   readonly solutionImageUrl?: string | undefined;
   readonly sourceImageUrl?: string | undefined;
 }
@@ -52,7 +48,6 @@ function deriveSummary(source: PuzzleSource): PuzzleSummary {
   const common = {
     json,
     hash: source.hash,
-    filePath: source.filePath,
     solutionImageUrl: source.solutionImageUrl,
     sourceImageUrl: source.sourceImageUrl,
   };
@@ -102,7 +97,7 @@ const _listeners = new Set<() => void>();
 const _cache = new Map<string, PuzzleSummary>();
 
 function summaryFor(source: PuzzleSource): PuzzleSummary {
-  const key = `${source.slug}\n${source.hash}\n${source.filePath ?? ""}`;
+  const key = `${source.slug}\n${source.hash}`;
   const cached = _cache.get(key);
   if (cached) return cached;
   const summary = deriveSummary(source);

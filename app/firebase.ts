@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics, isSupported, logEvent } from "firebase/analytics";
-import { getAuth } from "firebase/auth";
+import { connectAuthEmulator, getAuth } from "firebase/auth";
 import { connectFirestoreEmulator, initializeFirestore } from "firebase/firestore";
 import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
 
@@ -17,19 +17,22 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+export const firebaseApp = app;
+// `VITE_FUNCTIONS_EMULATOR=1 npm run dev` talks to `firebase emulators:start` instead of production.
+export const usingEmulators = Boolean(import.meta.env.VITE_FUNCTIONS_EMULATOR);
 export const auth = getAuth(app);
 // Optional fields (e.g. solvedAt) may be undefined; drop them instead of throwing.
 export const db = initializeFirestore(app, { ignoreUndefinedProperties: true });
 export const functions = getFunctions(app, "us-central1");
-// `VITE_FUNCTIONS_EMULATOR=1 npm run dev` talks to `firebase emulators:start` instead of production.
-if (import.meta.env.VITE_FUNCTIONS_EMULATOR) {
+if (usingEmulators) {
   connectFunctionsEmulator(functions, "127.0.0.1", 5001);
   connectFirestoreEmulator(db, "127.0.0.1", 8080);
+  connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
 }
 
 // Public download URL for a file in the storage bucket (read access comes from storage.rules).
 export function storageFileUrl(path: string): string {
-  const host = import.meta.env.VITE_FUNCTIONS_EMULATOR ? "http://127.0.0.1:9199" : "https://firebasestorage.googleapis.com";
+  const host = usingEmulators ? "http://127.0.0.1:9199" : "https://firebasestorage.googleapis.com";
   return `${host}/v0/b/${firebaseConfig.storageBucket}/o/${encodeURIComponent(path)}?alt=media`;
 }
 

@@ -1,30 +1,27 @@
-// Publishes a local puzzle folder to Firebase — the app's only source of puzzles.
+// Publishes a local puzzle folder to Firebase in bulk (the admin panel handles single puzzles).
 //
-//   npm run puzzles:upload -- [--dir puzzles] [--dry-run] [--prune]
+//   npm run puzzles:upload -- [--dir puzzles] [--dry-run] [--overwrite] [--prune]
 //
-// Every puzzle must pass the app's validation first. Only packs holding new or changed puzzles
-// are rewritten, and the catalog goes last. A device that reads a pack between those writes (or
-// after a failed run) still takes the pack as it is and re-checks it on its next sync
-// (app/puzzleSync.ts), so no puzzle goes missing. Puzzles that are published but missing from
-// the folder stay published unless --prune is given. Layout and credentials: firebaseAdmin.ts.
+// Every puzzle must pass the app's validation first. New puzzles are published; puzzles that
+// are already published but differ from the folder are skipped unless --overwrite, since the
+// admin panel may have fixed them after this folder was made (refresh it with
+// `npm run puzzles:download`). --prune unpublishes puzzles missing from the folder.
+//
+// Only packs that change are rewritten, and the catalog goes last. A device that reads a pack
+// between those writes (or after a failed run) still takes the pack as it is and re-checks it on
+// its next sync (app/puzzleSync.ts). Layout: shared/cloudPuzzles.ts.
 import { readFileSync } from "node:fs";
-import { extname } from "node:path";
-import { initAdmin, listIds, parseArgs, type CatalogDoc, type PackEntry } from "./firebaseAdmin.ts";
-import { findInvalidPuzzles, readPuzzleFiles, type PuzzleFile, type PuzzleImageFile } from "./puzzleFiles.ts";
-import { planPacks } from "./puzzlePacks.ts";
-
-// Firestore rejects documents over 1 MiB; leave room for field names and overhead.
-const MAX_PACK_BYTES = 900_000;
-
-const CONTENT_TYPES: Record<string, string> = {
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".webp": "image/webp",
-};
-
-const imageStoragePath = (id: string, image: PuzzleImageFile): string =>
-  `puzzles/${id}/${image.hash}${extname(image.name).toLowerCase()}`;
+import {
+  imageContentType,
+  imageStoragePath,
+  MAX_PACK_BYTES,
+  planPacks,
+  type CatalogDoc,
+  type PackDoc,
+  type PackEntry,
+} from "../shared/cloudPuzzles.ts";
+import { initAdmin, listIds, parseArgs } from "./firebaseAdmin.ts";
+import { findInvalidPuzzles, readPuzzleFiles, type PuzzleFile } from "./puzzleFiles.ts";
 
 function findDuplicateIds(puzzles: readonly PuzzleFile[]): string[] {
   const seen = new Map<string, string>();
@@ -40,9 +37,10 @@ function findDuplicateIds(puzzles: readonly PuzzleFile[]): string[] {
 async function main(): Promise<void> {
   const { flags, dir } = parseArgs(process.argv.slice(2));
   const dryRun = flags.has("--dry-run");
+  const overwrite = flags.has("--overwrite");
   const prune = flags.has("--prune");
 
-  const puzzles = readPuzzleFiles(dir);
+  const puzzles = await readPuzzleFiles(dir);
   if (!puzzles.length) throw new Error(`No puzzles found in ${dir}.`);
   const duplicates = findDuplicateIds(puzzles);
   if (duplicates.length) throw new Error(`Duplicate puzzle ids:\n  ${duplicates.join("\n  ")}`);
@@ -60,13 +58,21 @@ async function main(): Promise<void> {
   for (const pack of Object.values(currentPacks)) {
     for (const [id, hash] of Object.entries(pack.puzzles)) published.set(id, hash);
   }
-  const changed = puzzles.filter((p) => published.get(p.id) !== p.hash);
+  const added = puzzles.filter((p) => !published.has(p.id));
+  const differing = puzzles.filter((p) => published.has(p.id) && published.get(p.id) !== p.hash);
+  const changed = overwrite ? [...added, ...differing] : added;
   const localIds = new Set(puzzles.map((p) => p.id));
   const missing = [...published.keys()].filter((id) => !localIds.has(id));
-  const plan = planPacks(currentPacks, puzzles, prune);
+  const plan = await planPacks(currentPacks, changed, prune ? missing : []);
 
   console.log(`${puzzles.length} puzzles in ${dir}, ${published.size} published.`);
-  console.log(`${changed.length} new or changed${changed.length ? `: ${listIds(changed.map((p) => p.id))}` : ""}`);
+  console.log(`${added.length} new${added.length ? `: ${listIds(added.map((p) => p.id))}` : ""}`);
+  if (differing.length) {
+    console.log(
+      `${differing.length} differ from the published version: ${listIds(differing.map((p) => p.id))}` +
+        (overwrite ? " — overwriting" : " — skipped (use --overwrite to replace the published version)"),
+    );
+  }
   if (missing.length) {
     console.log(`${missing.length} published but not in the folder: ${listIds(missing)}` + (prune ? " — unpublishing" : " — kept (use --prune to unpublish)"));
   }
@@ -88,20 +94,18 @@ async function main(): Promise<void> {
       if (exists) continue;
       await file.save(readFileSync(image.absPath), {
         resumable: false,
-        contentType: CONTENT_TYPES[extname(image.name).toLowerCase()] ?? "application/octet-stream",
+        contentType: imageContentType(image.name),
         metadata: { cacheControl: "public, max-age=31536000, immutable" },
       });
     }
   }
 
-  const byId = new Map(puzzles.map((p) => [p.id, p]));
+  const byId = new Map(changed.map((p) => [p.id, p]));
   for (const packId of plan.dirty) {
     const ref = db.doc(`puzzlePacks/${packId}`);
     const ids = Object.keys(plan.packs[packId]!.puzzles);
-    // Published puzzles missing from the folder (no --prune) keep their stored entry.
-    const old = ids.some((id) => !byId.has(id))
-      ? (((await ref.get()).data()?.puzzles ?? {}) as Record<string, PackEntry>)
-      : {};
+    // Puzzles this run doesn't change keep their stored entry.
+    const old = ids.some((id) => !byId.has(id)) ? (((await ref.get()).data() as PackDoc | undefined)?.puzzles ?? {}) : {};
     const entries: Record<string, PackEntry> = {};
     for (const id of ids) {
       const p = byId.get(id);
@@ -115,9 +119,9 @@ async function main(): Promise<void> {
       for (const image of p.images) images[image.kind] = imageStoragePath(p.id, image);
       entries[id] = { hash: p.hash, file: p.relPath, json: p.jsonText, images };
     }
-    const doc = { schema: 2, hash: plan.packs[packId]!.hash, puzzles: entries };
+    const doc: PackDoc = { schema: 2, hash: plan.packs[packId]!.hash, puzzles: entries };
     const bytes = Buffer.byteLength(JSON.stringify(doc));
-    if (bytes > MAX_PACK_BYTES) throw new Error(`Pack ${packId} would be ${bytes} bytes; lower PACK_SIZE in scripts/puzzlePacks.ts.`);
+    if (bytes > MAX_PACK_BYTES) throw new Error(`Pack ${packId} would be ${bytes} bytes; lower PACK_SIZE in shared/cloudPuzzles.ts.`);
     await ref.set(doc);
   }
 

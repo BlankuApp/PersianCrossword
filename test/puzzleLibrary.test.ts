@@ -20,13 +20,12 @@ describe("puzzle library", () => {
     const puzzle = getPuzzleById("7");
     expect(puzzle?.title).toBe(json.meta?.title);
     expect(puzzle?.sourceImageUrl).toBe("https://img/7.webp");
-    expect(puzzle?.filePath).toBeUndefined();
     expect(puzzle?.error).toBeUndefined();
   });
 
-  it("falls back to the slug without meta.id and keeps local file paths", () => {
-    setPuzzleSources([{ slug: "no-id", hash: "h", json: { ...json, meta: metaWithoutId }, filePath: "../puzzles/a/no-id.json" }]);
-    expect(getPuzzleById("no-id")?.filePath).toBe("../puzzles/a/no-id.json");
+  it("falls back to the slug without meta.id", () => {
+    setPuzzleSources([{ slug: "no-id", hash: "h", json: { ...json, meta: metaWithoutId } }]);
+    expect(getPuzzleById("no-id")?.title).toBe(json.meta?.title);
     expect(getPuzzleById("7")).toBeUndefined();
   });
 

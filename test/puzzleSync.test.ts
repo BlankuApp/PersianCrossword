@@ -9,7 +9,11 @@ vi.mock("firebase/firestore", () => ({
   documentId: () => "__id__",
   where: (_field: string, _op: string, ids: string[]) => ids,
   query: (name: string, ids: string[]) => ({ name, ids }),
-  getDoc: async (path: string) => ({ exists: () => cloud.docs.has(path), data: () => cloud.docs.get(path) }),
+  // Reads at call time, like a real network round trip.
+  getDoc: async (path: string) => {
+    const data = cloud.docs.get(path);
+    return { exists: () => data !== undefined, data: () => data };
+  },
   getDocs: async ({ name, ids }: { name: string; ids: string[] }) => {
     cloud.queried.push(ids);
     const docs = ids
@@ -27,7 +31,7 @@ vi.mock("../app/firebase", () => ({
 import sample10 from "../samples/sample-10x10-garden.json";
 import { getPuzzleById, listPuzzles } from "../app/puzzleLibrary";
 import { readStoredCatalog } from "../app/puzzleStore";
-import { syncPuzzleCatalog } from "../app/puzzleSync";
+import { refreshPuzzleCatalog, retryPuzzleSync, syncPuzzleCatalog } from "../app/puzzleSync";
 
 type Entry = { hash: string; file: string; json: string; images: Record<string, string> };
 
@@ -120,5 +124,12 @@ describe("syncPuzzleCatalog", () => {
     publish({ p002: [puzzle("3", "اصلاح‌شده"), puzzle("4")] });
     await syncPuzzleCatalog();
     expect(ids()).toEqual(["3", "4"]);
+  });
+
+  it("refreshes after an admin's change even while an older check is running", async () => {
+    retryPuzzleSync(); // reads the catalog now, before the change below
+    publish({ p002: [puzzle("3", "اصلاح‌شده"), puzzle("4")], p003: [puzzle("9", "تازه منتشرشده")] });
+    await refreshPuzzleCatalog();
+    expect(getPuzzleById("9")?.title).toBe("تازه منتشرشده");
   });
 });

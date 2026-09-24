@@ -14,6 +14,8 @@ import {
   ChevronDown,
   EllipsisVertical,
   Save,
+  Upload,
+  Undo2,
 } from "lucide-react";
 import {
   useEffect,
@@ -63,18 +65,44 @@ import { CrosswordBoard } from "../components/CrosswordBoard";
 import { ActiveClue } from "../components/CluePanel";
 import { HelpTutorial } from "../components/HelpTutorial";
 
+// Admin editing (app/admin): where the editing tools save, plus the admin's toolbar actions.
+export interface PuzzleEditor {
+  // A draft saves privately; a published puzzle's fix goes straight to players.
+  readonly kind: "draft" | "published";
+  readonly save: (json: CrosswordJson) => Promise<void>;
+  readonly publish?: ((json: CrosswordJson) => Promise<void>) | undefined;
+  readonly unpublish?: (() => Promise<void>) | undefined;
+}
+
+type ConfirmAction = "reset" | "save" | "publish" | "unpublish";
+
+const CONFIRM_TEXT: Record<ConfirmAction, { readonly title: string; readonly body: string }> = {
+  reset: { title: "پاک کردن پاسخ‌ها", body: "همه پاسخ‌های واردشده پاک می‌شوند و قابل بازگشت نیست. ادامه می‌دهید؟" },
+  save: { title: "ذخیره جدول", body: "حرف‌های واردشده به‌عنوان پاسخ جدول ذخیره می‌شوند. ادامه می‌دهید؟" },
+  publish: { title: "انتشار جدول", body: "جدول برای همه بازیکنان منتشر می‌شود. ادامه می‌دهید؟" },
+  unpublish: { title: "لغو انتشار", body: "جدول از فهرست بازیکنان برداشته و به پیش‌نویس‌ها منتقل می‌شود. ادامه می‌دهید؟" },
+};
+
 interface SolverPageProps {
   readonly id: string;
   readonly json: CrosswordJson;
   readonly solutionImageUrl?: string | undefined;
   readonly sourceImageUrl?: string | undefined;
-  readonly filePath?: string | undefined;
+  // Admins only: turns on the editing tools.
+  readonly editor?: PuzzleEditor | undefined;
+  readonly onBack?: (() => void) | undefined;
 }
 
-export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePath }: SolverPageProps) {
+export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor, onBack = goHome }: SolverPageProps) {
   const { syncVersion, pushChanges } = useAuth();
   const normalizedJson = useMemo(() => normalizeGridDirection(json), [json]);
-  const isDebugMode = import.meta.env.DEV && json.version === 3 && !!filePath;
+  const isDebugMode = !!editor && json.version === 3;
+  // Latest saved JSON: a second edit must build on the first even before the new version of
+  // the puzzle arrives back through its props.
+  const editedJsonRef = useRef(json);
+  useEffect(() => {
+    editedJsonRef.current = json;
+  }, [json]);
   const isTouch = useMemo(() => isTouchDevice(), []);
   useNoBackGesture();
 
@@ -133,7 +161,8 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
   const [showSolution, setShowSolution] = useState(false);
   const [checkMode, setCheckMode] = useState(loadCheckMode);
   const [sourceCollapsed, setSourceCollapsed] = useState(true);
-  const [confirmAction, setConfirmAction] = useState<"reset" | "save" | null>(null);
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
   const [isToolbarMenuOpen, setIsToolbarMenuOpen] = useState(false);
 
   const boardRef = useRef<HTMLDivElement>(null);
@@ -421,27 +450,52 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     setSelection(firstSlot ? selectSlot(firstSlot) : undefined);
   }
 
-  async function handleDebugSave(): Promise<void> {
-    if (!filePath || !puzzle || !crosswordState) return;
+  // The letters entered on the board become the puzzle's answers (disk format: LTR rows, "" for block).
+  function withSolvedGrid(source: CrosswordJson): CrosswordJson | null {
+    if (!puzzle || !crosswordState) return null;
+    const solvedGrid = Array.from({ length: puzzle.size.rows }, (_, row) =>
+      Array.from({ length: puzzle.size.cols }, (_, col) =>
+        puzzle.isBlock({ row, col }) ? "" : crosswordState.getCell({ row, col }) || " ",
+      ).reverse(),
+    );
+    return { ...source, grid: solvedGrid };
+  }
+
+  async function saveJsonEdit(next: CrosswordJson): Promise<void> {
+    if (!editor) return;
+    await editor.save(next);
+    editedJsonRef.current = next;
+  }
+
+  function openConfirm(action: ConfirmAction): void {
+    setConfirmError(null);
+    setConfirmAction(action);
+  }
+
+  async function runConfirmAction(action: ConfirmAction): Promise<void> {
+    if (action === "reset") {
+      resetProgress();
+      setConfirmAction(null);
+      return;
+    }
+    if (!editor) return;
     setIsSaving(true);
+    setConfirmError(null);
     try {
-      // Bake the currently solved letters into the grid (disk format: LTR rows, "" for block).
-      const solvedGrid = Array.from({ length: puzzle.size.rows }, (_, row) =>
-        Array.from({ length: puzzle.size.cols }, (_, col) =>
-          puzzle.isBlock({ row, col }) ? "" : crosswordState.getCell({ row, col }) || " ",
-        ).reverse(),
-      );
-      const res = await fetch("/dev/save-puzzle", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filePath, json: { ...json, grid: solvedGrid } }),
-      });
-      if (!res.ok) console.error("[debug] save failed", res.status, await res.text());
+      if (action === "save") {
+        const next = withSolvedGrid(editedJsonRef.current);
+        if (next) await saveJsonEdit(next);
+      } else if (action === "publish") {
+        await editor.publish?.(editedJsonRef.current);
+      } else {
+        await editor.unpublish?.();
+      }
+      setConfirmAction(null);
     } catch (e) {
-      console.error("[debug] save failed", e);
+      console.error(`[admin] ${action} failed`, e);
+      setConfirmError(e instanceof Error ? e.message : String(e));
     } finally {
       setIsSaving(false);
-      setConfirmAction(null);
     }
   }
 
@@ -455,15 +509,11 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
   }
 
   async function handleSaveClue(slot: Slot, newClue: string): Promise<void> {
-    if (!filePath) return;
-    const res = await fetch("/dev/save-puzzle", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filePath, json: withUpdatedClue(json, slot, newClue) }),
-    });
-    if (!res.ok) {
-      console.error("[debug] clue save failed", res.status, await res.text());
-      throw new Error(`ذخیره با خطا مواجه شد (${res.status})`);
+    try {
+      await saveJsonEdit(withUpdatedClue(editedJsonRef.current, slot, newClue));
+    } catch (e) {
+      console.error("[admin] clue save failed", e);
+      throw new Error(`ذخیره با خطا مواجه شد: ${e instanceof Error ? e.message : String(e)}`);
     }
     setClueOverrides((prev) => ({ ...prev, [slot.id]: newClue }));
   }
@@ -512,7 +562,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
         <button
           type="button"
           className="header-back"
-          onClick={goHome}
+          onClick={onBack}
           title="بازگشت به فهرست جدول‌ها"
           aria-label="بازگشت به فهرست جدول‌ها"
         >
@@ -597,7 +647,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
             <button
               type="button"
               className="toolbar-menu-danger"
-              onClick={() => setConfirmAction("reset")}
+              onClick={() => openConfirm("reset")}
               title="پاک کردن پاسخ‌ها"
               aria-label="پاک کردن پاسخ‌ها"
             >
@@ -607,13 +657,25 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
             {isDebugMode ? (
               <button
                 type="button"
-                onClick={() => setConfirmAction("save")}
+                onClick={() => openConfirm("save")}
                 disabled={isSaving}
-                title="ذخیره جدول (دیباگ)"
+                title="ذخیره حرف‌ها به‌عنوان پاسخ جدول (مدیر)"
                 aria-label="ذخیره جدول"
               >
                 <Save size={18} aria-hidden="true" />
-                <span>{isSaving ? "در حال ذخیره..." : "ذخیره"}</span>
+                <span>ذخیره پاسخ‌ها</span>
+              </button>
+            ) : null}
+            {editor?.publish ? (
+              <button type="button" onClick={() => openConfirm("publish")} disabled={isSaving}>
+                <Upload size={18} aria-hidden="true" />
+                <span>انتشار</span>
+              </button>
+            ) : null}
+            {editor?.unpublish ? (
+              <button type="button" className="toolbar-menu-danger" onClick={() => openConfirm("unpublish")} disabled={isSaving}>
+                <Undo2 size={18} aria-hidden="true" />
+                <span>لغو انتشار</span>
               </button>
             ) : null}
           </div>
@@ -629,12 +691,13 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
           onClick={() => setConfirmAction(null)}
         >
           <div className="solution-modal confirm-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>{confirmAction === "reset" ? "پاک کردن پاسخ‌ها" : "ذخیره جدول"}</h2>
+            <h2>{CONFIRM_TEXT[confirmAction].title}</h2>
             <p>
-              {confirmAction === "reset"
-                ? "همه پاسخ‌های واردشده پاک می‌شوند و قابل بازگشت نیست. ادامه می‌دهید؟"
-                : "جدول با وضعیت فعلی روی دیسک ذخیره می‌شود. ادامه می‌دهید؟"}
+              {confirmAction === "save" && editor?.kind === "published"
+                ? "حرف‌های واردشده به‌عنوان پاسخ جدول ذخیره و برای همه بازیکنان منتشر می‌شوند. ادامه می‌دهید؟"
+                : CONFIRM_TEXT[confirmAction].body}
             </p>
+            {confirmError ? <p className="clue-edit-error confirm-modal-error">{confirmError}</p> : null}
             <div className="solution-modal-actions">
               <button type="button" onClick={() => setConfirmAction(null)}>
                 انصراف
@@ -642,17 +705,10 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
               <button
                 type="button"
                 className="confirm-modal-primary"
-                disabled={confirmAction === "save" && isSaving}
-                onClick={() => {
-                  if (confirmAction === "reset") {
-                    resetProgress();
-                    setConfirmAction(null);
-                  } else {
-                    void handleDebugSave();
-                  }
-                }}
+                disabled={isSaving}
+                onClick={() => void runConfirmAction(confirmAction)}
               >
-                {confirmAction === "save" && isSaving ? "در حال ذخیره..." : "تایید"}
+                {isSaving ? "در حال انجام..." : "تایید"}
               </button>
             </div>
           </div>
