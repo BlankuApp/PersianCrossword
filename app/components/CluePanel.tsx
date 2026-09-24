@@ -217,6 +217,8 @@ function ClueBlock({
     return () => window.removeEventListener("keydown", onKey);
   }, [isEditOpen]);
 
+  const isSolved = aiLetters.every(Boolean);
+
   return (
     <div
       className={`active-clue-block${isActive ? ` active-clue-block-active active-clue-block-active-${slot.direction}` : ""}`}
@@ -227,20 +229,25 @@ function ClueBlock({
             {slot.groupNum.toLocaleString("fa-IR")} {slot.direction === "across" ? "افقی" : "عمودی"}
           </span>{" "}
           <span>{slot.clue}</span>{" "}
-          <button
-            type="button"
-            onClick={handleGoogleSearch}
-            className="clue-search-link"
-            title="جستجو در گوگل"
-            aria-label="جستجو در گوگل برای این پرسش"
-          >
-            🔍 جستجو در گوگل
-          </button>{" "}
+          {isSolved ? null : (
+            <>
+              <button
+                type="button"
+                onClick={handleGoogleSearch}
+                className="clue-search-link"
+                title="جستجو در گوگل"
+                aria-label="جستجو در گوگل برای این پرسش"
+              >
+                🔍 جستجو در گوگل
+              </button>{" "}
+            </>
+          )}
           <ClueAiButton
             clue={slot.clue}
-            isSolved={aiLetters.every(Boolean)}
+            isSolved={isSolved}
             cellValues={aiLetters}
             answer={aiLetters.join("")}
+            trayLetters={trayTiles.map((t) => t.letter)}
           />
         </p>
         <div className="active-clue-head-actions">

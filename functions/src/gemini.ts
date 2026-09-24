@@ -16,7 +16,7 @@ export async function streamGemini(
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], tools: [{ google_search: {} }] }),
     },
   );
   if (!res.ok || !res.body) throw new GeminiHttpError(res.status);
