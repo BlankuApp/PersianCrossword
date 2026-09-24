@@ -43,6 +43,7 @@
 body {
   margin: 0;
   min-width: 320px;
+  min-height: 100vh;
   min-height: 100dvh;
   background: #f6f4ef;
 }
@@ -54,6 +55,7 @@ select {
 
 .app-shell {
   width: min(1180px, 100%);
+  min-height: 100vh;
   min-height: 100dvh;
   margin: 0 auto;
   padding: var(--shell-padding);
@@ -232,6 +234,7 @@ select {
 /* Doubled class beats the later .solution-modal max-width/padding rules. */
 .solution-modal.tutorial-modal {
   max-width: min(94vw, 470px);
+  max-height: 92vh;
   max-height: 92dvh;
   width: 100%;
   gap: 9px;
@@ -617,6 +620,7 @@ select {
   flex-direction: column;
   gap: 12px;
   max-width: min(95vw, 900px);
+  max-height: 95vh;
   max-height: 95dvh;
   padding: 16px 20px;
   border-radius: 12px;
@@ -714,6 +718,7 @@ select {
 .solution-image img {
   display: block;
   max-width: 100%;
+  max-height: calc(95vh - 100px);
   max-height: calc(95dvh - 100px);
   height: auto;
   object-fit: contain;
@@ -899,6 +904,11 @@ select {
   overflow: hidden;
   appearance: none;
   -webkit-appearance: none;
+  /* Android's tap highlight (and the orange focus ring on old WebViews) also covers the
+     hidden clue tooltip, so it flashes on tap. Keyboard focus has its own style below
+     (.cell-open:focus-visible); the selected-cell color is the tap feedback. */
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
   /* --ripple = rings from the selected cell, so check-mode colors spread outward. */
   transition: color 200ms ease calc(var(--ripple, 0) * 20ms);
 }
@@ -1032,6 +1042,26 @@ select {
   width: 100%;
   height: 100%;
   display: block;
+}
+
+/* WebView < 88 (unupdated Android 11 and older) has no aspect-ratio: square each cell
+   with a padding spacer instead, which squares the board too. */
+@supports not (aspect-ratio: 1) {
+  .cell::before {
+    content: "";
+    grid-area: 1 / 1;
+    padding-bottom: 100%;
+  }
+
+  .cell-value {
+    grid-area: 1 / 1;
+  }
+
+  .cell-block-icon {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
 }
 
 .active-clue {
@@ -1692,6 +1722,7 @@ select {
   border-radius: 12px;
   padding: 40px 24px 24px;
   width: min(420px, 94vw);
+  max-height: 90vh;
   max-height: 90dvh;
   overflow-y: auto;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
@@ -1701,6 +1732,7 @@ select {
   display: flex;
   flex-direction: column;
   width: min(720px, 94vw);
+  max-height: 85vh;
   max-height: 85dvh;
   overflow: hidden; /* the entry list scrolls, not the whole dialog */
 }
