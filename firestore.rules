@@ -8,6 +8,14 @@ service cloud.firestore {
     match /users/{uid}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
+    // Published puzzles (catalog/index + puzzlePacks/{pack}) are public so the app can download
+    // them even before sign-in. Only scripts/uploadPuzzles.ts (admin SDK) writes them.
+    match /catalog/{doc} {
+      allow read: if true;
+    }
+    match /puzzlePacks/{pack} {
+      allow read: if true;
+    }
     // Everything else — including aiUsage, which only the askAi function (admin SDK) touches —
     // is denied by default.
   }

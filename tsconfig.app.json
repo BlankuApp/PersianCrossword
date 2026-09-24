@@ -18,5 +18,5 @@
     "skipLibCheck": true,
     "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"]
   },
-  "include": ["app", "test/**/*.tsx", "samples/**/*.json", "vite.config.ts"]
+  "include": ["app", "scripts", "test/**/*.tsx", "samples/**/*.json", "vite.config.ts"]
 }

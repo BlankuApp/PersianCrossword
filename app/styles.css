@@ -2032,17 +2032,22 @@ select {
   font-size: 1.1rem;
 }
 
-.empty-hint {
-  margin-top: 8px;
-  font-size: 0.9rem;
-  color: #86948c;
+.empty-retry {
+  margin-top: 12px;
+  min-height: 40px;
+  padding: 0 18px;
+  border: 1px solid #4c9f70;
+  border-radius: 10px;
+  background: #edf6f0;
+  color: #1e5c38;
+  font: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
 }
 
-.empty-hint code {
-  background: #eef1ee;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.85rem;
+.empty-retry:focus-visible {
+  outline: 2px solid #4c9f70;
+  outline-offset: 2px;
 }
 
 /* Puzzle table */

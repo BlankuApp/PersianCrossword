@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 
 vi.mock("../app/AuthContext", () => ({ useAuth: () => ({ user: null, loading: true, syncVersion: 0 }) }));
 vi.mock("../app/components/AuthButton", () => ({ AuthButton: () => null }));
-vi.mock("../app/puzzleLibrary", () => ({ listPuzzles: () => [] }));
+vi.mock("../app/puzzleLibrary", () => ({ listPuzzles: () => [], usePuzzleLibrary: () => ({ puzzles: [], ready: true, sync: "ok" }) }));
 
 import { HomePage } from "../app/pages/HomePage";
 import { WHATS_NEW } from "../app/whatsNew";
