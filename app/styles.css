@@ -904,6 +904,9 @@ select {
   overflow: hidden;
   appearance: none;
   -webkit-appearance: none;
+  /* Old WebViews ring a tapped cell in orange, and the ring also wraps its hidden clue
+     tooltip. Keyboard focus has its own style below (.cell-open:focus-visible). */
+  outline: none;
   /* --ripple = rings from the selected cell, so check-mode colors spread outward. */
   transition: color 200ms ease calc(var(--ripple, 0) * 20ms);
 }
