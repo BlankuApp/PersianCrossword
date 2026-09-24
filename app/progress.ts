@@ -67,6 +67,26 @@ export function saveGeminiKey(value: string): void {
   window.localStorage.setItem(GEMINI_KEY_KEY, value);
 }
 
+// Dash, not the STORAGE_PREFIX colon — same reason as CHECK_MODE_KEY above.
+// Most recently opened puzzle ids first; orders the home page's "continue solving" strip.
+const RECENT_KEY = "persian-crossword-recent";
+
+export function loadRecentIds(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const ids: unknown = JSON.parse(window.localStorage.getItem(RECENT_KEY) ?? "[]");
+    return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+export function markRecent(id: string): void {
+  if (typeof window === "undefined") return;
+  const ids = [id, ...loadRecentIds().filter((other) => other !== id)].slice(0, 20);
+  window.localStorage.setItem(RECENT_KEY, JSON.stringify(ids));
+}
+
 export interface ProgressInfo {
   readonly filled: number;
   readonly total: number;

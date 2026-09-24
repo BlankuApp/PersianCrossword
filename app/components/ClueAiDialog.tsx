@@ -194,7 +194,7 @@ export function ClueAiButton({ clue, isSolved, cellValues, answer }: ClueAiButto
             ) : (
               <div className="clue-ai-text" dir="rtl">
                 {renderMarkdown(text)}
-                {status === "loading" && !text ? <p>در حال دریافت پاسخ…</p> : null}
+                {status === "loading" && !text ? <p className="shimmer-text">در حال دریافت پاسخ…</p> : null}
               </div>
             )}
           </div>

@@ -1951,28 +1951,11 @@ select {
   text-align: right;
 }
 
-.th-sortable {
-  cursor: pointer;
-  user-select: none;
+.puzzle-table th {
   white-space: nowrap;
   color: #3e4f43;
   font-size: 0.88rem;
   font-weight: 700;
-  letter-spacing: 0.01em;
-}
-
-.th-sortable:hover {
-  background: #e6ece8;
-}
-
-.th-active {
-  color: #1e5c38;
-}
-
-.sort-indicator {
-  font-size: 0.7em;
-  margin-right: 2px;
-  opacity: 0.7;
 }
 
 .puzzle-row {
@@ -2119,12 +2102,19 @@ select {
   gap: 6px;
 }
 
-.progress-bar-fill {
-  flex: 1;
-  max-width: 80px;
+.progress-bar-track {
+  display: block;
+  flex: 0 0 80px;
   height: 6px;
-  background: #4c9f70;
+  background: #e3e9e5;
   border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  display: block;
+  height: 100%;
+  background: #4c9f70;
 }
 
 .progress-pct {
@@ -2137,32 +2127,251 @@ select {
 .progress-empty {
   color: #aab4ad;
   font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+/* Home list: continue strip, search + filters, summary */
+
+.continue-strip {
+  margin-bottom: 20px;
+}
+
+.continue-strip h2,
+.list-summary {
+  margin: 0 0 10px;
+  color: #3e4f43;
+  font-size: 0.95rem;
+}
+
+.continue-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.continue-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #d3d8d2;
+  border-radius: 10px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  text-align: right;
+  cursor: pointer;
+}
+
+.continue-card:hover {
+  border-color: #4c9f70;
+  background: #f4f8f5;
+}
+
+.continue-card .progress-bar-track {
+  flex: 1;
+}
+
+.continue-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.list-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+  scroll-margin-top: 12px;
+}
+
+/* Search sits at the end of the filter row as a 40px icon button and widens
+   while focused or holding text. */
+.list-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 40px;
+  padding: 0 10px;
+  overflow: hidden;
+  border: 1px solid #d3d8d2;
+  border-radius: 10px;
+  background: #fff;
+  color: #6a766e;
+  cursor: pointer;
+  transition: width 0.25s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.list-search:hover {
+  background: #f4f8f5;
+}
+
+.list-search svg {
+  flex-shrink: 0;
+}
+
+.list-search:focus-within,
+.list-search:has(input:not(:placeholder-shown)) {
+  width: min(280px, 100%);
+  background: #fff;
+  cursor: text;
+}
+
+.list-search:focus-within {
+  border-color: #4c9f70;
+  box-shadow: 0 0 0 3px rgba(76, 159, 112, 0.15);
+}
+
+.list-search input {
+  flex: 1;
+  min-width: 0;
+  min-height: 38px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #17201b;
+  font: inherit;
+}
+
+.list-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.chip-group {
+  position: relative;
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid #d3d8d2;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #4e5b53;
+  font: inherit;
+  font-size: 0.88rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.chip:not([aria-pressed="true"]):hover {
+  background: #f4f8f5;
+}
+
+.chip[aria-pressed="true"] {
+  color: #1e5c38;
+  font-weight: 700;
+}
+
+/* Sliding highlight behind the active chip (positioned by ChipGroup). */
+.chip-pill {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 0;
+  border-radius: 7px;
+  background: #edf6f0;
+  box-shadow: inset 0 0 0 1px #cfe3d6;
+  transition:
+    transform 0.28s cubic-bezier(0.3, 1.25, 0.5, 1),
+    width 0.28s cubic-bezier(0.3, 1.25, 0.5, 1);
+}
+
+.chip {
+  position: relative;
+}
+
+.list-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding-inline-start: 10px;
+  border: 1px solid #d3d8d2;
+  border-radius: 10px;
+  background: #fff;
+  color: #4e5b53;
+}
+
+.list-select select {
+  min-height: 38px;
+  padding: 0 4px 0 8px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #2d3b32;
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.list-select:focus-within {
+  border-color: #4c9f70;
+  box-shadow: 0 0 0 3px rgba(76, 159, 112, 0.15);
+}
+
+.chip:focus-visible,
+.list-clear:focus-visible,
+.continue-card:focus-visible {
+  outline: 2px solid #4c9f70;
+  outline-offset: 2px;
+}
+
+.list-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.list-sort {
+  margin-inline-start: auto;
+}
+
+.list-clear {
+  border: 0;
+  background: none;
+  color: #1e5c38;
+  font: inherit;
+  font-size: 0.88rem;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .pagination {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
   margin-top: 16px;
 }
 
-.pagination-pages {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+.pagination-gap {
+  color: #95a29a;
 }
 
 .pagination-button {
-  min-width: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
   min-height: 40px;
-  padding: 0 14px;
+  padding: 0 10px;
   border: 1px solid #d3d8d2;
   border-radius: 10px;
   background: #ffffff;
   color: #2d3b32;
+  font: inherit;
   cursor: pointer;
 }
 
@@ -2176,7 +2385,7 @@ select {
   background: #f6f7f6;
 }
 
-.pagination-page.is-active {
+.pagination-button.is-active {
   border-color: #4c9f70;
   background: #edf6f0;
   color: #1e5c38;
@@ -2189,6 +2398,43 @@ select {
 }
 
 @media (max-width: 640px) {
+  /* Title and actions share one row; a smaller title makes room. */
+  .home-header {
+    flex-wrap: nowrap;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .home-header h1 {
+    margin: 0;
+    font-size: 1.35rem;
+  }
+
+  /* The open search fills whatever is left of its row instead of a fixed width
+     (flex-grow animates; the 40px basis keeps it from wrapping to a new line). */
+  .list-search {
+    flex: 0 0 40px; /* an explicit basis overrides the desktop open-state width */
+    transition: flex-grow 0.25s cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+
+  .list-search:focus-within,
+  .list-search:has(input:not(:placeholder-shown)) {
+    flex-grow: 1;
+  }
+
+  .chip-group {
+    display: flex;
+    width: 100%;
+  }
+
+  .chip {
+    flex: 1;
+    justify-content: center;
+    gap: 3px;
+    padding: 0 4px;
+    font-size: 0.82rem;
+  }
+
   .android-announcement {
     grid-template-columns: auto minmax(0, 1fr);
     padding: 14px;
@@ -2205,24 +2451,66 @@ select {
     width: 100%;
   }
 
-  .puzzle-table th,
-  .puzzle-table td {
-    padding: 8px 10px;
+  .continue-list {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(200px, 75%);
+    grid-template-columns: none;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
   }
 
-  .th-id,
-  .td-id,
-  .th-date,
-  .td-date {
+  .continue-card {
+    scroll-snap-align: start;
+  }
+
+  /* Phones: each table row becomes a two-line card (title + progress / badges + date). */
+  .puzzle-table,
+  .puzzle-table tbody {
+    display: block;
+  }
+
+  .puzzle-table thead,
+  .td-id {
     display: none;
   }
 
-  .td-progress {
+  .puzzle-row {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title title title progress"
+      "level paper date date";
+    align-items: center;
+    gap: 6px 10px;
+    padding: 12px 14px;
+  }
+
+  .puzzle-row:first-child {
+    border-top: 0;
+  }
+
+  .puzzle-table td {
+    padding: 0;
     min-width: 0;
   }
 
+  .td-title { grid-area: title; }
+  .td-difficulty { grid-area: level; }
+  .td-newspaper { grid-area: paper; }
+  .td-date { grid-area: date; }
+  .td-progress { grid-area: progress; min-width: 0; }
+
+  .progress-bar-track {
+    flex-basis: 48px;
+  }
+
   .pagination {
-    justify-content: center;
+    gap: 4px;
+  }
+
+  .pagination-button {
+    min-width: 36px;
+    padding: 0 6px;
   }
 }
 
@@ -2236,4 +2524,82 @@ select {
   text-align: center;
   font-size: 0.85rem;
   opacity: 0.7;
+}
+
+/* ---- Transitions (adapted from transitions.dev) ---- */
+
+/* Dialogs rise in with a slight scale; the backdrop fades. */
+.solution-modal,
+.auth-modal {
+  animation: modal-in 0.24s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+}
+
+.auth-modal-backdrop {
+  animation: solution-fade-in 0.2s ease-out;
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+}
+
+/* Account menu grows out of the avatar button (top-left in RTL). */
+.auth-menu {
+  transform-origin: top left;
+  animation: menu-in 0.18s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.95);
+  }
+}
+
+.auth-error {
+  animation: error-shake 0.36s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes error-shake {
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
+}
+
+/* A light band sweeps across the text, right to left (reading direction). */
+.shimmer-text {
+  background: linear-gradient(90deg, #6b776f 40%, #d4ddd6 50%, #6b776f 60%) 0 0 / 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 1.8s linear infinite;
+}
+
+@keyframes shimmer {
+  from { background-position: 0% 0; }
+  to { background-position: 100% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .solution-modal,
+  .auth-modal,
+  .auth-modal-backdrop,
+  .auth-menu,
+  .auth-error {
+    animation: none;
+  }
+
+  .chip-pill,
+  .list-search {
+    transition: none;
+  }
+
+  .shimmer-text {
+    background: none;
+    color: #6b776f;
+    animation: none;
+  }
 }

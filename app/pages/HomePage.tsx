@@ -1,16 +1,45 @@
-import { useEffect, useMemo, useState } from "react";
-import { Flame, HelpCircle, Smartphone, Sprout } from "lucide-react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  Circle,
+  CircleCheck,
+  Flame,
+  HelpCircle,
+  Layers,
+  LayoutList,
+  Newspaper,
+  PencilLine,
+  Search,
+  Smartphone,
+  Sprout,
+  type LucideIcon,
+} from "lucide-react";
 import { listPuzzles, type PuzzleSummary } from "../puzzleLibrary";
-import { loadProgress, computeProgress, type ProgressInfo } from "../progress";
-import { navigate } from "../router";
+import { loadProgress, loadRecentIds, computeProgress, type ProgressInfo } from "../progress";
+import { navigate, setHomeQuery } from "../router";
 import { useAuth } from "../AuthContext";
 import { AuthButton } from "../components/AuthButton";
 import { WHATS_NEW, loadWhatsNewSeen, markWhatsNewSeen } from "../whatsNew";
-
-type SortKey = "id" | "title" | "difficulty" | "author" | "newspaper" | "publishedAt" | "progress";
-type SortDir = "asc" | "desc";
+import {
+  DEFAULT_LIST_QUERY,
+  compareIds,
+  filterAndSortPuzzles,
+  isSpecialDifficulty,
+  listQueryToParams,
+  pageItems,
+  parseListQuery,
+  puzzleStatus,
+  type LevelFilter,
+  type ListQuery,
+  type SortKey,
+  type StatusFilter,
+} from "../puzzleListQuery";
 
 const ITEMS_PER_PAGE = 25;
+
+const fa = (n: number) => n.toLocaleString("fa-IR");
 
 function formatDate(iso: string): string {
   if (!iso) return "—";
@@ -110,7 +139,7 @@ function DifficultyBadge({ difficulty }: { difficulty: string | undefined }) {
 
   if (!label) return <span>—</span>;
 
-  const isSpecial = label === "ویژه" || label.toLowerCase() === "special";
+  const isSpecial = isSpecialDifficulty(label);
   const Icon = isSpecial ? Flame : Sprout;
 
   return (
@@ -124,13 +153,99 @@ function DifficultyBadge({ difficulty }: { difficulty: string | undefined }) {
   );
 }
 
+function ProgressBar({ percent }: { percent: number }) {
+  return (
+    // Spans, not divs: it also renders inside the continue-card <button>.
+    <span className="progress-bar-wrap" title={`${fa(percent)}٪`}>
+      <span className="progress-bar-track">
+        <span className="progress-bar-fill" style={{ width: `${percent}%` }} />
+      </span>
+      <span className="progress-pct">{fa(percent)}٪</span>
+    </span>
+  );
+}
+
+function ChipGroup<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: readonly (readonly [T, string, LucideIcon])[];
+  onChange: (value: T) => void;
+}) {
+  // A single highlight "pill" slides under the active chip instead of each chip painting its own.
+  const groupRef = useRef<HTMLDivElement>(null);
+  const [pill, setPill] = useState<{ x: number; width: number } | null>(null);
+  useLayoutEffect(() => {
+    const group = groupRef.current;
+    if (!group) return;
+    const measure = () => {
+      const active = group.querySelector<HTMLElement>('[aria-pressed="true"]');
+      if (active) setPill({ x: active.offsetLeft, width: active.offsetWidth });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(group);
+    return () => observer.disconnect();
+  }, [value]);
+
+  return (
+    <div ref={groupRef} className="chip-group" role="group" aria-label={label}>
+      {pill && (
+        <span
+          className="chip-pill"
+          aria-hidden="true"
+          style={{ width: pill.width, transform: `translateX(${pill.x}px)` }}
+        />
+      )}
+      {options.map(([optionValue, optionLabel, Icon]) => (
+        <button
+          key={optionValue}
+          type="button"
+          className="chip"
+          aria-pressed={value === optionValue}
+          onClick={() => onChange(optionValue)}
+        >
+          <Icon size={15} strokeWidth={2.2} aria-hidden="true" />
+          {optionLabel}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const LEVEL_OPTIONS = [
+  ["", "همهٔ سطح‌ها", Layers],
+  ["normal", "عادی", Sprout],
+  ["special", "ویژه", Flame],
+] as const satisfies readonly (readonly [LevelFilter, string, LucideIcon])[];
+
+const STATUS_OPTIONS = [
+  ["", "همه", LayoutList],
+  ["new", "شروع نشده", Circle],
+  ["progress", "در حال حل", PencilLine],
+  ["done", "تکمیل شده", CircleCheck],
+] as const satisfies readonly (readonly [StatusFilter, string, LucideIcon])[];
+
+const SORT_OPTIONS = [
+  ["new", "جدیدترین"],
+  ["old", "قدیمی‌ترین"],
+  ["progress", "بیشترین پیشرفت"],
+] as const satisfies readonly (readonly [SortKey, string])[];
+
+function openPuzzle(id: string): void {
+  navigate(`#/puzzle/${id}`);
+}
+
 export function HomePage() {
   const puzzles = useMemo(() => listPuzzles(), []);
   const { user, loading, syncVersion } = useAuth();
-  const [sortKey, setSortKey] = useState<SortKey>("id");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [query, setQuery] = useState<ListQuery>(() => parseListQuery(window.location.hash));
   const [progressMap, setProgressMap] = useState<Record<string, ProgressInfo>>({});
+  const listTopRef = useRef<HTMLDivElement>(null);
 
   // Reload progress whenever puzzles change or cloud sync completes
   useEffect(() => {
@@ -142,79 +257,46 @@ export function HomePage() {
     setProgressMap(map);
   }, [puzzles, syncVersion]);
 
-  function handleSort(key: SortKey): void {
-    if (key === sortKey) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir(key === "publishedAt" ? "desc" : "asc");
-    }
-    setCurrentPage(1);
+  useEffect(() => {
+    setHomeQuery(listQueryToParams(query));
+  }, [query]);
+
+  const newspapers = useMemo(
+    () => [...new Set(puzzles.map((p) => p.newspaper).filter(Boolean))],
+    [puzzles],
+  );
+
+  const filtered = useMemo(
+    () => filterAndSortPuzzles(puzzles, progressMap, query),
+    [puzzles, progressMap, query],
+  );
+
+  // Unfinished puzzles, most recently opened first.
+  const continueList = useMemo(() => {
+    const recent = loadRecentIds();
+    const rank = (id: string) => {
+      const index = recent.indexOf(id);
+      return index === -1 ? Infinity : index;
+    };
+    return puzzles
+      .filter((p) => !p.error && puzzleStatus(progressMap[p.id]) === "progress")
+      .sort((a, b) => rank(a.id) - rank(b.id) || compareIds(b, a))
+      .slice(0, 3);
+  }, [puzzles, progressMap]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const page = Math.min(query.page, pageCount);
+  const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  const hasFilters = Boolean(query.q || query.level || query.status || query.paper);
+
+  // Any filter change starts again from page 1.
+  function updateFilters(patch: Partial<ListQuery>): void {
+    setQuery((q) => ({ ...q, ...patch, page: 1 }));
   }
 
-  const sorted = useMemo(() => {
-    return [...puzzles].sort((a, b) => {
-      let cmp = 0;
-      switch (sortKey) {
-        case "id":
-          cmp = String(a.id).localeCompare(String(b.id), "fa", { numeric: true });
-          break;
-        case "title":
-          cmp = a.title.localeCompare(b.title, "fa", { numeric: true });
-          break;
-        case "difficulty":
-          cmp = (a.difficulty ?? "").localeCompare(b.difficulty ?? "", "fa");
-          break;
-        case "author":
-          cmp = a.author.localeCompare(b.author, "fa");
-          break;
-        case "newspaper":
-          cmp = a.newspaper.localeCompare(b.newspaper, "fa");
-          break;
-        case "publishedAt":
-          cmp = a.publishedAt.localeCompare(b.publishedAt);
-          break;
-        case "progress":
-          cmp = (progressMap[a.id]?.percent ?? 0) - (progressMap[b.id]?.percent ?? 0);
-          break;
-      }
-      return sortDir === "asc" ? cmp : -cmp;
-    });
-  }, [puzzles, sortKey, sortDir, progressMap]);
-
-  const pageCount = Math.max(1, Math.ceil(sorted.length / ITEMS_PER_PAGE));
-  const paginated = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return sorted.slice(start, start + ITEMS_PER_PAGE);
-  }, [sorted, currentPage]);
-
-  useEffect(() => {
-    if (currentPage > pageCount) {
-      setCurrentPage(pageCount);
-    }
-  }, [currentPage, pageCount]);
-
-  function SortHeader({
-    colKey,
-    children,
-    className,
-  }: {
-    colKey: SortKey;
-    children: React.ReactNode;
-    className?: string;
-  }) {
-    const active = sortKey === colKey;
-    const indicator = active ? (sortDir === "asc" ? " ▲" : " ▼") : "";
-    return (
-      <th
-        className={`th-sortable${active ? " th-active" : ""}${className ? ` ${className}` : ""}`}
-        onClick={() => handleSort(colKey)}
-        aria-sort={active ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
-      >
-        {children}
-        {indicator && <span className="sort-indicator" aria-hidden="true">{indicator}</span>}
-      </th>
-    );
+  function goToPage(target: number): void {
+    setQuery((q) => ({ ...q, page: target }));
+    listTopRef.current?.scrollIntoView({ block: "start" });
   }
 
   return (
@@ -249,6 +331,28 @@ export function HomePage() {
         </aside>
       )}
 
+      {continueList.length > 0 && (
+        <section className="continue-strip" aria-labelledby="continue-title">
+          <h2 id="continue-title">ادامهٔ حل</h2>
+          <div className="continue-list">
+            {continueList.map((puzzle) => (
+              <button
+                key={puzzle.id}
+                type="button"
+                className="continue-card"
+                onClick={() => openPuzzle(puzzle.id)}
+              >
+                <span className="continue-card-head">
+                  <span className="puzzle-title">{puzzle.title}</span>
+                  <DifficultyBadge difficulty={puzzle.difficulty} />
+                </span>
+                <ProgressBar percent={progressMap[puzzle.id]?.percent ?? 0} />
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
       {puzzles.length === 0 ? (
         <div className="empty-state">
           <p>هیچ جدولی یافت نشد.</p>
@@ -260,69 +364,152 @@ export function HomePage() {
         </div>
       ) : (
         <>
-          <div className="puzzle-table-wrapper">
-            <table className="puzzle-table" aria-label="فهرست جدول‌ها">
-              <thead>
-                <tr>
-                  <SortHeader colKey="id" className="th-id">شناسه</SortHeader>
-                  <SortHeader colKey="title">عنوان</SortHeader>
-                  <SortHeader colKey="difficulty">سطح</SortHeader>
-                  <SortHeader colKey="newspaper" className="th-newspaper">روزنامه</SortHeader>
-                  <SortHeader colKey="publishedAt" className="th-date">تاریخ</SortHeader>
-                  <SortHeader colKey="progress">پیشرفت</SortHeader>
-                </tr>
-              </thead>
-              <tbody>
-                {paginated.map((puzzle) => {
-                  const progress = progressMap[puzzle.id];
-                  return (
+          <div className="list-controls" ref={listTopRef}>
+            <div className="list-filters">
+              <ChipGroup
+                label="سطح"
+                value={query.level}
+                options={LEVEL_OPTIONS}
+                onChange={(level) => updateFilters({ level })}
+              />
+              <ChipGroup
+                label="وضعیت"
+                value={query.status}
+                options={STATUS_OPTIONS}
+                onChange={(status) => updateFilters({ status })}
+              />
+              {newspapers.length > 1 && (
+                <label className="list-select">
+                  <Newspaper size={15} strokeWidth={2.2} aria-hidden="true" />
+                  <select
+                    aria-label="روزنامه"
+                    value={query.paper}
+                    onChange={(e) => updateFilters({ paper: e.target.value })}
+                  >
+                    <option value="">همهٔ روزنامه‌ها</option>
+                    {newspapers.map((paper) => (
+                      <option key={paper} value={paper}>
+                        {paper}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              {/* Collapsed to an icon until focused or filled (pure CSS, see .list-search). */}
+              <label className="list-search" title="جستجو">
+                <Search size={18} strokeWidth={2.2} aria-hidden="true" />
+                <input
+                  type="search"
+                  placeholder="شماره یا عنوان جدول"
+                  aria-label="جستجوی جدول"
+                  value={query.q}
+                  onChange={(e) => updateFilters({ q: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") e.currentTarget.blur();
+                  }}
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="list-summary">
+            <span aria-live="polite">
+              {fa(filtered.length)} جدول
+              {pageCount > 1 && ` · صفحهٔ ${fa(page)} از ${fa(pageCount)}`}
+            </span>
+            {hasFilters && (
+              <button
+                type="button"
+                className="list-clear"
+                onClick={() => setQuery({ ...DEFAULT_LIST_QUERY, sort: query.sort })}
+              >
+                پاک کردن فیلترها
+              </button>
+            )}
+            <label className="list-select list-sort">
+              <ArrowUpDown size={15} strokeWidth={2.2} aria-hidden="true" />
+              <select
+                aria-label="مرتب‌سازی"
+                value={query.sort}
+                onChange={(e) => updateFilters({ sort: e.target.value as SortKey })}
+              >
+                {SORT_OPTIONS.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          {filtered.length === 0 ? (
+            <div className="empty-state">
+              <p>جدولی با این مشخصات پیدا نشد.</p>
+            </div>
+          ) : (
+            <div className="puzzle-table-wrapper">
+              <table className="puzzle-table" aria-label="فهرست جدول‌ها">
+                <thead>
+                  <tr>
+                    <th className="th-id">شناسه</th>
+                    <th>عنوان</th>
+                    <th>سطح</th>
+                    <th>روزنامه</th>
+                    <th className="th-date">تاریخ</th>
+                    <th>پیشرفت</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginated.map((puzzle) => (
                     <PuzzleRow
                       key={puzzle.id}
                       puzzle={puzzle}
-                      progress={progress}
-                      onClick={() => navigate(`#/puzzle/${puzzle.id}`)}
+                      progress={progressMap[puzzle.id]}
+                      onClick={() => openPuzzle(puzzle.id)}
                     />
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {pageCount > 1 && (
             <nav className="pagination" aria-label="صفحه‌بندی جدول‌ها">
               <button
                 type="button"
                 className="pagination-button"
-                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                disabled={currentPage === 1}
+                onClick={() => goToPage(page - 1)}
+                disabled={page === 1}
+                aria-label="صفحهٔ قبل"
               >
-                قبلی
+                <ChevronRight size={18} aria-hidden="true" />
               </button>
-
-              <div className="pagination-pages" aria-label={`صفحه ${currentPage} از ${pageCount}`}>
-                {Array.from({ length: pageCount }, (_, index) => {
-                  const page = index + 1;
-                  return (
-                    <button
-                      key={page}
-                      type="button"
-                      className={`pagination-button pagination-page${page === currentPage ? " is-active" : ""}`}
-                      onClick={() => setCurrentPage(page)}
-                      aria-current={page === currentPage ? "page" : undefined}
-                    >
-                      {page}
-                    </button>
-                  );
-                })}
-              </div>
-
+              {pageItems(page, pageCount).map((item, index) =>
+                item === null ? (
+                  <span key={`gap-${index}`} className="pagination-gap" aria-hidden="true">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={item}
+                    type="button"
+                    className={`pagination-button${item === page ? " is-active" : ""}`}
+                    onClick={() => goToPage(item)}
+                    aria-label={`صفحهٔ ${fa(item)}`}
+                    aria-current={item === page ? "page" : undefined}
+                  >
+                    {fa(item)}
+                  </button>
+                ),
+              )}
               <button
                 type="button"
                 className="pagination-button"
-                onClick={() => setCurrentPage((page) => Math.min(pageCount, page + 1))}
-                disabled={currentPage === pageCount}
+                onClick={() => goToPage(page + 1)}
+                disabled={page === pageCount}
+                aria-label="صفحهٔ بعد"
               >
-                بعدی
+                <ChevronLeft size={18} aria-hidden="true" />
               </button>
             </nav>
           )}
@@ -384,10 +571,7 @@ function PuzzleRow({
         ) : done ? (
           <span className="badge badge-done">تکمیل شد</span>
         ) : pct > 0 ? (
-          <div className="progress-bar-wrap" title={`${pct}٪`}>
-            <div className="progress-bar-fill" style={{ width: `${pct}%` }} />
-            <span className="progress-pct">{pct}٪</span>
-          </div>
+          <ProgressBar percent={pct} />
         ) : (
           <span className="progress-empty">شروع نشده</span>
         )}

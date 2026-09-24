@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   cellKey,
   compilePuzzle,
@@ -13,6 +13,15 @@ import { LetterGlyph } from "./LetterGlyph";
 // DiceBear styles that render as a filled square — one is picked at random per mount,
 // so every visit to a puzzle dresses its block cells differently.
 const BLOCK_STYLES = ["blobs", "initial-face", "loops", "shapes", "line-face", "thumbs", "planets"];
+
+const SHAKE_FRAMES: Keyframe[] = [
+  { transform: "translateX(0)" },
+  { transform: "translateX(-3px)" },
+  { transform: "translateX(3px)" },
+  { transform: "translateX(-2px)" },
+  { transform: "translateX(2px)" },
+  { transform: "translateX(0)" },
+];
 
 interface CrosswordBoardProps {
   readonly boardRef: React.RefObject<HTMLDivElement | null>;
@@ -52,6 +61,28 @@ export function CrosswordBoard({
   const [blockStyle] = useState(
     () => BLOCK_STYLES[Math.floor(Math.random() * BLOCK_STYLES.length)],
   );
+
+  // Shake cells that just received a wrong letter. Driven by value changes (not by the
+  // red class) so turning check mode on, or opening a puzzle, doesn't shake every wrong cell.
+  const prevRef = useRef({ puzzle, state });
+  useEffect(() => {
+    const prev = prevRef.current;
+    prevRef.current = { puzzle, state };
+    if (!checkMode || !solutionState || prev.puzzle !== puzzle || prev.state === state) return;
+    // Optional calls: jsdom (tests) has neither matchMedia nor Element.animate.
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    for (let row = 0; row < puzzle.size.rows; row++) {
+      for (let col = 0; col < puzzle.size.cols; col++) {
+        const coord = { row, col };
+        const value = state.getCell(coord);
+        if (!value || value === prev.state.getCell(coord)) continue;
+        if (normalizePersianText(value) === normalizePersianText(solutionState.getCell(coord) ?? "")) continue;
+        boardRef.current
+          ?.querySelector(`[data-cell-key="${cellKey(coord)}"]`)
+          ?.animate?.(SHAKE_FRAMES, { duration: 320, easing: "cubic-bezier(0.36, 0.07, 0.19, 0.97)" });
+      }
+    }
+  }, [puzzle, state, checkMode, solutionState, boardRef]);
 
   return (
     <div

@@ -53,10 +53,11 @@ import {
   saveCheckMode,
   loadSeenTutorial,
   saveSeenTutorial,
+  markRecent,
 } from "../progress";
 import { saveCloudProgress } from "../cloudProgress";
 import { useAuth } from "../AuthContext";
-import { navigate } from "../router";
+import { goHome } from "../router";
 import { useNoBackGesture } from "../gestureExclusion";
 import { BoardWithLabels } from "../components/BoardWithLabels";
 import { CrosswordBoard } from "../components/CrosswordBoard";
@@ -265,6 +266,8 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     // Only re-check when the rendered puzzle changes, not on solution toggles.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [puzzle, compileError]);
+
+  useEffect(() => markRecent(id), [id]);
 
   useEffect(() => {
     saveProgress(id, savedState);
@@ -539,7 +542,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
             <button
               type="button"
               className="btn-home"
-              onClick={() => navigate("#/")}
+              onClick={goHome}
               title="بازگشت به فهرست جدول‌ها"
               aria-label="بازگشت به فهرست جدول‌ها"
             >

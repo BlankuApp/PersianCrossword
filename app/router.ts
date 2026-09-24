@@ -17,6 +17,22 @@ export function navigate(to: string): void {
   window.location.hash = to;
 }
 
+// Last home URL including its page/filter query, so leaving a puzzle restores the list view.
+let homeHash = "#/";
+
+export function setHomeQuery(params: URLSearchParams): void {
+  const query = params.toString();
+  homeHash = query ? `#/?${query}` : "#/";
+  // replaceState: filter tweaks shouldn't pile up history entries, and it doesn't fire hashchange.
+  if ((window.location.hash || "#/") !== homeHash) {
+    window.history.replaceState(window.history.state, "", homeHash);
+  }
+}
+
+export function goHome(): void {
+  navigate(homeHash);
+}
+
 export function useHashRoute(): Route {
   const [route, setRoute] = useState<Route>(() => parseHash(window.location.hash));
 
@@ -42,7 +58,7 @@ export function useHardwareBackButton(route: Route): void {
 
     const listenerPromise = CapacitorApp.addListener("backButton", () => {
       if (routeRef.current.name === "puzzle") {
-        navigate("#/");
+        goHome();
       } else {
         CapacitorApp.exitApp();
       }
