@@ -167,6 +167,15 @@ describe("syncProgress", () => {
     expect(loadMirror().entries.p1).toMatchObject({ v: 3, dirty: false, playedAt: 5000 });
   });
 
+  it("re-derives a downloaded status the cloud got stale", async () => {
+    seedCloud("p1", SOLUTION, { v: 3, status: "progress", percent: 100 });
+    seedLocal({});
+
+    await syncProgress("uid1");
+
+    expect(loadMirror().entries.p1).toMatchObject({ status: "done", percent: 100, v: 3, dirty: false });
+  });
+
   it("uploads local changes in one transaction and bumps the version", async () => {
     seedCloud("p1", { "0,0": "م" }, { v: 2 });
     saveProgress("p1", { cells: { "0,0": "م", "0,1": "ا" } });
@@ -377,12 +386,12 @@ describe("progress", () => {
     expect(computeProgress(onDiskPuzzle, { cells: {} })).toEqual({ status: "new", percent: 0 });
   });
 
-  it("re-derives a stale status from the letters and marks it for upload", () => {
+  it("re-derives a stale status from the letters without marking the letters changed", () => {
     saveProgress("p1", { cells: SOLUTION });
     seedLocal({ p1: entry({ status: "progress", percent: 100, v: 3, playedAt: 500 }) });
     refreshProgress();
     expect(loadMirror().entries.p1).toEqual({
-      status: "done", percent: 100, v: 3, dirty: true, playedAt: 500, solvedAt: 500,
+      status: "done", percent: 100, v: 3, dirty: false, playedAt: 500, solvedAt: 500,
     });
   });
 
