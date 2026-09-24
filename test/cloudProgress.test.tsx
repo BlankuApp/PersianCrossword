@@ -81,7 +81,14 @@ vi.mock("../app/puzzleLibrary", () => ({
 }));
 
 import { AuthProvider, useAuth } from "../app/AuthContext";
-import { claimDevice, mergeCells, pushDirty, syncProgress, upgradeLocalProgress } from "../app/cloudProgress";
+import {
+  claimDevice,
+  mergeCells,
+  pushDirty,
+  refreshProgress,
+  syncProgress,
+  upgradeLocalProgress,
+} from "../app/cloudProgress";
 import {
   computeProgress,
   loadMirror,
@@ -158,6 +165,15 @@ describe("syncProgress", () => {
     expect(fake.writes).toBe(0);
     expect(loadProgress("p1").cells).toEqual({ "0,0": "م", "0,1": "ا" });
     expect(loadMirror().entries.p1).toMatchObject({ v: 3, dirty: false, playedAt: 5000 });
+  });
+
+  it("re-derives a downloaded status the cloud got stale", async () => {
+    seedCloud("p1", SOLUTION, { v: 3, status: "progress", percent: 100 });
+    seedLocal({});
+
+    await syncProgress("uid1");
+
+    expect(loadMirror().entries.p1).toMatchObject({ status: "done", percent: 100, v: 3, dirty: false });
   });
 
   it("uploads local changes in one transaction and bumps the version", async () => {
@@ -364,8 +380,19 @@ describe("progress", () => {
   it("counts a full grid as solved only when every letter is right", () => {
     expect(computeProgress(onDiskPuzzle, { cells: SOLUTION })).toEqual({ status: "done", percent: 100 });
     const wrong = { ...SOLUTION, "0,0": "ب" };
-    expect(computeProgress(onDiskPuzzle, { cells: wrong })).toEqual({ status: "progress", percent: 100 });
+    const open = Object.keys(SOLUTION).length;
+    const percent = Math.floor(((open - 1) / open) * 100);
+    expect(computeProgress(onDiskPuzzle, { cells: wrong })).toEqual({ status: "progress", percent });
     expect(computeProgress(onDiskPuzzle, { cells: {} })).toEqual({ status: "new", percent: 0 });
+  });
+
+  it("re-derives a stale status from the letters without marking the letters changed", () => {
+    saveProgress("p1", { cells: SOLUTION });
+    seedLocal({ p1: entry({ status: "progress", percent: 100, v: 3, playedAt: 500 }) });
+    refreshProgress();
+    expect(loadMirror().entries.p1).toEqual({
+      status: "done", percent: 100, v: 3, dirty: false, playedAt: 500, solvedAt: 500,
+    });
   });
 
   it("merges letters with the newer copy on top", () => {

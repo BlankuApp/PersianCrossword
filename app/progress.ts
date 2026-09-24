@@ -1,4 +1,4 @@
-import { compilePuzzle, createState } from "../src/index";
+import { compilePuzzle, createState, normalizePersianText } from "../src/index";
 import type { CrosswordJson, CrosswordPuzzle, CrosswordState, SavedCrosswordState } from "../src/index";
 
 export const STORAGE_PREFIX = "persian-crossword:";
@@ -75,19 +75,25 @@ export interface ProgressInfo {
 }
 
 // "Done" means every letter is right; puzzles without answers only need every square filled.
+// The percentage counts right letters (any letter where the answer is unknown), rounded down.
 export function progressOf(puzzle: CrosswordPuzzle, state: CrosswordState): ProgressInfo {
   let filled = 0;
+  let correct = 0;
   let total = 0;
   for (let row = 0; row < puzzle.size.rows; row++) {
     for (let col = 0; col < puzzle.size.cols; col++) {
       const coord = { row, col };
       if (puzzle.isBlock(coord)) continue;
       total++;
-      if (state.getCell(coord)) filled++;
+      const value = state.getCell(coord);
+      if (!value) continue;
+      filled++;
+      const answer = normalizePersianText(puzzle.source.grid[row]![col]!.trim());
+      if (!answer || normalizePersianText(value) === answer) correct++;
     }
   }
   if (filled === 0) return { status: "new", percent: 0 };
-  const percent = Math.round((filled / total) * 100);
+  const percent = Math.floor((correct / total) * 100);
   const done =
     filled === total &&
     puzzle.slots.every((slot) => ["correct", "unknownAnswer"].includes(state.checkSlot(slot.id)));
