@@ -19,7 +19,8 @@
     "dev": "vite --host 127.0.0.1",
     "test": "vitest run --pool=threads",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.app.json --noEmit",
-    "puzzles:upload": "node scripts/uploadPuzzles.ts"
+    "puzzles:upload": "node scripts/uploadPuzzles.ts",
+    "puzzles:download": "node scripts/downloadPuzzles.ts"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",

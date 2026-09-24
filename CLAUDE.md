@@ -7,7 +7,8 @@ npm run dev          # Vite dev server → http://127.0.0.1:5173
 npm run build        # Build lib (dist/) + app (app-dist/)
 npm run test         # Vitest unit tests
 npm run typecheck    # Type-check both tsconfig.json and tsconfig.app.json
-npm run puzzles:upload -- --dry-run   # Publish new/changed puzzles to Firebase (see "Cloud puzzles")
+npm run puzzles:upload -- --dry-run   # Publish puzzles/ to Firebase (see "Puzzles in Firebase")
+npm run puzzles:download              # Backup / fresh copy of every published puzzle into puzzles/
 ```
 
 ### Firebase Functions (AI proxy)
@@ -28,8 +29,8 @@ src/          Core TS library (grid, puzzle, state, text, validation, types)
 app/          React SPA (Vite): auth, routing, solver UI, puzzle library
 test/         Vitest tests for the core library
 functions/    Firebase Functions: askAi — Gemini proxy with per-user daily quota (Firestore aiUsage/{uid})
-puzzles/      Puzzle JSON files, grouped in batches (1-50, 51-100, 101-150, …)
-scripts/      Node scripts (run with plain `node`, which strips TS types): puzzle fingerprints + uploader
+puzzles/      Local working copy of the puzzles (gitignored; Firebase is the source): batches 1-50, 51-100, …
+scripts/      Node scripts (run with plain `node`, which strips TS types): puzzle upload/download
 dist/         TS library build output (tsc)
 app-dist/     Vite app build output → deployed to GitHub Pages
 ```
@@ -43,7 +44,7 @@ rejects an explicitly-passed `undefined` value — write `foo?: T | undefined` w
 
 ## Puzzle Format
 
-Puzzles are `CrosswordJson` (version 3) JSON files under `puzzles/`.
+Puzzles are `CrosswordJson` (version 3) JSON files, edited locally under `puzzles/` and published to Firebase.
 - **Slot IDs**: `R{row}-{n}` for horizontal, `C{col}-{n}` for vertical.
 - **Vertical column numbering**: 1-based *from the right* (RTL convention).
 - Each puzzle folder can have a matching `{id}.png` (solution image) and an optional
@@ -66,28 +67,29 @@ Progress sync (`app/cloudProgress.ts`):
   left as a backup. Old app builds still write there only.
 
 Security rules live in `firestore.rules` (owner-only `users/{uid}/**`, public read of `catalog/*` and
-`puzzles/*`, everything else denied) and `storage.rules` (public read of `puzzles/**`):
+`puzzlePacks/*`, everything else denied) and `storage.rules` (public read of `puzzles/**`):
 `npx firebase-tools deploy --only firestore:rules,storage`. `VITE_FUNCTIONS_EMULATOR=1` also points Firestore
 and Storage at the local emulators (ports 8080, 9199).
 
-## Cloud puzzles
+## Puzzles in Firebase
 
-The app ships every puzzle under `puzzles/` (built-in copy) and also downloads new and changed
-ones from Firebase, so installed Android apps get puzzles without an app update.
-- `scripts/uploadPuzzles.ts` publishes: `catalog/index` `{ schema: 1, puzzles: { [id]: hash }, removed: [id] }`,
-  `puzzles/{id}` `{ schema: 1, hash, json: "<text>", images }` (text because Firestore rejects nested
-  arrays), images in Storage at `puzzles/{id}/{imageHash}.{ext}`. Only changed puzzles are written;
-  `--prune` marks ids no longer on disk as removed. Needs `GOOGLE_APPLICATION_CREDENTIALS` (service
-  account) or `FIRESTORE_EMULATOR_HOST` + `FIREBASE_STORAGE_EMULATOR_HOST`.
-- The hash (`scripts/puzzleFiles.ts`) covers the parsed JSON and image bytes; Vite exposes the
-  built-in ones as `virtual:puzzle-hashes`, so app and uploader agree on what changed.
-- `app/puzzleSync.ts` reads `catalog/index` (one read per check: startup, back online, foreground
-  after 30 min) and fetches only puzzles whose hash matches neither the built-in copy nor an earlier
-  download. Downloads live in IndexedDB (`app/puzzleStore.ts`); `app/puzzleCatalog.ts` merges them
-  over the built-in list (`usePuzzleLibrary()`). Downloaded puzzles have no `filePath` (no debug mode).
-- `npm run dev` skips the cloud check so debug edits to local files aren't masked; set
-  `VITE_PUZZLE_SYNC=1` (with `VITE_FUNCTIONS_EMULATOR=1` for the emulators) to test it.
-- The deploy workflow runs the uploader before building when the `FIREBASE_SERVICE_ACCOUNT` secret is set.
+Firebase is the only source of puzzles: the repo and the app bundle hold none. `puzzles/` (and
+`raw_data/`, original scans) are local, gitignored working copies.
+- `scripts/uploadPuzzles.ts` publishes the folder; layout in `scripts/firebaseAdmin.ts`: `catalog/index`
+  lists packs `{ [packId]: { hash, puzzles: { [id]: hash } } }`; `puzzlePacks/{packId}` holds up to 50
+  puzzles as JSON text (Firestore rejects nested arrays) with their file path; images live in Storage at
+  `puzzles/{id}/{imageHash}.{ext}`. A puzzle keeps its pack for life (`scripts/puzzlePacks.ts`), so an
+  edit rewrites one pack. Published puzzles missing locally stay unless `--prune`.
+  Needs `GOOGLE_APPLICATION_CREDENTIALS` (service account) or `FIRESTORE_EMULATOR_HOST` +
+  `FIREBASE_STORAGE_EMULATOR_HOST`. `scripts/downloadPuzzles.ts` restores the same layout.
+- The puzzle hash (`scripts/puzzleFiles.ts`) covers the parsed JSON and image bytes.
+- `app/puzzleSync.ts` reads `catalog/index` (one read per check: startup, back online, foreground after
+  30 min) and fetches only packs whose hash changed (all ~6 on a new device). Packs live in IndexedDB
+  (`app/puzzleStore.ts`); `usePuzzleLibrary()` exposes the list plus a `sync` state for the home page's
+  loading/offline messages.
+- `npm run dev` lists the local `puzzles/` folder instead (`/dev/local-puzzles` in `vite.config.ts`), so
+  debug mode can edit and save files; set `VITE_PUZZLE_SYNC=1` (with `VITE_FUNCTIONS_EMULATOR=1` for the
+  emulators) to use the Firebase path. Tests use `test/puzzle-folder/`.
 
 ## Deploy
 

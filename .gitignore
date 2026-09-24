@@ -14,3 +14,8 @@ functions/.secret.local
 .firebase/
 firebase-debug.log
 firestore-debug.log
+# Puzzles live in Firebase (npm run puzzles:upload / puzzles:download); these are local working copies.
+puzzles/
+raw_data/
+# Firebase service-account keys for the puzzle scripts.
+*service-account*.json

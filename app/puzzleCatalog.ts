@@ -1,13 +1,11 @@
-// What the app knows about the cloud puzzle catalog (written by scripts/uploadPuzzles.ts) and
-// the puzzles it downloaded from it. Pure logic; app/puzzleSync.ts does the network and
-// app/puzzleStore.ts the device storage.
+// What the app knows about the cloud puzzle catalog (written by scripts/uploadPuzzles.ts; layout
+// in scripts/firebaseAdmin.ts) and the packs it downloaded. Pure logic; app/puzzleSync.ts does
+// the network and app/puzzleStore.ts the device storage.
 import type { CrosswordJson } from "../src/index";
 
 export interface RemoteCatalog {
-  // id → content hash of the published version.
-  readonly puzzles: Readonly<Record<string, string>>;
-  // Unpublished ids: hidden even when the app was built with them.
-  readonly removed: readonly string[];
+  // Pack id → pack hash; a pack is re-downloaded when its hash changes.
+  readonly packs: Readonly<Record<string, string>>;
 }
 
 export interface DownloadedPuzzle {
@@ -18,76 +16,55 @@ export interface DownloadedPuzzle {
   readonly sourceImageUrl?: string | undefined;
 }
 
-export interface StoredCatalog {
-  // The last catalog this device fetched; null until the first successful check.
-  readonly catalog: RemoteCatalog | null;
-  // Only puzzles that differ from (or are missing in) the app's built-in copy.
-  readonly downloaded: Readonly<Record<string, DownloadedPuzzle>>;
+export interface StoredPack {
+  readonly hash: string;
+  readonly puzzles: Readonly<Record<string, DownloadedPuzzle>>;
 }
 
-export const EMPTY_STORED_CATALOG: StoredCatalog = { catalog: null, downloaded: {} };
+export interface StoredCatalog {
+  // Every published puzzle this device has, by pack.
+  readonly packs: Readonly<Record<string, StoredPack>>;
+}
 
-const isStringRecord = (value: unknown): value is Record<string, string> =>
-  typeof value === "object" && value !== null && !Array.isArray(value) &&
-  Object.values(value).every((v) => typeof v === "string");
+export const EMPTY_STORED_CATALOG: StoredCatalog = { packs: {} };
 
-// Validates catalog/index; anything unexpected (a newer schema, a broken write) is ignored.
+// Validates catalog/index; anything unexpected (another schema, a broken write) is ignored.
 export function parseRemoteCatalog(data: unknown): RemoteCatalog | null {
-  const d = data as { schema?: unknown; puzzles?: unknown; removed?: unknown } | null | undefined;
-  if (d?.schema !== 1 || !isStringRecord(d.puzzles)) return null;
-  const removed = Array.isArray(d.removed) ? d.removed.filter((id): id is string => typeof id === "string") : [];
-  return { puzzles: d.puzzles, removed };
+  const d = data as { schema?: unknown; packs?: unknown } | null | undefined;
+  if (d?.schema !== 2 || typeof d.packs !== "object" || d.packs === null) return null;
+  const packs: Record<string, string> = {};
+  for (const [id, pack] of Object.entries(d.packs as Record<string, unknown>)) {
+    const hash = (pack as { hash?: unknown } | null)?.hash;
+    if (typeof hash !== "string") return null;
+    packs[id] = hash;
+  }
+  return { packs };
 }
 
 export interface SyncPlan {
-  // Ids whose published version this device doesn't have yet.
+  // Packs this device doesn't have in their published version.
   readonly fetch: readonly string[];
-  // Downloads still current; everything else is dropped.
-  readonly keep: Readonly<Record<string, DownloadedPuzzle>>;
+  // Packs still current; any other stored pack was unpublished and is dropped.
+  readonly keep: Readonly<Record<string, StoredPack>>;
 }
 
-export function planSync(
-  builtinHashes: Readonly<Record<string, string>>,
-  downloaded: Readonly<Record<string, DownloadedPuzzle>>,
-  remote: RemoteCatalog,
-): SyncPlan {
+export function planSync(stored: StoredCatalog, remote: RemoteCatalog): SyncPlan {
   const fetch: string[] = [];
-  const keep: Record<string, DownloadedPuzzle> = {};
-  for (const [id, hash] of Object.entries(remote.puzzles)) {
-    if (builtinHashes[id] === hash) continue; // the app already ships this exact version
-    const have = downloaded[id];
+  const keep: Record<string, StoredPack> = {};
+  for (const [id, hash] of Object.entries(remote.packs)) {
+    const have = stored.packs[id];
     if (have?.hash === hash) keep[id] = have;
     else fetch.push(id);
   }
   return { fetch, keep };
 }
 
-export interface CatalogPuzzle<B> {
-  readonly id: string;
-  // Set when the device's download replaces (or adds to) the built-in puzzles.
-  readonly downloaded?: DownloadedPuzzle | undefined;
-  readonly builtin?: B | undefined;
+export function storedPuzzles(stored: StoredCatalog): [string, DownloadedPuzzle][] {
+  return Object.values(stored.packs).flatMap((pack) => Object.entries(pack.puzzles));
 }
 
-// Built-in puzzles, minus unpublished ones, with downloaded versions swapped in. A built-in
-// copy that already matches the catalog wins over an older download (after an app update).
-export function composeCatalog<B extends { readonly id: string; readonly hash: string }>(
-  builtins: readonly B[],
-  stored: StoredCatalog,
-): CatalogPuzzle<B>[] {
-  const removed = new Set(stored.catalog?.removed ?? []);
-  const published = stored.catalog?.puzzles ?? {};
-  const result: CatalogPuzzle<B>[] = [];
-  const seen = new Set<string>();
-  for (const builtin of builtins) {
-    seen.add(builtin.id);
-    if (removed.has(builtin.id)) continue;
-    const download = stored.downloaded[builtin.id];
-    const useDownload = download && published[builtin.id] !== builtin.hash;
-    result.push({ id: builtin.id, builtin, downloaded: useDownload ? download : undefined });
-  }
-  for (const [id, download] of Object.entries(stored.downloaded)) {
-    if (!seen.has(id) && !removed.has(id)) result.push({ id, downloaded: download });
-  }
-  return result;
+// Compares what two catalogs hold, not the (large) puzzle contents.
+export function sameStoredCatalog(a: StoredCatalog, b: StoredCatalog): boolean {
+  const key = (s: StoredCatalog) => JSON.stringify(Object.entries(s.packs).map(([id, p]) => [id, p.hash]).sort());
+  return key(a) === key(b);
 }

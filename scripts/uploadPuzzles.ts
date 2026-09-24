@@ -1,31 +1,18 @@
-// Publishes the puzzles under puzzles/ to Firebase, where the app downloads new and changed ones.
+// Publishes a local puzzle folder to Firebase — the app's only source of puzzles.
 //
-//   node scripts/uploadPuzzles.ts [--dry-run] [--prune]
+//   npm run puzzles:upload -- [--dir puzzles] [--dry-run] [--prune]
 //
-// Cloud layout (read by app/puzzleSync.ts):
-//   catalog/index   { schema: 1, puzzles: { [id]: hash }, removed: [id], updatedAt }
-//                   — the one document every app reads per check
-//   puzzles/{id}    { schema: 1, hash, json: "<CrosswordJson text>", images: { solution?, source? } }
-//                   — the JSON is stored as text because Firestore can't hold nested arrays
-//   Storage puzzles/{id}/{imageHash}.{ext} — images; the name changes with the content
-//
-// Only puzzles whose hash differs from the catalog are written, and the catalog goes last so
-// an app never sees an entry before its document exists. --prune marks puzzles that are in the
-// catalog but no longer under puzzles/ as removed (apps hide them); without it they stay listed.
-//
-// Credentials: GOOGLE_APPLICATION_CREDENTIALS=<service-account.json>, or
-// FIRESTORE_EMULATOR_HOST + FIREBASE_STORAGE_EMULATOR_HOST for the local emulators.
-import { applicationDefault, initializeApp } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
-import { getStorage } from "firebase-admin/storage";
+// Only packs holding new or changed puzzles are rewritten, and the catalog goes last so an app
+// never sees a pack hash before the pack itself. Puzzles that are published but missing from
+// the folder stay published unless --prune is given. Layout and credentials: firebaseAdmin.ts.
 import { readFileSync } from "node:fs";
-import { extname, resolve } from "node:path";
+import { extname } from "node:path";
+import { initAdmin, listIds, parseArgs, type CatalogDoc, type PackEntry } from "./firebaseAdmin.ts";
 import { readPuzzleFiles, type PuzzleFile, type PuzzleImageFile } from "./puzzleFiles.ts";
+import { planPacks } from "./puzzlePacks.ts";
 
-const PROJECT_ID = "persiancrossword";
-const BUCKET = "persiancrossword.firebasestorage.app";
-// Each puzzle document is ~10 KB; 100 per commit stays far below Firestore's request limits.
-const CHUNK = 100;
+// Firestore rejects documents over 1 MiB; leave room for field names and overhead.
+const MAX_PACK_BYTES = 900_000;
 
 const CONTENT_TYPES: Record<string, string> = {
   ".png": "image/png",
@@ -36,9 +23,6 @@ const CONTENT_TYPES: Record<string, string> = {
 
 const imageStoragePath = (id: string, image: PuzzleImageFile): string =>
   `puzzles/${id}/${image.hash}${extname(image.name).toLowerCase()}`;
-
-const listIds = (ids: readonly string[]): string =>
-  ids.length > 20 ? `${ids.slice(0, 20).join(", ")}, … (+${ids.length - 20} more)` : ids.join(", ");
 
 function findDuplicateIds(puzzles: readonly PuzzleFile[]): string[] {
   const seen = new Map<string, string>();
@@ -52,41 +36,41 @@ function findDuplicateIds(puzzles: readonly PuzzleFile[]): string[] {
 }
 
 async function main(): Promise<void> {
-  const args = new Set(process.argv.slice(2));
-  const dryRun = args.has("--dry-run");
-  const prune = args.has("--prune");
+  const { flags, dir } = parseArgs(process.argv.slice(2));
+  const dryRun = flags.has("--dry-run");
+  const prune = flags.has("--prune");
 
-  const puzzles = readPuzzleFiles(resolve(import.meta.dirname, ".."));
+  const puzzles = readPuzzleFiles(dir);
+  if (!puzzles.length) throw new Error(`No puzzles found in ${dir}.`);
   const duplicates = findDuplicateIds(puzzles);
   if (duplicates.length) throw new Error(`Duplicate puzzle ids:\n  ${duplicates.join("\n  ")}`);
-  if (!puzzles.length) throw new Error("No puzzles found under puzzles/ — refusing to publish an empty catalog.");
 
-  const app = initializeApp({
-    projectId: PROJECT_ID,
-    storageBucket: BUCKET,
-    ...(process.env.FIRESTORE_EMULATOR_HOST ? {} : { credential: applicationDefault() }),
-  });
-  const db = getFirestore(app);
-  const bucket = getStorage(app).bucket();
+  const { db, bucket } = initAdmin();
   const catalogRef = db.doc("catalog/index");
-
   const snap = await catalogRef.get();
-  const current = (snap.data() ?? {}) as { puzzles?: Record<string, string>; removed?: string[] };
-  const listed: Record<string, string> = { ...current.puzzles };
-  const changed = puzzles.filter((p) => listed[p.id] !== p.hash);
-  const localIds = new Set(puzzles.map((p) => p.id));
-  const gone = Object.keys(listed).filter((id) => !localIds.has(id));
+  const current = snap.data() as Partial<CatalogDoc> | undefined;
+  if (current && current.schema !== 2) throw new Error(`catalog/index has schema ${String(current.schema)}; expected 2.`);
+  const currentPacks = current?.packs ?? {};
 
-  console.log(`${puzzles.length} puzzles on disk, ${Object.keys(listed).length} in the catalog.`);
-  console.log(`${changed.length} new or changed${changed.length ? `: ${listIds(changed.map((p) => p.id))}` : ""}`);
-  if (gone.length) {
-    console.log(`${gone.length} in the catalog but not on disk: ${listIds(gone)}` + (prune ? " — marking removed" : " — kept (use --prune to remove)"));
+  const published = new Map<string, string>();
+  for (const pack of Object.values(currentPacks)) {
+    for (const [id, hash] of Object.entries(pack.puzzles)) published.set(id, hash);
   }
-  const removing = prune ? gone : [];
-  if (!changed.length && !removing.length) {
+  const changed = puzzles.filter((p) => published.get(p.id) !== p.hash);
+  const localIds = new Set(puzzles.map((p) => p.id));
+  const missing = [...published.keys()].filter((id) => !localIds.has(id));
+  const plan = planPacks(currentPacks, puzzles, prune);
+
+  console.log(`${puzzles.length} puzzles in ${dir}, ${published.size} published.`);
+  console.log(`${changed.length} new or changed${changed.length ? `: ${listIds(changed.map((p) => p.id))}` : ""}`);
+  if (missing.length) {
+    console.log(`${missing.length} published but not in the folder: ${listIds(missing)}` + (prune ? " — unpublishing" : " — kept (use --prune to unpublish)"));
+  }
+  if (!plan.dirty.length && !plan.deleted.length) {
     console.log("Nothing to publish.");
     return;
   }
+  console.log(`Packs to write: ${plan.dirty.join(", ") || "none"}` + (plan.deleted.length ? `; to delete: ${plan.deleted.join(", ")}` : ""));
   if (dryRun) {
     console.log("Dry run: nothing written.");
     return;
@@ -106,24 +90,37 @@ async function main(): Promise<void> {
     }
   }
 
-  for (let i = 0; i < changed.length; i += CHUNK) {
-    const batch = db.batch();
-    for (const p of changed.slice(i, i + CHUNK)) {
+  const byId = new Map(puzzles.map((p) => [p.id, p]));
+  for (const packId of plan.dirty) {
+    const ref = db.doc(`puzzlePacks/${packId}`);
+    const ids = Object.keys(plan.packs[packId]!.puzzles);
+    // Published puzzles missing from the folder (no --prune) keep their stored entry.
+    const old = ids.some((id) => !byId.has(id))
+      ? (((await ref.get()).data()?.puzzles ?? {}) as Record<string, PackEntry>)
+      : {};
+    const entries: Record<string, PackEntry> = {};
+    for (const id of ids) {
+      const p = byId.get(id);
+      if (!p) {
+        const kept = old[id];
+        if (!kept) throw new Error(`Puzzle ${id} is listed in pack ${packId} but its data is missing.`);
+        entries[id] = kept;
+        continue;
+      }
       const images: Record<string, string> = {};
       for (const image of p.images) images[image.kind] = imageStoragePath(p.id, image);
-      batch.set(db.doc(`puzzles/${p.id}`), { schema: 1, hash: p.hash, json: p.jsonText, images });
+      entries[id] = { hash: p.hash, file: p.relPath, json: p.jsonText, images };
     }
-    await batch.commit();
+    const doc = { schema: 2, hash: plan.packs[packId]!.hash, puzzles: entries };
+    const bytes = Buffer.byteLength(JSON.stringify(doc));
+    if (bytes > MAX_PACK_BYTES) throw new Error(`Pack ${packId} would be ${bytes} bytes; lower PACK_SIZE in scripts/puzzlePacks.ts.`);
+    await ref.set(doc);
   }
 
-  for (const p of changed) listed[p.id] = p.hash;
-  for (const id of removing) delete listed[id];
-  const removed = new Set(current.removed ?? []);
-  for (const id of removing) removed.add(id);
-  // A puzzle published again is no longer removed.
-  for (const id of Object.keys(listed)) removed.delete(id);
-  await catalogRef.set({ schema: 1, puzzles: listed, removed: [...removed].sort(), updatedAt: Date.now() });
-  console.log(`Published ${changed.length} puzzle(s)` + (removing.length ? `, removed ${removing.length}` : "") + ".");
+  const catalog: CatalogDoc = { schema: 2, packs: plan.packs, updatedAt: Date.now() };
+  await catalogRef.set(catalog);
+  for (const packId of plan.deleted) await db.doc(`puzzlePacks/${packId}`).delete();
+  console.log(`Published: ${plan.dirty.length} pack(s) written` + (plan.deleted.length ? `, ${plan.deleted.length} deleted` : "") + ".");
 }
 
 main().catch((error: unknown) => {

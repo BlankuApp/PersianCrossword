@@ -1,73 +1,55 @@
 import { describe, expect, it } from "vitest";
 import {
-  composeCatalog,
   parseRemoteCatalog,
   planSync,
-  type DownloadedPuzzle,
+  sameStoredCatalog,
+  storedPuzzles,
   type StoredCatalog,
+  type StoredPack,
 } from "../app/puzzleCatalog";
 import type { CrosswordJson } from "../src/index";
 
 const json = { version: 3, grid: [["ا"]], clues: { horizontal: {}, vertical: {} } } as unknown as CrosswordJson;
-const download = (hash: string): DownloadedPuzzle => ({ hash, json });
+const storedPack = (hash: string, ids: string[]): StoredPack => ({
+  hash,
+  puzzles: Object.fromEntries(ids.map((id) => [id, { hash: `${id}-h`, json }])),
+});
 
 describe("parseRemoteCatalog", () => {
-  it("accepts a schema 1 catalog and defaults removed to empty", () => {
-    expect(parseRemoteCatalog({ schema: 1, puzzles: { a: "h1" } })).toEqual({ puzzles: { a: "h1" }, removed: [] });
+  it("reads pack hashes from a schema 2 catalog", () => {
+    const data = { schema: 2, packs: { p001: { hash: "a", puzzles: { "1": "x" } } }, updatedAt: 1 };
+    expect(parseRemoteCatalog(data)).toEqual({ packs: { p001: "a" } });
   });
 
-  it("rejects unknown schemas and malformed data", () => {
-    expect(parseRemoteCatalog({ schema: 2, puzzles: {} })).toBeNull();
-    expect(parseRemoteCatalog({ schema: 1, puzzles: { a: 1 } })).toBeNull();
+  it("rejects other schemas and malformed data", () => {
+    expect(parseRemoteCatalog({ schema: 1, puzzles: {} })).toBeNull();
+    expect(parseRemoteCatalog({ schema: 2, packs: { p001: {} } })).toBeNull();
     expect(parseRemoteCatalog(undefined)).toBeNull();
   });
 });
 
 describe("planSync", () => {
-  const builtin = { a: "a1", b: "b1" };
-
-  it("downloads only puzzles the app neither ships nor already downloaded", () => {
-    const remote = { puzzles: { a: "a1", b: "b2", c: "c1", d: "d1" }, removed: [] };
-    const plan = planSync(builtin, { d: download("d1") }, remote);
-    expect(plan.fetch).toEqual(["b", "c"]);
-    expect(Object.keys(plan.keep)).toEqual(["d"]);
+  it("downloads everything on a new device", () => {
+    const plan = planSync({ packs: {} }, { packs: { p001: "a", p002: "b" } });
+    expect(plan.fetch).toEqual(["p001", "p002"]);
+    expect(plan.keep).toEqual({});
   });
 
-  it("drops downloads that are outdated, removed, or now built in", () => {
-    const remote = { puzzles: { a: "a1", c: "c2" }, removed: ["d"] };
-    const plan = planSync(builtin, { a: download("a0"), c: download("c1"), d: download("d1") }, remote);
-    expect(plan.fetch).toEqual(["c"]);
-    expect(plan.keep).toEqual({});
+  it("downloads only changed packs and drops unpublished ones", () => {
+    const stored: StoredCatalog = {
+      packs: { p001: storedPack("a", ["1"]), p002: storedPack("b", ["2"]), p003: storedPack("c", ["3"]) },
+    };
+    const plan = planSync(stored, { packs: { p001: "a", p002: "b2" } });
+    expect(plan.fetch).toEqual(["p002"]);
+    expect(Object.keys(plan.keep)).toEqual(["p001"]);
   });
 });
 
-describe("composeCatalog", () => {
-  const builtins = [
-    { id: "a", hash: "a1" },
-    { id: "b", hash: "b1" },
-  ];
-
-  it("shows the built-in puzzles when nothing was downloaded yet", () => {
-    const list = composeCatalog(builtins, { catalog: null, downloaded: {} });
-    expect(list.map((p) => [p.id, p.downloaded])).toEqual([["a", undefined], ["b", undefined]]);
-  });
-
-  it("swaps in downloaded versions, adds new puzzles and hides removed ones", () => {
-    const stored: StoredCatalog = {
-      catalog: { puzzles: { b: "b2", c: "c1" }, removed: ["a"] },
-      downloaded: { b: download("b2"), c: download("c1") },
-    };
-    const list = composeCatalog(builtins, stored);
-    expect(list.map((p) => [p.id, p.downloaded?.hash])).toEqual([["b", "b2"], ["c", "c1"]]);
-  });
-
-  it("keeps built-in puzzles the catalog doesn't know about yet", () => {
-    const list = composeCatalog(builtins, { catalog: { puzzles: { a: "a1" }, removed: [] }, downloaded: {} });
-    expect(list.map((p) => p.id)).toEqual(["a", "b"]);
-  });
-
-  it("prefers a built-in copy that already matches the catalog over an older download", () => {
-    const stored: StoredCatalog = { catalog: { puzzles: { a: "a1" }, removed: [] }, downloaded: { a: download("a0") } };
-    expect(composeCatalog(builtins, stored)[0]?.downloaded).toBeUndefined();
+describe("stored catalog helpers", () => {
+  it("lists every stored puzzle and compares catalogs by pack hash", () => {
+    const a: StoredCatalog = { packs: { p001: storedPack("a", ["1", "2"]), p002: storedPack("b", ["3"]) } };
+    expect(storedPuzzles(a).map(([id]) => id)).toEqual(["1", "2", "3"]);
+    expect(sameStoredCatalog(a, { packs: { p002: a.packs.p002!, p001: a.packs.p001! } })).toBe(true);
+    expect(sameStoredCatalog(a, { packs: { p001: a.packs.p001! } })).toBe(false);
   });
 });

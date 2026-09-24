@@ -1,11 +1,11 @@
 import { EMPTY_STORED_CATALOG, type StoredCatalog } from "./puzzleCatalog";
 
-// Downloaded puzzles live in IndexedDB, not localStorage: they grow with every published puzzle
-// the installed app doesn't ship, and localStorage (~5 MB) also holds everyone's progress.
-// The whole StoredCatalog is one record, so the catalog and its downloads always match.
+// Downloaded puzzles live in IndexedDB, not localStorage: they grow with every published puzzle,
+// and localStorage (~5 MB) also holds everyone's progress. The whole StoredCatalog is one
+// record, so a device never holds half of a sync.
 const DB_NAME = "persian-crossword";
 const STORE = "kv";
-const KEY = "puzzle-catalog";
+const KEY = "puzzle-packs";
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -32,14 +32,14 @@ async function withStore<T>(mode: IDBTransactionMode, run: (store: IDBObjectStor
   }
 }
 
-// No IndexedDB (private windows, old WebViews) or a broken record: start from the built-in
-// puzzles only. Downloads then just last until the page closes.
+// No IndexedDB (private windows, old WebViews) or a broken record: start empty and download
+// again. Downloads then just last until the page closes.
 export async function readStoredCatalog(): Promise<StoredCatalog> {
   try {
     if (typeof indexedDB === "undefined") return EMPTY_STORED_CATALOG;
     const value = (await withStore("readonly", (store) => store.get(KEY))) as Partial<StoredCatalog> | undefined;
-    if (!value || typeof value.downloaded !== "object" || value.downloaded === null) return EMPTY_STORED_CATALOG;
-    return { catalog: value.catalog ?? null, downloaded: value.downloaded };
+    if (!value || typeof value.packs !== "object" || value.packs === null) return EMPTY_STORED_CATALOG;
+    return { packs: value.packs };
   } catch (error) {
     console.warn("[puzzleStore] could not read downloaded puzzles", error);
     return EMPTY_STORED_CATALOG;

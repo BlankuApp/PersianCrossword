@@ -1,7 +1,7 @@
 import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Minimal Firestore: documents by path; "in" queries on puzzles/ return the matching ids.
+// Minimal Firestore: documents by path; "in" queries return the matching ids.
 const cloud = vi.hoisted(() => ({ docs: new Map<string, unknown>(), queried: [] as string[][] }));
 vi.mock("firebase/firestore", () => ({
   doc: (_db: unknown, ...path: string[]) => path.join("/"),
@@ -24,89 +24,85 @@ vi.mock("../app/firebase", () => ({
   storageFileUrl: (path: string) => `https://storage.test/${path}`,
 }));
 
-import { builtinHashes, getPuzzleById, listPuzzles, setStoredCatalog } from "../app/puzzleLibrary";
-import { EMPTY_STORED_CATALOG } from "../app/puzzleCatalog";
-import { readStoredCatalog, writeStoredCatalog } from "../app/puzzleStore";
+import sample10 from "../samples/sample-10x10-garden.json";
+import { getPuzzleById, listPuzzles } from "../app/puzzleLibrary";
+import { readStoredCatalog } from "../app/puzzleStore";
 import { syncPuzzleCatalog } from "../app/puzzleSync";
 
-const builtinCount = Object.keys(builtinHashes).length;
-const existing = getPuzzleById("14")!;
+type Entry = { hash: string; file: string; json: string; images: Record<string, string> };
 
-function publish(id: string, hash: string, json: unknown, images: Record<string, string> = {}): void {
-  cloud.docs.set(`puzzles/${id}`, { schema: 1, hash, json: JSON.stringify(json), images });
-}
-
-function setCatalog(puzzles: Record<string, string>, removed: string[] = []): void {
-  cloud.docs.set("catalog/index", { schema: 1, puzzles: { ...builtinHashes, ...puzzles }, removed });
-}
-
-const newPuzzleJson = (id: string) => ({ ...existing.json, meta: { ...existing.json.meta, id, title: `جدول ${id}` } });
-
-beforeEach(async () => {
-  cloud.docs.clear();
-  cloud.queried.length = 0;
-  await writeStoredCatalog(EMPTY_STORED_CATALOG);
-  setStoredCatalog(EMPTY_STORED_CATALOG);
+const puzzle = (id: string, title = `جدول ${id}`, images: Record<string, string> = {}): Entry => ({
+  hash: `${id}:${title}`,
+  file: `x/${id}.json`,
+  json: JSON.stringify({ ...sample10, meta: { ...sample10.meta, id, title } }),
+  images,
 });
 
+// Publishes packs the way scripts/uploadPuzzles.ts does; the pack hash is just its contents here.
+function publish(packs: Record<string, Entry[]>, { skipPackDocs = [] as string[] } = {}): void {
+  const catalog: Record<string, { hash: string; puzzles: Record<string, string> }> = {};
+  for (const [packId, entries] of Object.entries(packs)) {
+    const hash = entries.map((e) => e.hash).join("|");
+    catalog[packId] = { hash, puzzles: Object.fromEntries(entries.map((e) => [JSON.parse(e.json).meta.id, e.hash])) };
+    if (skipPackDocs.includes(packId)) continue;
+    const docPuzzles = Object.fromEntries(entries.map((e) => [JSON.parse(e.json).meta.id, e]));
+    cloud.docs.set(`puzzlePacks/${packId}`, { schema: 2, hash, puzzles: docPuzzles });
+  }
+  cloud.docs.set("catalog/index", { schema: 2, packs: catalog, updatedAt: 1 });
+}
+
+const ids = () => listPuzzles().map((p) => p.id).sort();
+
+beforeEach(() => {
+  cloud.queried.length = 0;
+});
+
+// One sequence: the device state carries over between steps, as on a real phone.
 describe("syncPuzzleCatalog", () => {
-  it("keeps the built-in puzzles when nothing was published yet", async () => {
-    expect(await syncPuzzleCatalog()).toBe(false);
-    expect(listPuzzles()).toHaveLength(builtinCount);
+  it("fails without a published catalog, leaving the library empty", async () => {
+    await expect(syncPuzzleCatalog()).rejects.toMatchObject({ code: "no-catalog" });
+    expect(listPuzzles()).toEqual([]);
   });
 
-  it("reads only the catalog when every published puzzle is built in", async () => {
-    setCatalog({});
-    await syncPuzzleCatalog();
-    expect(cloud.queried).toEqual([]);
-    expect(listPuzzles()).toHaveLength(builtinCount);
-  });
-
-  it("downloads new and changed puzzles, stores them, and lists them", async () => {
-    const fixed = { ...existing.json, meta: { ...existing.json.meta, title: "اصلاح‌شده" } };
-    publish("9001", "n1", newPuzzleJson("9001"), { solution: "puzzles/9001/abc.png" });
-    publish("14", "fix1", fixed);
-    setCatalog({ "9001": "n1", "14": "fix1" });
-
+  it("downloads every pack on a new device and keeps them on the device", async () => {
+    publish({ p001: [puzzle("1"), puzzle("2", "دو", { source: "puzzles/2/abc.webp" })], p002: [puzzle("3")] });
     expect(await syncPuzzleCatalog()).toBe(true);
-    expect(cloud.queried.flat().sort()).toEqual(["14", "9001"]);
-    expect(listPuzzles()).toHaveLength(builtinCount + 1);
-    expect(getPuzzleById("9001")?.solutionImageUrl).toBe("https://storage.test/puzzles/9001/abc.png");
-    expect(getPuzzleById("9001")?.filePath).toBeUndefined();
-    expect(getPuzzleById("14")?.title).toBe("اصلاح‌شده");
+    expect(cloud.queried.flat().sort()).toEqual(["p001", "p002"]);
+    expect(ids()).toEqual(["1", "2", "3"]);
+    expect(getPuzzleById("2")?.sourceImageUrl).toBe("https://storage.test/puzzles/2/abc.webp");
 
-    // Survives a restart: the device copy holds the same puzzles.
     const stored = await readStoredCatalog();
-    expect(Object.keys(stored.downloaded).sort()).toEqual(["14", "9001"]);
+    expect(Object.keys(stored.packs).sort()).toEqual(["p001", "p002"]);
+  });
 
-    // Nothing new: the next check downloads nothing.
-    cloud.queried.length = 0;
+  it("reads only the catalog when nothing changed", async () => {
     expect(await syncPuzzleCatalog()).toBe(false);
     expect(cloud.queried).toEqual([]);
   });
 
-  it("skips a document that doesn't hold the catalog's version yet, and retries later", async () => {
-    publish("9002", "old", newPuzzleJson("9002"));
-    setCatalog({ "9002": "new" });
+  it("re-downloads only the pack holding an edited or new puzzle", async () => {
+    publish({ p001: [puzzle("1"), puzzle("2", "دو", { source: "puzzles/2/abc.webp" })], p002: [puzzle("3", "اصلاح‌شده"), puzzle("4")] });
     await syncPuzzleCatalog();
-    expect(getPuzzleById("9002")).toBeUndefined();
-
-    publish("9002", "new", newPuzzleJson("9002"));
-    await syncPuzzleCatalog();
-    expect(getPuzzleById("9002")).toBeDefined();
+    expect(cloud.queried).toEqual([["p002"]]);
+    expect(getPuzzleById("3")?.title).toBe("اصلاح‌شده");
+    expect(ids()).toEqual(["1", "2", "3", "4"]);
   });
 
-  it("hides unpublished puzzles, built-in or downloaded", async () => {
-    publish("9003", "n1", newPuzzleJson("9003"));
-    setCatalog({ "9003": "n1" });
+  it("keeps the old pack while its new version isn't readable yet, then catches up", async () => {
+    publish({ p001: [puzzle("1", "تازه"), puzzle("2")], p002: [puzzle("3", "اصلاح‌شده"), puzzle("4")] }, { skipPackDocs: ["p001"] });
+    // The p001 document still holds the previous version: the device keeps its old copy.
     await syncPuzzleCatalog();
-    expect(getPuzzleById("9003")).toBeDefined();
+    expect(getPuzzleById("1")?.title).toBe("جدول 1");
+    expect(ids()).toEqual(["1", "2", "3", "4"]);
 
-    const { "14": _gone, ...rest } = builtinHashes;
-    cloud.docs.set("catalog/index", { schema: 1, puzzles: rest, removed: ["14", "9003"] });
+    publish({ p001: [puzzle("1", "تازه"), puzzle("2")], p002: [puzzle("3", "اصلاح‌شده"), puzzle("4")] });
     await syncPuzzleCatalog();
-    expect(getPuzzleById("14")).toBeUndefined();
-    expect(getPuzzleById("9003")).toBeUndefined();
-    expect(listPuzzles()).toHaveLength(builtinCount - 1);
+    expect(getPuzzleById("1")?.title).toBe("تازه");
+  });
+
+  it("drops unpublished packs", async () => {
+    publish({ p002: [puzzle("3", "اصلاح‌شده"), puzzle("4")] });
+    await syncPuzzleCatalog();
+    expect(ids()).toEqual(["3", "4"]);
   });
 });

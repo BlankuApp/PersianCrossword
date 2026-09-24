@@ -15,7 +15,8 @@ import {
   Sprout,
   type LucideIcon,
 } from "lucide-react";
-import { usePuzzleLibrary, type PuzzleSummary } from "../puzzleLibrary";
+import { usePuzzleLibrary, type PuzzleSummary, type PuzzleSyncState } from "../puzzleLibrary";
+import { retryPuzzleSync } from "../puzzleSync";
 import { loadMirror, type ProgressInfo } from "../progress";
 import { navigate, setHomeQuery } from "../router";
 import { useAuth } from "../AuthContext";
@@ -239,8 +240,34 @@ function openPuzzle(id: string): void {
   navigate(`#/puzzle/${id}`);
 }
 
+// No puzzles on the device yet: they arrive with the first successful check (app/puzzleSync.ts).
+function EmptyLibrary({ sync }: { sync: PuzzleSyncState }) {
+  if (sync === "checking") {
+    return (
+      <div className="empty-state" role="status">
+        <p>در حال دریافت جدول‌ها…</p>
+      </div>
+    );
+  }
+  if (sync === "ok") {
+    return (
+      <div className="empty-state">
+        <p>هیچ جدولی یافت نشد.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="empty-state">
+      <p>{sync === "offline" ? "برای دریافت جدول‌ها به اینترنت وصل شوید." : "دریافت جدول‌ها انجام نشد."}</p>
+      <button type="button" className="empty-retry" onClick={retryPuzzleSync}>
+        تلاش دوباره
+      </button>
+    </div>
+  );
+}
+
 export function HomePage() {
-  const { puzzles } = usePuzzleLibrary();
+  const { puzzles, sync } = usePuzzleLibrary();
   const { syncVersion } = useAuth();
   const [query, setQuery] = useState<ListQuery>(() => parseListQuery(window.location.hash));
   const listTopRef = useRef<HTMLDivElement>(null);
@@ -321,14 +348,7 @@ export function HomePage() {
       )}
 
       {puzzles.length === 0 ? (
-        <div className="empty-state">
-          <p>هیچ جدولی یافت نشد.</p>
-          <p className="empty-hint">
-            فایل‌های JSON جدول را در پوشه{" "}
-            <code>puzzles/</code>{" "}
-            یا زیرپوشه‌های آن قرار دهید.
-          </p>
-        </div>
+        <EmptyLibrary sync={sync} />
       ) : (
         <>
           <div className="list-controls" ref={listTopRef}>
