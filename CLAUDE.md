@@ -72,8 +72,18 @@ Puzzles are `CrosswordJson` (version 3) JSON files under `puzzles/`.
 ## Firebase
 
 Project: `persiancrossword` (Firebase console).
-Progress is stored in Firestore at `users/{uid}/puzzles/{puzzleId}`.
-Local fallback uses `localStorage` with key prefix `persian-crossword:`.
+Progress sync (`app/cloudProgress.ts`):
+- `users/{uid}/meta/scoreboard` — `{ schema: 1, puzzles: { [id]: { v, status, percent, playedAt, solvedAt? } } }`,
+  read once per sync; `users/{uid}/progress/{puzzleId}` — `{ cells, v }`, fetched only when its `v` changed.
+  Uploads are transactions that bump `v` in both. Clashes merge letters (newer `playedAt` wins a square).
+- Device: letters in `localStorage` `persian-crossword:{id}`; per-puzzle status/version/dirty flag in
+  `persian-crossword-sync` (the "mirror", `app/progress.ts`). Edits mark the mirror dirty; the push happens later.
+- `users/{uid}/puzzles/{id}` is the pre-scoreboard layout: imported once when no scoreboard exists, then
+  left as a backup. Old app builds still write there only.
+
+Security rules live in `firestore.rules` (owner-only `users/{uid}/**`, everything else denied):
+`npx firebase-tools deploy --only firestore:rules`. `VITE_FUNCTIONS_EMULATOR=1` also points Firestore at the
+local emulator (port 8080).
 
 ## Deploy
 

@@ -16,7 +16,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { listPuzzles, type PuzzleSummary } from "../puzzleLibrary";
-import { loadProgress, loadRecentIds, computeProgress, type ProgressInfo } from "../progress";
+import { loadMirror, type ProgressInfo } from "../progress";
 import { navigate, setHomeQuery } from "../router";
 import { useAuth } from "../AuthContext";
 import { AuthButton } from "../components/AuthButton";
@@ -243,18 +243,10 @@ export function HomePage() {
   const puzzles = useMemo(() => listPuzzles(), []);
   const { syncVersion } = useAuth();
   const [query, setQuery] = useState<ListQuery>(() => parseListQuery(window.location.hash));
-  const [progressMap, setProgressMap] = useState<Record<string, ProgressInfo>>({});
   const listTopRef = useRef<HTMLDivElement>(null);
 
-  // Reload progress whenever puzzles change or cloud sync completes
-  useEffect(() => {
-    const map: Record<string, ProgressInfo> = {};
-    for (const p of puzzles) {
-      const saved = loadProgress(p.id);
-      map[p.id] = computeProgress(p.json, saved);
-    }
-    setProgressMap(map);
-  }, [puzzles, syncVersion]);
+  // Status per puzzle from the device's sync record; re-read whenever a sync changed it.
+  const progressMap = useMemo(() => loadMirror().entries, [syncVersion]);
 
   useEffect(() => {
     setHomeQuery(listQueryToParams(query));
@@ -270,16 +262,12 @@ export function HomePage() {
     [puzzles, progressMap, query],
   );
 
-  // Unfinished puzzles, most recently opened first.
+  // Unfinished puzzles, most recently played (on any device) first.
   const continueList = useMemo(() => {
-    const recent = loadRecentIds();
-    const rank = (id: string) => {
-      const index = recent.indexOf(id);
-      return index === -1 ? Infinity : index;
-    };
+    const playedAt = (id: string) => progressMap[id]?.playedAt ?? 0;
     return puzzles
       .filter((p) => !p.error && puzzleStatus(progressMap[p.id]) === "progress")
-      .sort((a, b) => rank(a.id) - rank(b.id) || compareIds(b, a))
+      .sort((a, b) => playedAt(b.id) - playedAt(a.id) || compareIds(b, a))
       .slice(0, 3);
   }, [puzzles, progressMap]);
 
@@ -521,7 +509,7 @@ function PuzzleRow({
   onClick: () => void;
 }) {
   const pct = progress?.percent ?? 0;
-  const done = progress?.completed ?? false;
+  const done = progress?.status === "done";
   const hasError = Boolean(puzzle.error);
 
   return (

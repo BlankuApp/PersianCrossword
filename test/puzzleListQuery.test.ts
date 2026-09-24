@@ -19,8 +19,8 @@ const puzzles = [
   puzzle("11", "جدول ۸۰۳۶", "عادی", "جام جم"),
 ];
 const progress: Record<string, ProgressInfo> = {
-  "9": { filled: 10, total: 100, percent: 10, completed: false },
-  "11": { filled: 100, total: 100, percent: 100, completed: true },
+  "9": { status: "progress", percent: 10 },
+  "11": { status: "done", percent: 100 },
 };
 const ids = (query: Partial<typeof DEFAULT_LIST_QUERY>) =>
   filterAndSortPuzzles(puzzles, progress, { ...DEFAULT_LIST_QUERY, ...query }).map((p) => p.id);

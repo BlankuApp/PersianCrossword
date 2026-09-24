@@ -13,9 +13,10 @@ import { Capacitor } from "@capacitor/core";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { LogOut } from "lucide-react";
 import { auth } from "../firebase";
-import { useAuth } from "../AuthContext";
+import { useAuth, type SyncStatus } from "../AuthContext";
 import { listPuzzles } from "../puzzleLibrary";
-import { computeProgress, loadGeminiKey, loadProgress, saveGeminiKey } from "../progress";
+import { loadGeminiKey, loadMirror, saveGeminiKey } from "../progress";
+import { puzzleStatus } from "../puzzleListQuery";
 import { FREE_AI_LIMITS } from "../gemini";
 
 type EmailMode = "signin" | "signup" | "reset";
@@ -44,12 +45,13 @@ function GoogleIcon({ size = 16 }: { size?: number }) {
 
 function computeDifficultyStats(): readonly DifficultyStats[] {
   const byLabel = new Map<string, { solved: number; inProgress: number; untouched: number }>();
+  const entries = loadMirror().entries;
   for (const puzzle of listPuzzles()) {
     const label = puzzle.difficulty?.trim() || NO_DIFFICULTY;
     const row = byLabel.get(label) ?? { solved: 0, inProgress: 0, untouched: 0 };
-    const { filled, completed } = computeProgress(puzzle.json, loadProgress(puzzle.id));
-    if (completed) row.solved++;
-    else if (filled > 0) row.inProgress++;
+    const status = puzzleStatus(entries[puzzle.id]);
+    if (status === "done") row.solved++;
+    else if (status === "progress") row.inProgress++;
     else row.untouched++;
     byLabel.set(label, row);
   }
@@ -60,13 +62,33 @@ function computeDifficultyStats(): readonly DifficultyStats[] {
   }));
 }
 
+function syncStatusText({ kind, unsent }: SyncStatus): string {
+  const queued = unsent > 0 ? `${fa(unsent)} جدول هنوز در فضای ابری ذخیره نشده است.` : "";
+  if (kind === "offline") return `اتصال به اینترنت برقرار نیست. ${queued || "پیشرفت شما روی همین دستگاه ذخیره است."}`;
+  if (kind === "error") return `ذخیره در فضای ابری انجام نشد. ${queued}`;
+  if (kind === "pending") return queued;
+  return "همهٔ پیشرفت‌ها در فضای ابری ذخیره شده است.";
+}
+
 function UserMenu() {
-  const { user, signOut, syncVersion } = useAuth();
+  const { user, signOut, syncVersion, syncStatus, syncNow } = useAuth();
   const [open, setOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const [geminiKey, setGeminiKey] = useState(loadGeminiKey);
 
   // Scanning every puzzle isn't free — only do it while the menu is open.
   const stats = useMemo(() => (open ? computeDifficultyStats() : []), [open, syncVersion]);
+  // Only problems that keep changes from reaching the cloud earn a dot on the avatar.
+  const syncProblem = syncStatus.kind === "error" || (syncStatus.kind === "offline" && syncStatus.unsent > 0);
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    try {
+      if (await signOut()) setOpen(false);
+    } finally {
+      setSigningOut(false);
+    }
+  }
 
   if (!user) return null;
 
@@ -95,6 +117,7 @@ function UserMenu() {
         aria-label={`حساب کاربری: ${name}`}
       >
         <img className="auth-avatar" src={avatar} alt="" />
+        {syncProblem && <span className="auth-sync-dot" aria-hidden="true" />}
       </button>
 
       {open && (
@@ -112,6 +135,15 @@ function UserMenu() {
                 </span>
               </div>
             </div>
+
+            <p className={`auth-sync-status auth-sync-${syncStatus.kind}`} role="status">
+              {syncStatusText(syncStatus)}
+              {(syncStatus.kind === "error" || syncStatus.kind === "offline") && (
+                <button type="button" className="auth-sync-retry" onClick={() => void syncNow()}>
+                  همین حالا تلاش کن
+                </button>
+              )}
+            </p>
 
             <table className="auth-stats">
               <thead>
@@ -172,9 +204,14 @@ function UserMenu() {
               ) : null}
             </div>
 
-            <button type="button" className="auth-btn auth-btn-block auth-signout-btn" onClick={signOut}>
+            <button
+              type="button"
+              className="auth-btn auth-btn-block auth-signout-btn"
+              onClick={handleSignOut}
+              disabled={signingOut}
+            >
               <LogOut size={16} strokeWidth={2} aria-hidden="true" />
-              خروج از حساب
+              {signingOut ? "در حال ذخیره…" : "خروج از حساب"}
             </button>
           </div>
         </>
