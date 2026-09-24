@@ -9,20 +9,6 @@ npm run test         # Vitest unit tests
 npm run typecheck    # Type-check both tsconfig.json and tsconfig.app.json
 ```
 
-### Grid-importer tool (Python)
-
-```bash
-# Backend (FastAPI + OpenCV + LlamaCloud)
-.venv\Scripts\activate            # activate virtualenv (root-level .venv)
-cd tools/grid-importer/backend
-uvicorn app:app --reload          # API at http://127.0.0.1:8000
-pytest                             # Run backend tests
-
-# Frontend (separate Vite app)
-cd tools/grid-importer/frontend
-npm install && npm run dev
-```
-
 ### Firebase Functions (AI proxy)
 
 ```bash
@@ -41,10 +27,6 @@ src/          Core TS library (grid, puzzle, state, text, validation, types)
 app/          React SPA (Vite): auth, routing, solver UI, puzzle library
 test/         Vitest tests for the core library
 functions/    Firebase Functions: askAi — Gemini proxy with per-user daily quota (Firestore aiUsage/{uid})
-tools/
-  grid-importer/
-    backend/  Python FastAPI — image → 0/1 grid matrix (OpenCV + LlamaCloud OCR)
-    frontend/ Standalone React tool for importing puzzles from images
 puzzles/      Puzzle JSON files, grouped in batches (1-50, 51-100, 101-150, …)
 dist/         TS library build output (tsc)
 app-dist/     Vite app build output → deployed to GitHub Pages
