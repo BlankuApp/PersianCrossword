@@ -272,8 +272,9 @@ export function HomePage() {
   const [query, setQuery] = useState<ListQuery>(() => parseListQuery(window.location.hash));
   const listTopRef = useRef<HTMLDivElement>(null);
 
-  // Status per puzzle from the device's sync record; re-read whenever a sync changed it.
-  const progressMap = useMemo(() => loadMirror().entries, [syncVersion]);
+  // Status per puzzle from the device's sync record; re-read whenever a sync or a puzzle
+  // update (refreshProgress) changed it.
+  const progressMap = useMemo(() => loadMirror().entries, [syncVersion, puzzles]);
 
   useEffect(() => {
     setHomeQuery(listQueryToParams(query));

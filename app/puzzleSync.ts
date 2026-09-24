@@ -1,5 +1,6 @@
 import { collection, doc, documentId, getDoc, getDocs, query, where } from "firebase/firestore";
 import type { CrosswordJson } from "../src/index";
+import { refreshProgress } from "./cloudProgress";
 import { db, logAnalyticsEvent, storageFileUrl } from "./firebase";
 import {
   EMPTY_STORED_CATALOG,
@@ -104,6 +105,7 @@ export async function syncPuzzleCatalog(): Promise<boolean> {
   await writeStoredCatalog(next);
   _stored = next;
   setStoredCatalog(next);
+  refreshProgress();
   return true;
 }
 
@@ -149,6 +151,7 @@ export async function refreshPuzzleCatalog(): Promise<void> {
 export async function startPuzzleSync(): Promise<void> {
   _stored = await readStoredCatalog();
   setStoredCatalog(_stored);
+  refreshProgress();
   window.addEventListener("online", () => void check());
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible" && Date.now() - _lastCheck > RECHECK_MS) void check();

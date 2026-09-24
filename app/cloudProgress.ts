@@ -37,6 +37,23 @@ function describe(id: string, cells: Cells): ProgressInfo {
   return { status: Object.keys(cells).length ? "progress" : "new", percent: 0 };
 }
 
+// Status and percent are worked out when letters change, against the puzzle as it was then; a
+// later fix to the puzzle's answers leaves them stale. Re-derive them from the letters and the
+// current puzzles, and upload what changed. Runs whenever the device's puzzles load or change.
+export function refreshProgress(): void {
+  const mirror = loadMirror();
+  const entries = { ...mirror.entries };
+  let changed = false;
+  for (const [id, entry] of Object.entries(entries)) {
+    if (!getPuzzleById(id)) continue;
+    const info = describe(id, loadProgress(id).cells);
+    if (info.status === entry.status && info.percent === entry.percent) continue;
+    entries[id] = progressEntry(info, entry.v, true, entry.playedAt, entry.solvedAt);
+    changed = true;
+  }
+  if (changed) saveMirror({ ...mirror, entries });
+}
+
 // The same puzzle changed on two devices: keep every letter; where both typed the same
 // square, the more recently played copy wins. A newer reset (no letters) wins outright.
 export function mergeCells(local: Cells, localAt: number, cloud: Cells, cloudAt: number): Cells {
