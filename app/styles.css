@@ -1039,6 +1039,26 @@ select {
   display: block;
 }
 
+/* WebView < 88 (unupdated Android 11 and older) has no aspect-ratio: square each cell
+   with a padding spacer instead, which squares the board too. */
+@supports not (aspect-ratio: 1) {
+  .cell::before {
+    content: "";
+    grid-area: 1 / 1;
+    padding-bottom: 100%;
+  }
+
+  .cell-value {
+    grid-area: 1 / 1;
+  }
+
+  .cell-block-icon {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+}
+
 .active-clue {
   border: 1px solid #d3d8d2;
   border-radius: 8px;
