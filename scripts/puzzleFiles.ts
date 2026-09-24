@@ -1,9 +1,9 @@
 // Reads a local puzzle folder (default: puzzles/, kept out of git) and fingerprints each
-// puzzle. Used by the upload script and the dev server. Runs in Node only; keep it free of
-// TS-only runtime syntax (`node` strips types).
+// puzzle. Used by the upload script (run with tsx) and the dev server.
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, extname, join, relative } from "node:path";
+import { validatePuzzleJson, type CrosswordJson } from "../src/index.ts";
 
 export interface PuzzleImageFile {
   readonly kind: "solution" | "source";
@@ -77,4 +77,16 @@ export function readPuzzleFiles(puzzlesDir: string): PuzzleFile[] {
         hash: puzzleHash(json, images),
       };
     });
+}
+
+// The same check the app runs on every puzzle; a puzzle failing it would show as a broken row.
+export function findInvalidPuzzles(puzzles: readonly Pick<PuzzleFile, "relPath" | "jsonText">[]): string[] {
+  return puzzles.flatMap((p) => {
+    try {
+      const result = validatePuzzleJson(JSON.parse(p.jsonText) as CrosswordJson);
+      return result.valid ? [] : [`${p.relPath}: ${result.issues.map((i) => i.message).join("; ")}`];
+    } catch (e) {
+      return [`${p.relPath}: ${e instanceof Error ? e.message : String(e)}`];
+    }
+  });
 }

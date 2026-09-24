@@ -2,13 +2,15 @@
 //
 //   npm run puzzles:upload -- [--dir puzzles] [--dry-run] [--prune]
 //
-// Only packs holding new or changed puzzles are rewritten, and the catalog goes last so an app
-// never sees a pack hash before the pack itself. Puzzles that are published but missing from
+// Every puzzle must pass the app's validation first. Only packs holding new or changed puzzles
+// are rewritten, and the catalog goes last. A device that reads a pack between those writes (or
+// after a failed run) still takes the pack as it is and re-checks it on its next sync
+// (app/puzzleSync.ts), so no puzzle goes missing. Puzzles that are published but missing from
 // the folder stay published unless --prune is given. Layout and credentials: firebaseAdmin.ts.
 import { readFileSync } from "node:fs";
 import { extname } from "node:path";
 import { initAdmin, listIds, parseArgs, type CatalogDoc, type PackEntry } from "./firebaseAdmin.ts";
-import { readPuzzleFiles, type PuzzleFile, type PuzzleImageFile } from "./puzzleFiles.ts";
+import { findInvalidPuzzles, readPuzzleFiles, type PuzzleFile, type PuzzleImageFile } from "./puzzleFiles.ts";
 import { planPacks } from "./puzzlePacks.ts";
 
 // Firestore rejects documents over 1 MiB; leave room for field names and overhead.
@@ -44,6 +46,8 @@ async function main(): Promise<void> {
   if (!puzzles.length) throw new Error(`No puzzles found in ${dir}.`);
   const duplicates = findDuplicateIds(puzzles);
   if (duplicates.length) throw new Error(`Duplicate puzzle ids:\n  ${duplicates.join("\n  ")}`);
+  const invalid = findInvalidPuzzles(puzzles);
+  if (invalid.length) throw new Error(`Fix these puzzles first (nothing was uploaded):\n  ${invalid.join("\n  ")}`);
 
   const { db, bucket } = initAdmin();
   const catalogRef = db.doc("catalog/index");

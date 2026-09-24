@@ -57,21 +57,22 @@ function toDownloadedPuzzle(entry: PackEntryDoc): DownloadedPuzzle | undefined {
   };
 }
 
-// Undefined when the document doesn't hold the catalog's version (e.g. read mid-upload); the
-// next check tries again.
-export function toStoredPack(data: unknown, expectedHash: string): StoredPack | undefined {
+// A pack document whose hash differs from the catalog's (read between the uploader's pack and
+// catalog writes, or after an upload that stopped halfway) is still taken as it is. It's stored
+// under its own hash, so the next check sees the mismatch and fetches the pack again.
+export function toStoredPack(data: unknown): StoredPack | undefined {
   const d = data as { schema?: unknown; hash?: unknown; puzzles?: unknown } | undefined;
-  if (d?.schema !== 2 || d.hash !== expectedHash || typeof d.puzzles !== "object" || d.puzzles === null) return undefined;
+  if (d?.schema !== 2 || typeof d.hash !== "string" || typeof d.puzzles !== "object" || d.puzzles === null) return undefined;
   const puzzles: Record<string, DownloadedPuzzle> = {};
   for (const [id, entry] of Object.entries(d.puzzles as Record<string, PackEntryDoc>)) {
     const puzzle = toDownloadedPuzzle(entry);
     if (puzzle) puzzles[id] = puzzle;
     else console.warn(`[puzzleSync] skipping unreadable puzzle ${id}`);
   }
-  return { hash: expectedHash, puzzles };
+  return { hash: d.hash, puzzles };
 }
 
-async function fetchPacks(ids: readonly string[], hashes: Readonly<Record<string, string>>): Promise<Record<string, StoredPack>> {
+async function fetchPacks(ids: readonly string[]): Promise<Record<string, StoredPack>> {
   const chunks: string[][] = [];
   for (let i = 0; i < ids.length; i += IN_LIMIT) chunks.push(ids.slice(i, i + IN_LIMIT));
   const snaps = await Promise.all(
@@ -80,7 +81,7 @@ async function fetchPacks(ids: readonly string[], hashes: Readonly<Record<string
   const result: Record<string, StoredPack> = {};
   for (const snap of snaps) {
     for (const d of snap.docs) {
-      const pack = toStoredPack(d.data(), hashes[d.id] ?? "");
+      const pack = toStoredPack(d.data());
       if (pack) result[d.id] = pack;
     }
   }
@@ -96,8 +97,8 @@ export async function syncPuzzleCatalog(): Promise<boolean> {
   if (!remote) throw Object.assign(new Error("No puzzle catalog published"), { code: "no-catalog" });
 
   const { fetch, keep } = planSync(_stored, remote);
-  const fetched = fetch.length ? await fetchPacks(fetch, remote.packs) : {};
-  // A pack that couldn't be read in its new version (mid-upload) keeps its old copy until next time.
+  const fetched = fetch.length ? await fetchPacks(fetch) : {};
+  // A pack that couldn't be read at all keeps its old copy until next time.
   const stale = Object.fromEntries(fetch.filter((id) => !fetched[id] && _stored.packs[id]).map((id) => [id, _stored.packs[id]!]));
   const next: StoredCatalog = { packs: { ...stale, ...keep, ...fetched } };
   if (sameStoredCatalog(_stored, next)) return false;

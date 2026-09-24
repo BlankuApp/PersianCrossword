@@ -30,7 +30,7 @@ app/          React SPA (Vite): auth, routing, solver UI, puzzle library
 test/         Vitest tests for the core library
 functions/    Firebase Functions: askAi — Gemini proxy with per-user daily quota (Firestore aiUsage/{uid})
 puzzles/      Local working copy of the puzzles (gitignored; Firebase is the source): batches 1-50, 51-100, …
-scripts/      Node scripts (run with plain `node`, which strips TS types): puzzle upload/download
+scripts/      Node scripts (run with tsx): puzzle upload/download
 dist/         TS library build output (tsc)
 app-dist/     Vite app build output → deployed to GitHub Pages
 ```
@@ -75,7 +75,8 @@ and Storage at the local emulators (ports 8080, 9199).
 
 Firebase is the only source of puzzles: the repo and the app bundle hold none. `puzzles/` (and
 `raw_data/`, original scans) are local, gitignored working copies.
-- `scripts/uploadPuzzles.ts` publishes the folder; layout in `scripts/firebaseAdmin.ts`: `catalog/index`
+- `scripts/uploadPuzzles.ts` validates every puzzle (`validatePuzzleJson`, aborting before any write),
+  then publishes the folder; layout in `scripts/firebaseAdmin.ts`: `catalog/index`
   lists packs `{ [packId]: { hash, puzzles: { [id]: hash } } }`; `puzzlePacks/{packId}` holds up to 50
   puzzles as JSON text (Firestore rejects nested arrays) with their file path; images live in Storage at
   `puzzles/{id}/{imageHash}.{ext}`. A puzzle keeps its pack for life (`scripts/puzzlePacks.ts`), so an
@@ -84,7 +85,9 @@ Firebase is the only source of puzzles: the repo and the app bundle hold none. `
   `FIREBASE_STORAGE_EMULATOR_HOST`. `scripts/downloadPuzzles.ts` restores the same layout.
 - The puzzle hash (`scripts/puzzleFiles.ts`) covers the parsed JSON and image bytes.
 - `app/puzzleSync.ts` reads `catalog/index` (one read per check: startup, back online, foreground after
-  30 min) and fetches only packs whose hash changed (all ~6 on a new device). Packs live in IndexedDB
+  30 min) and fetches only packs whose hash changed (all ~6 on a new device). A pack document whose hash
+  disagrees with the catalog (mid-upload, or a run that stopped halfway) is still used and re-fetched on
+  the next check. Packs live in IndexedDB
   (`app/puzzleStore.ts`); `usePuzzleLibrary()` exposes the list plus a `sync` state for the home page's
   loading/offline messages.
 - `npm run dev` lists the local `puzzles/` folder instead (`/dev/local-puzzles` in `vite.config.ts`), so

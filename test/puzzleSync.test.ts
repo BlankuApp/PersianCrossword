@@ -88,16 +88,32 @@ describe("syncPuzzleCatalog", () => {
     expect(ids()).toEqual(["1", "2", "3", "4"]);
   });
 
-  it("keeps the old pack while its new version isn't readable yet, then catches up", async () => {
+  it("takes a pack whose document and catalog entry disagree, and checks it again next time", async () => {
+    // The catalog lists a new p001, but its document still holds the previous version.
     publish({ p001: [puzzle("1", "تازه"), puzzle("2")], p002: [puzzle("3", "اصلاح‌شده"), puzzle("4")] }, { skipPackDocs: ["p001"] });
-    // The p001 document still holds the previous version: the device keeps its old copy.
     await syncPuzzleCatalog();
     expect(getPuzzleById("1")?.title).toBe("جدول 1");
     expect(ids()).toEqual(["1", "2", "3", "4"]);
 
+    cloud.queried.length = 0;
     publish({ p001: [puzzle("1", "تازه"), puzzle("2")], p002: [puzzle("3", "اصلاح‌شده"), puzzle("4")] });
     await syncPuzzleCatalog();
+    expect(cloud.queried).toEqual([["p001"]]);
     expect(getPuzzleById("1")?.title).toBe("تازه");
+  });
+
+  it("shows a new pack whose document is ahead of the catalog (upload stopped halfway)", async () => {
+    const entries = [puzzle("5"), puzzle("6")];
+    publish({ p001: [puzzle("1", "تازه"), puzzle("2")], p002: [puzzle("3", "اصلاح‌شده"), puzzle("4")], p003: entries });
+    // The p003 document was rewritten, but the catalog still has its old hash.
+    const doc = cloud.docs.get("puzzlePacks/p003") as { hash: string };
+    doc.hash = "newer";
+    await syncPuzzleCatalog();
+    expect(ids()).toEqual(["1", "2", "3", "4", "5", "6"]);
+
+    cloud.queried.length = 0;
+    await syncPuzzleCatalog();
+    expect(cloud.queried).toEqual([["p003"]]); // still differs from the catalog: fetched again
   });
 
   it("drops unpublished packs", async () => {
