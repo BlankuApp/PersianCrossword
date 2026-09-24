@@ -51,8 +51,7 @@ export function isSpecialDifficulty(difficulty: string | undefined): boolean {
 }
 
 export function puzzleStatus(progress: ProgressInfo | undefined): Exclude<StatusFilter, ""> {
-  if (progress?.completed) return "done";
-  return (progress?.filled ?? 0) > 0 ? "progress" : "new";
+  return progress?.status ?? "new";
 }
 
 // Fold Persian/Arabic-Indic digits to ASCII so typing "8036" or "۸۰۳۶" both find "جدول ۸۰۳۶".

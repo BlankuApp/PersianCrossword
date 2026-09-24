@@ -14,6 +14,8 @@ interface MockUser {
 const authState = vi.hoisted(() => ({
   user: null as null | MockUser,
   signOut: vi.fn(),
+  syncNow: vi.fn(),
+  syncStatus: { kind: "synced", unsent: 0 } as { kind: "synced" | "pending" | "offline" | "error"; unsent: number },
 }));
 
 const platform = vi.hoisted(() => ({ native: false }));
@@ -31,7 +33,13 @@ const firebaseMocks = vi.hoisted(() => ({
 const nativeAuthMocks = vi.hoisted(() => ({ signInWithGoogle: vi.fn() }));
 
 vi.mock("../app/AuthContext", () => ({
-  useAuth: () => ({ user: authState.user, signOut: authState.signOut }),
+  useAuth: () => ({
+    user: authState.user,
+    signOut: authState.signOut,
+    syncNow: authState.syncNow,
+    syncStatus: authState.syncStatus,
+    syncVersion: 0,
+  }),
 }));
 
 vi.mock("../app/firebase", () => ({ auth: { name: "test-auth" }, functions: {} }));
@@ -73,8 +81,10 @@ async function fillEmailForm(user: ReturnType<typeof userEvent.setup>) {
 describe("AuthButton", () => {
   beforeEach(() => {
     authState.user = null;
+    authState.syncStatus = { kind: "synced", unsent: 0 };
     platform.native = false;
     vi.clearAllMocks();
+    authState.signOut.mockResolvedValue(true);
     firebaseMocks.createUser.mockResolvedValue({});
     firebaseMocks.resetPassword.mockResolvedValue(undefined);
     firebaseMocks.signInAnonymously.mockResolvedValue({});
@@ -187,6 +197,41 @@ describe("AuthButton", () => {
     await user.click(screen.getByRole("button", { name: "حساب کاربری: کاربر آزمایشی" }));
     await user.click(screen.getByRole("button", { name: "خروج از حساب" }));
     expect(authState.signOut).toHaveBeenCalledOnce();
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "حساب کاربری" })).not.toBeInTheDocument());
+  });
+
+  it("keeps the menu open when the player cancels signing out", async () => {
+    authState.user = { uid: "u1", isAnonymous: false, displayName: "کاربر", email: null, providerData: [] };
+    authState.signOut.mockResolvedValue(false);
+    const user = userEvent.setup();
+    render(<AuthButton />);
+    await user.click(screen.getByRole("button", { name: "حساب کاربری: کاربر" }));
+    await user.click(screen.getByRole("button", { name: "خروج از حساب" }));
+    expect(screen.getByRole("dialog", { name: "حساب کاربری" })).toBeInTheDocument();
+  });
+
+  it("shows sync status, a dot for lasting problems, and a retry button", async () => {
+    authState.user = { uid: "u1", isAnonymous: false, displayName: "کاربر", email: null, providerData: [] };
+    authState.syncStatus = { kind: "error", unsent: 2 };
+    const user = userEvent.setup();
+    const { container } = render(<AuthButton />);
+    expect(container.querySelector(".auth-sync-dot")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "حساب کاربری: کاربر" }));
+    expect(screen.getByRole("status")).toHaveTextContent("۲ جدول هنوز در فضای ابری ذخیره نشده است");
+    await user.click(screen.getByRole("button", { name: "همین حالا تلاش کن" }));
+    expect(authState.syncNow).toHaveBeenCalledOnce();
+  });
+
+  it("shows no dot or retry when everything is saved", async () => {
+    authState.user = { uid: "u1", isAnonymous: false, displayName: "کاربر", email: null, providerData: [] };
+    const user = userEvent.setup();
+    const { container } = render(<AuthButton />);
+    expect(container.querySelector(".auth-sync-dot")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "حساب کاربری: کاربر" }));
+    expect(screen.getByRole("status")).toHaveTextContent("همهٔ پیشرفت‌ها در فضای ابری ذخیره شده است.");
+    expect(screen.queryByRole("button", { name: "همین حالا تلاش کن" })).not.toBeInTheDocument();
   });
 
   it("lets an anonymous guest open sign-in when allowGuestUpgrade", async () => {

@@ -47,15 +47,14 @@ import {
 } from "../crosswordUi";
 import {
   loadProgress,
-  saveProgress,
   normalizeGridDirection,
+  progressOf,
+  recordEdit,
   loadCheckMode,
   saveCheckMode,
   loadSeenTutorial,
   saveSeenTutorial,
-  markRecent,
 } from "../progress";
-import { saveCloudProgress } from "../cloudProgress";
 import { useAuth } from "../AuthContext";
 import { goHome } from "../router";
 import { useNoBackGesture } from "../gestureExclusion";
@@ -73,7 +72,7 @@ interface SolverPageProps {
 }
 
 export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePath }: SolverPageProps) {
-  const { user, syncVersion } = useAuth();
+  const { syncVersion, pushChanges } = useAuth();
   const normalizedJson = useMemo(() => normalizeGridDirection(json), [json]);
   const isDebugMode = import.meta.env.DEV && json.version === 3 && !!filePath;
   const isTouch = useMemo(() => isTouchDevice(), []);
@@ -267,16 +266,25 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [puzzle, compileError]);
 
-  useEffect(() => markRecent(id), [id]);
+  // Letters are saved on the device at once; the cloud gets them after a quiet spell or
+  // when leaving the puzzle (the app going to the background is handled in AuthContext).
+  const pushTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(
+    () => () => {
+      clearTimeout(pushTimerRef.current);
+      pushChanges();
+    },
+    [pushChanges],
+  );
 
-  useEffect(() => {
-    saveProgress(id, savedState);
-    if (!user) return;
-    const timer = setTimeout(() => {
-      void saveCloudProgress(user.uid, id, savedState);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [id, savedState, user]);
+  function saveEdit(nextState: ReturnType<typeof createState>): void {
+    if (!puzzle) return;
+    const saved = nextState.toJSON();
+    setSavedState(saved);
+    recordEdit(id, saved, progressOf(puzzle, nextState));
+    clearTimeout(pushTimerRef.current);
+    pushTimerRef.current = setTimeout(pushChanges, 30_000);
+  }
 
   const isPuzzleSolved = useMemo(() => {
     if (!puzzle || !crosswordState) return false;
@@ -296,9 +304,6 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     prevSolvedRef.current = isPuzzleSolved;
   }, [isPuzzleSolved]);
 
-  function commitState(nextState: ReturnType<typeof createState>): void {
-    setSavedState(nextState.toJSON());
-  }
 
   function selectCell(coord: Coord): void {
     if (!puzzle) return;
@@ -354,7 +359,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
     const nextState = createState(puzzle, savedState);
     nextState.setCell(coord, value);
     if (clearCoord) nextState.setCell(clearCoord, null);
-    commitState(nextState);
+    saveEdit(nextState);
   }
 
   function backspaceCell(): void {
@@ -411,9 +416,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, filePat
   }
 
   function resetProgress(): void {
-    const empty = { cells: {} };
-    setSavedState(empty);
-    saveProgress(id, empty);
+    if (puzzle) saveEdit(createState(puzzle));
     const firstSlot = puzzle?.slots[0];
     setSelection(firstSlot ? selectSlot(firstSlot) : undefined);
   }

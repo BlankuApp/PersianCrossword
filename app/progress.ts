@@ -1,5 +1,5 @@
 import { compilePuzzle, createState } from "../src/index";
-import type { CrosswordJson, SavedCrosswordState } from "../src/index";
+import type { CrosswordJson, CrosswordPuzzle, CrosswordState, SavedCrosswordState } from "../src/index";
 
 export const STORAGE_PREFIX = "persian-crossword:";
 
@@ -67,69 +67,111 @@ export function saveGeminiKey(value: string): void {
   window.localStorage.setItem(GEMINI_KEY_KEY, value);
 }
 
-// Dash, not the STORAGE_PREFIX colon — same reason as CHECK_MODE_KEY above.
-// Most recently opened puzzle ids first; orders the home page's "continue solving" strip.
-const RECENT_KEY = "persian-crossword-recent";
-
-export function loadRecentIds(): string[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const ids: unknown = JSON.parse(window.localStorage.getItem(RECENT_KEY) ?? "[]");
-    return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === "string") : [];
-  } catch {
-    return [];
-  }
-}
-
-export function markRecent(id: string): void {
-  if (typeof window === "undefined") return;
-  const ids = [id, ...loadRecentIds().filter((other) => other !== id)].slice(0, 20);
-  window.localStorage.setItem(RECENT_KEY, JSON.stringify(ids));
-}
+export type PuzzleStatus = "new" | "progress" | "done";
 
 export interface ProgressInfo {
-  readonly filled: number;
-  readonly total: number;
+  readonly status: PuzzleStatus;
   readonly percent: number;
-  readonly completed: boolean;
 }
 
-export function computeProgress(json: CrosswordJson, saved: SavedCrosswordState): ProgressInfo {
-  let puzzle;
-  try {
-    puzzle = compilePuzzle(normalizeGridDirection(json));
-  } catch {
-    return { filled: 0, total: 0, percent: 0, completed: false };
-  }
-
-  let state;
-  try {
-    state = createState(puzzle, saved);
-  } catch {
-    return { filled: 0, total: 0, percent: 0, completed: false };
-  }
-
+// "Done" means every letter is right; puzzles without answers only need every square filled.
+export function progressOf(puzzle: CrosswordPuzzle, state: CrosswordState): ProgressInfo {
   let filled = 0;
   let total = 0;
-  let allCorrect = true;
-  const hasAnswers = puzzle.slots.some((s) => s.answer !== null);
-
   for (let row = 0; row < puzzle.size.rows; row++) {
     for (let col = 0; col < puzzle.size.cols; col++) {
       const coord = { row, col };
       if (puzzle.isBlock(coord)) continue;
       total++;
-      const value = state.getCell(coord);
-      if (value) {
-        filled++;
-      } else {
-        allCorrect = false;
-      }
+      if (state.getCell(coord)) filled++;
     }
   }
+  if (filled === 0) return { status: "new", percent: 0 };
+  const percent = Math.round((filled / total) * 100);
+  const done =
+    filled === total &&
+    puzzle.slots.every((slot) => ["correct", "unknownAnswer"].includes(state.checkSlot(slot.id)));
+  return { status: done ? "done" : "progress", percent };
+}
 
-  const percent = total === 0 ? 0 : Math.round((filled / total) * 100);
-  const completed = filled === total && (!hasAnswers || allCorrect);
+export function computeProgress(json: CrosswordJson, saved: SavedCrosswordState): ProgressInfo {
+  const hasLetters = Object.keys(saved.cells).length > 0;
+  try {
+    const puzzle = compilePuzzle(normalizeGridDirection(json));
+    return progressOf(puzzle, createState(puzzle, saved));
+  } catch {
+    return { status: hasLetters ? "progress" : "new", percent: 0 };
+  }
+}
 
-  return { filled, total, percent, completed };
+// Per-puzzle sync record on this device, mirrored from the cloud scoreboard
+// (users/{uid}/meta/scoreboard). Letters themselves stay in the STORAGE_PREFIX keys.
+export interface ProgressEntry extends ProgressInfo {
+  readonly v: number; // cloud version these letters build on; 0 = never uploaded
+  readonly dirty: boolean; // changed on this device since the last upload
+  readonly playedAt: number; // ms of the last edit; orders "continue solving", newer wins a clash
+  readonly solvedAt?: number | undefined;
+}
+
+export interface SyncMirror {
+  readonly owner: string | null; // uid whose progress this is; null = signed-out player
+  readonly ownerAnonymous: boolean;
+  readonly entries: Readonly<Record<string, ProgressEntry>>;
+}
+
+// Dash, not the STORAGE_PREFIX colon — same reason as CHECK_MODE_KEY above.
+export const SYNC_KEY = "persian-crossword-sync";
+const EMPTY_MIRROR: SyncMirror = { owner: null, ownerAnonymous: false, entries: {} };
+
+export function loadMirror(): SyncMirror {
+  if (typeof window === "undefined") return EMPTY_MIRROR;
+  try {
+    const raw = JSON.parse(window.localStorage.getItem(SYNC_KEY) ?? "null") as (SyncMirror & { schema: number }) | null;
+    return raw?.schema === 1 ? raw : EMPTY_MIRROR;
+  } catch {
+    return EMPTY_MIRROR;
+  }
+}
+
+export function saveMirror(mirror: SyncMirror): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(SYNC_KEY, JSON.stringify({ schema: 1, ...mirror }));
+}
+
+export function progressEntry(
+  info: ProgressInfo,
+  v: number,
+  dirty: boolean,
+  playedAt: number,
+  solvedAt?: number | undefined,
+): ProgressEntry {
+  const solved = info.status === "done" ? (solvedAt ?? playedAt) : 0;
+  return { ...info, v, dirty, playedAt, ...(solved ? { solvedAt: solved } : {}) };
+}
+
+// A letter typed (or a reset) on this device: save it now, upload later.
+export function recordEdit(id: string, saved: SavedCrosswordState, info: ProgressInfo): void {
+  saveProgress(id, saved);
+  const mirror = loadMirror();
+  const prev = mirror.entries[id];
+  saveMirror({
+    ...mirror,
+    entries: { ...mirror.entries, [id]: progressEntry(info, prev?.v ?? 0, true, Date.now(), prev?.solvedAt) },
+  });
+}
+
+export function countUnsent(): number {
+  return Object.values(loadMirror().entries).filter((entry) => entry.dirty).length;
+}
+
+export function localProgressIds(): string[] {
+  return Object.keys(window.localStorage)
+    .filter((key) => key.startsWith(STORAGE_PREFIX))
+    .map((key) => key.slice(STORAGE_PREFIX.length));
+}
+
+// Signing out of a real account: its letters must not show up for the next player on this device.
+export function clearLocalProgress(): void {
+  for (const id of localProgressIds()) window.localStorage.removeItem(STORAGE_PREFIX + id);
+  window.localStorage.removeItem(SYNC_KEY);
 }

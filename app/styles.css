@@ -1512,6 +1512,7 @@ select {
 }
 
 .auth-avatar-btn {
+  position: relative;
   padding: 0;
   border: 1px solid #bac3bc;
   border-radius: 10px;
@@ -1534,6 +1535,45 @@ select {
 .auth-avatar-lg {
   width: 56px;
   height: 56px;
+}
+
+.auth-sync-dot {
+  position: absolute;
+  top: -4px;
+  inset-inline-end: -4px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: #c2410c;
+}
+
+.auth-sync-status {
+  margin: 12px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.7;
+  color: #1e5c38;
+}
+
+.auth-sync-pending {
+  color: #5a645d;
+}
+
+.auth-sync-offline,
+.auth-sync-error {
+  color: #9a3412;
+}
+
+.auth-sync-retry {
+  margin-inline-start: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .auth-menu-backdrop {

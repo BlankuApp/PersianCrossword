@@ -11,7 +11,7 @@ import type { CrosswordJson } from "../src/index";
 const json10 = sample10 as CrosswordJson;
 const json11 = sample11 as CrosswordJson;
 
-const authState = vi.hoisted(() => ({ user: null, syncVersion: 0 }));
+const authState = vi.hoisted(() => ({ user: null, syncVersion: 0, pushChanges: () => {} }));
 
 vi.mock("../app/AuthContext", () => ({
   useAuth: () => authState,
@@ -129,6 +129,21 @@ describe("Persian crossword UI", () => {
     render(<SolverPage id="sample-10x10-garden" json={json10} />);
 
     expect(screen.getByLabelText("ردیف 1 ستون 10")).toHaveTextContent("س");
+  });
+
+  it("saves nothing until the player types, then queues the change for upload", async () => {
+    const user = userEvent.setup();
+    render(<SolverPage id="sample-10x10-garden" json={json10} />);
+
+    expect(window.localStorage.getItem("persian-crossword:sample-10x10-garden")).toBeNull();
+    expect(window.localStorage.getItem("persian-crossword-sync")).toBeNull();
+
+    await user.click(screen.getByLabelText("ردیف 1 ستون 7"));
+    await user.keyboard("س");
+
+    expect(JSON.parse(window.localStorage.getItem("persian-crossword:sample-10x10-garden")!).cells).toEqual({ "0,6": "س" });
+    const entry = JSON.parse(window.localStorage.getItem("persian-crossword-sync")!).entries["sample-10x10-garden"];
+    expect(entry).toMatchObject({ status: "progress", dirty: true, v: 0 });
   });
 
   it("preserves the selected cell when cloud sync refreshes progress", async () => {

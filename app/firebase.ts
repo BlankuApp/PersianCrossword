@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
-import { getAnalytics, isSupported } from "firebase/analytics";
+import { getAnalytics, isSupported, logEvent } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { connectFirestoreEmulator, initializeFirestore } from "firebase/firestore";
 import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
 
 // TODO: Replace with your Firebase project config from Firebase Console
@@ -18,10 +18,20 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+// Optional fields (e.g. solvedAt) may be undefined; drop them instead of throwing.
+export const db = initializeFirestore(app, { ignoreUndefinedProperties: true });
 export const functions = getFunctions(app, "us-central1");
 // `VITE_FUNCTIONS_EMULATOR=1 npm run dev` talks to `firebase emulators:start` instead of production.
-if (import.meta.env.VITE_FUNCTIONS_EMULATOR) connectFunctionsEmulator(functions, "127.0.0.1", 5001);
+if (import.meta.env.VITE_FUNCTIONS_EMULATOR) {
+  connectFunctionsEmulator(functions, "127.0.0.1", 5001);
+  connectFirestoreEmulator(db, "127.0.0.1", 8080);
+}
 
 // Analytics only runs where supported (not in jsdom tests or cookie-less contexts).
-isSupported().then((ok) => ok && getAnalytics(app)).catch(() => {});
+const analytics = isSupported()
+  .then((ok) => (ok ? getAnalytics(app) : null))
+  .catch(() => null);
+
+export function logAnalyticsEvent(name: string, params: Record<string, string>): void {
+  void analytics.then((instance) => instance && logEvent(instance, name, params));
+}
