@@ -1,6 +1,6 @@
 import { Delete, Pencil, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { normalizePersianText, type Coord, type Direction, type Slot } from "../../src/index";
+import { normalizePersianText, splitPersianGraphemes, type Coord, type Direction, type Slot } from "../../src/index";
 import { buildLetterTray } from "../crosswordUi";
 import { ClueAiButton } from "./ClueAiDialog";
 import { SHAKE_FRAMES } from "./CrosswordBoard";
@@ -13,7 +13,7 @@ interface ActiveClueProps {
   readonly getCellValue?: (coord: Coord) => string | undefined;
   readonly onCellChange?: (coord: Coord, value: string | null, clearCoord?: Coord) => void;
   readonly isDebugMode?: boolean;
-  readonly onSaveClue?: (slot: Slot, newClue: string) => Promise<void>;
+  readonly onSaveClue?: (slot: Slot, newClue: string, newAnswer?: readonly string[]) => Promise<void>;
   readonly checkMode?: boolean;
   readonly getSolutionValue?: (coord: Coord) => string | undefined;
 }
@@ -24,7 +24,7 @@ interface ClueBlockProps {
   readonly getCellValue?: ((coord: Coord) => string | undefined) | undefined;
   readonly onCellChange?: ((coord: Coord, value: string | null, clearCoord?: Coord) => void) | undefined;
   readonly isDebugMode?: boolean | undefined;
-  readonly onSaveClue?: ((slot: Slot, newClue: string) => Promise<void>) | undefined;
+  readonly onSaveClue?: ((slot: Slot, newClue: string, newAnswer?: readonly string[]) => Promise<void>) | undefined;
   readonly checkMode?: boolean | undefined;
   readonly getSolutionValue?: ((coord: Coord) => string | undefined) | undefined;
 }
@@ -40,6 +40,8 @@ interface DragState {
 function coordKey(coord: Coord): string {
   return `${coord.row},${coord.col}`;
 }
+
+const BLANK_LETTER = "_";
 
 // Pointer travel under this is a tap, not a drag.
 const TAP_SLOP_PX = 6;
@@ -145,6 +147,7 @@ function ClueBlock({
   }, [slot, cellValues, getSolutionValue]);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [draftClue, setDraftClue] = useState("");
+  const [draftAnswer, setDraftAnswer] = useState("");
   const [isSavingClue, setIsSavingClue] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
@@ -235,8 +238,14 @@ function ClueBlock({
     window.open(googleUrl, "_blank");
   };
 
+  // The answer as the admin edits it: one letter per cell, "_" for a cell without one.
+  function currentAnswer(): string {
+    return slot.cells.map((c) => getSolutionValue?.(c) || BLANK_LETTER).join("");
+  }
+
   function openEditModal(): void {
     setDraftClue(slot.clue);
+    setDraftAnswer(currentAnswer());
     setSaveError(null);
     setIsEditOpen(true);
   }
@@ -247,10 +256,17 @@ function ClueBlock({
 
   async function handleSaveClick(): Promise<void> {
     if (!onSaveClue) return;
+    // ZWNJ would glue itself to a letter as one grapheme; spaces aren't letters.
+    const letters = splitPersianGraphemes(draftAnswer.replace(/[\s\u200C]/g, ""));
+    if (letters.length !== slot.cells.length) {
+      setSaveError(`پاسخ باید ${slot.cells.length.toLocaleString("fa-IR")} حرف باشد.`);
+      return;
+    }
+    const answerChanged = letters.join("") !== splitPersianGraphemes(currentAnswer()).join("");
     setIsSavingClue(true);
     setSaveError(null);
     try {
-      await onSaveClue(slot, draftClue);
+      await onSaveClue(slot, draftClue, answerChanged ? letters.map((l) => (l === BLANK_LETTER ? "" : l)) : undefined);
       setIsEditOpen(false);
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : String(e));
@@ -353,6 +369,15 @@ function ClueBlock({
               autoFocus
               dir="rtl"
             />
+            <label className="clue-edit-answer">
+              <span>پاسخ ({slot.cells.length.toLocaleString("fa-IR")} حرف، «{BLANK_LETTER}» برای خانه خالی)</span>
+              <input
+                className="clue-edit-textarea"
+                value={draftAnswer}
+                onChange={(e) => setDraftAnswer(e.target.value)}
+                dir="rtl"
+              />
+            </label>
             {saveError ? <p className="clue-edit-error">{saveError}</p> : null}
             <div className="clue-edit-modal-footer">
               <button
