@@ -237,4 +237,16 @@ describe("ActiveClue tap-to-place tiles", () => {
     fireEvent.click(screen.getByRole("button", { name: "پاک کردن آخرین حرف این پاسخ" }));
     expect(onCellChange).toHaveBeenCalledWith({ row: 2, col: 0 }, null);
   });
+
+  it("hides the tray once the word matches its known answer", () => {
+    const answer = ["ش", "ک", "ن"];
+    const { rerender } = render(
+      <ActiveClue slots={{ down: slot }} showTray getCellValue={(c) => ["ش", "ک", "ب"][c.row]} getSolutionValue={(c) => answer[c.row]} />,
+    );
+    expect(screen.queryByRole("group", { name: "کاشی‌های حرف" })).not.toBeNull();
+    rerender(
+      <ActiveClue slots={{ down: slot }} showTray getCellValue={(c) => answer[c.row]} getSolutionValue={(c) => answer[c.row]} />,
+    );
+    expect(screen.queryByRole("group", { name: "کاشی‌های حرف" })).toBeNull();
+  });
 });

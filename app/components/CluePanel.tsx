@@ -285,6 +285,8 @@ function ClueBlock({
   }, [isEditOpen]);
 
   const isSolved = aiLetters.every(Boolean);
+  // Solved against a known answer, not merely full: only then are the tray's letters done with.
+  const isAnswered = isSolved && slot.cells.every((c) => getSolutionValue?.(c));
 
   return (
     <div
@@ -320,22 +322,13 @@ function ClueBlock({
             <button
               type="button"
               onClick={openEditModal}
-              className="clue-icon-btn"
+              className="clue-icon-btn clue-icon-edit"
               title="ویرایش متن پرسش (دیباگ)"
               aria-label="ویرایش متن پرسش"
             >
               <Pencil size={20} aria-hidden="true" />
             </button>
           ) : null}
-          <button
-            type="button"
-            onClick={clearLastLetter}
-            className="clue-backspace-btn"
-            title="پاک کردن حرف"
-            aria-label="پاک کردن آخرین حرف این پاسخ"
-          >
-            <Delete size={20} aria-hidden="true" />
-          </button>
         </div>
       </div>
       {isDebugMode && isEditOpen ? (
@@ -392,14 +385,13 @@ function ClueBlock({
         </div>
       ) : null}
       {showTray && slot.cells.length > 0 ? (
-        <div ref={rowRef} className="word-cells-row" role="list" aria-label="خانه‌های کلمه انتخاب شده" data-no-back-gesture>
+        <div ref={rowRef} className="word-cells-row" role="group" aria-label="خانه‌های کلمه انتخاب شده" data-no-back-gesture>
           {slot.cells.map((coord, i) => {
             const key = coordKey(coord);
             const value = cellValues?.[i];
             return (
               <div
                 key={key}
-                role="listitem"
                 className={[
                   "word-cell",
                   value ? "word-cell-filled" : "",
@@ -417,9 +409,18 @@ function ClueBlock({
               </div>
             );
           })}
+        <button
+          type="button"
+          onClick={clearLastLetter}
+          className="clue-backspace-btn"
+          title="پاک کردن حرف"
+          aria-label="پاک کردن آخرین حرف این پاسخ"
+        >
+          <Delete size={20} aria-hidden="true" />
+        </button>
         </div>
       ) : null}
-      {showTray && trayTiles.length > 0 ? (
+      {showTray && !isAnswered && trayTiles.length > 0 ? (
         <div className="letter-tray" role="group" aria-label="کاشی‌های حرف" data-no-back-gesture>
           {trayTiles.map((tile) => (
             <button
