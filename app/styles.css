@@ -1113,12 +1113,34 @@ select {
   line-height: 1.7;
 }
 
+/* A tinted pill in the direction's color, with an arrow showing which way the word runs. */
 .active-clue-label {
-  margin-inline-end: 4px;
-  color: #8a948d;
-  font-size: 0.85em;
-  font-weight: 500;
+  --label-fg: #1e5c38;
+  --label-bg: #e9efeb;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-inline-end: 6px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--label-bg);
+  color: var(--label-fg);
+  font-size: 0.75em;
+  font-weight: 600;
+  line-height: 1.35;
+  vertical-align: baseline;
   white-space: nowrap;
+}
+
+.active-clue-label-down {
+  --label-fg: #2f5673;
+  --label-bg: #eaeef1;
+}
+
+.active-clue-label svg {
+  width: 0.95em;
+  height: 0.95em;
+  opacity: 0.75;
 }
 
 .letter-tray {
@@ -1233,6 +1255,7 @@ select {
 .clue-backspace-btn {
   --icon-fg: #486151;
   --icon-bg: #eef3ef;
+  --icon-border: #c8d0cb;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -1241,7 +1264,7 @@ select {
   width: 26px;
   height: 26px;
   padding: 0;
-  border: 1px solid color-mix(in srgb, var(--icon-fg) 30%, white);
+  border: 1px solid var(--icon-border);
   border-radius: 4px;
   background: var(--icon-bg);
   color: var(--icon-fg);
@@ -1269,21 +1292,25 @@ select {
 .clue-icon-search {
   --icon-fg: #1a73e8;
   --icon-bg: #e8f0fe;
+  --icon-border: #bad5f8;
 }
 
 .clue-icon-ai {
   --icon-fg: #7c3aed;
   --icon-bg: #f1eafe;
+  --icon-border: #d8c4fa;
 }
 
 .clue-icon-edit {
   --icon-fg: #b45309;
   --icon-bg: #fdf1e3;
+  --icon-border: #e8cbb5;
 }
 
 .clue-backspace-btn {
   --icon-fg: #c62828;
   --icon-bg: #fdecec;
+  --icon-border: #eebfbf;
 }
 
 @media (max-width: 1024px) {

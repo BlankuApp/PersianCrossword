@@ -1,4 +1,4 @@
-import { Delete, Pencil, Search, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, Delete, Pencil, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { normalizePersianText, splitPersianGraphemes, type Coord, type Direction, type Slot } from "../../src/index";
 import { buildLetterTray } from "../crosswordUi";
@@ -294,7 +294,8 @@ function ClueBlock({
     >
       <div className="active-clue-head">
         <p>
-          <span className="active-clue-label">
+          <span className={`active-clue-label active-clue-label-${slot.direction}`}>
+            {slot.direction === "across" ? <ArrowLeft aria-hidden="true" /> : <ArrowDown aria-hidden="true" />}
             {slot.groupNum.toLocaleString("fa-IR")} {slot.direction === "across" ? "افقی" : "عمودی"}
           </span>{" "}
           <span>{slot.clue}</span>
