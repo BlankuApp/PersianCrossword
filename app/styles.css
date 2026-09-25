@@ -2936,6 +2936,14 @@ select {
   min-width: 0;
 }
 
+.admin-draft-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-block: 2px;
+}
+
 .admin-draft-id {
   color: #86948c;
   font-size: 0.85rem;

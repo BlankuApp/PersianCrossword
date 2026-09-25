@@ -1,6 +1,8 @@
 import { useMemo, useState, type ChangeEvent } from "react";
 import { ArrowRight, FilePlus2, Pencil, Trash2, Upload } from "lucide-react";
 import { useAuth } from "../AuthContext";
+import { DifficultyBadge, ProgressBar } from "../pages/HomePage";
+import { computeProgress, loadProgress } from "../progress";
 import { usePuzzleLibrary } from "../puzzleLibrary";
 import { refreshPuzzleCatalog } from "../puzzleSync";
 import { goHome } from "../router";
@@ -67,6 +69,12 @@ function AdminContent() {
 
 function DraftRow({ draft }: { draft: Draft }) {
   const problems = useMemo(() => publishProblems(draft.json), [draft.json]);
+  // The admin's own letters on this device (drafts save progress like any puzzle).
+  const { syncVersion } = useAuth();
+  const percent = useMemo(
+    () => computeProgress(draft.json, loadProgress(draft.id)).percent,
+    [draft.id, draft.json, syncVersion],
+  );
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const title = draft.json.meta?.title ?? draft.id;
@@ -100,6 +108,10 @@ function DraftRow({ draft }: { draft: Draft }) {
       <div className="admin-draft-info">
         <strong>{title}</strong>
         <span className="admin-draft-id">شناسه: {draft.id}</span>
+        <span className="admin-draft-meta">
+          <DifficultyBadge difficulty={draft.json.meta?.difficulty} />
+          {percent > 0 ? <ProgressBar percent={percent} /> : <span className="progress-empty">شروع نشده</span>}
+        </span>
         {problems.length ? (
           <span className="admin-draft-status admin-draft-status-todo" title={problems.join("\n")}>
             {problems[0]}
