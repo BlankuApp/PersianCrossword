@@ -134,7 +134,7 @@ function GitHubIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-function DifficultyBadge({ difficulty }: { difficulty: string | undefined }) {
+export function DifficultyBadge({ difficulty }: { difficulty: string | undefined }) {
   const label = difficulty?.trim();
 
   if (!label) return <span>—</span>;
@@ -153,7 +153,7 @@ function DifficultyBadge({ difficulty }: { difficulty: string | undefined }) {
   );
 }
 
-function ProgressBar({ percent }: { percent: number }) {
+export function ProgressBar({ percent }: { percent: number }) {
   return (
     // Spans, not divs: it also renders inside the continue-card <button>.
     <span className="progress-bar-wrap" title={`${fa(percent)}٪`}>
