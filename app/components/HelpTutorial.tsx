@@ -227,9 +227,6 @@ export function HelpTutorial({ onClose }: HelpTutorialProps) {
                     <span className="clue-icon-btn clue-icon-ai" ref={setTarget(`ai:${direction}`)}>
                       <Sparkles size={16} aria-hidden="true" />
                     </span>
-                    <span className="clue-backspace-btn" ref={setTarget(`backspace:${direction}`)}>
-                      <Delete size={16} aria-hidden="true" />
-                    </span>
                   </span>
                 </div>
 
@@ -254,6 +251,9 @@ export function HelpTutorial({ onClose }: HelpTutorialProps) {
                       </div>
                     );
                   })}
+                  <span className="clue-backspace-btn" ref={setTarget(`backspace:${direction}`)}>
+                    <Delete size={16} aria-hidden="true" />
+                  </span>
                 </div>
 
                 <div className="letter-tray tutorial-tray">

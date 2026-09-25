@@ -375,6 +375,10 @@ select {
   }
 }
 
+.tutorial-word-row > .clue-backspace-btn {
+  pointer-events: none;
+}
+
 .tutorial-word-row,
 .tutorial-tray {
   margin-top: 0;
@@ -383,7 +387,8 @@ select {
 }
 
 .tutorial-clue .word-cell,
-.tutorial-clue .tray-tile {
+.tutorial-clue .tray-tile,
+.tutorial-word-row > .clue-backspace-btn {
   width: 30px;
   height: 30px;
 }
@@ -528,7 +533,8 @@ select {
   }
 
   .tutorial-clue .word-cell,
-  .tutorial-clue .tray-tile {
+  .tutorial-clue .tray-tile,
+  .tutorial-word-row > .clue-backspace-btn {
     width: 27px;
     height: 27px;
   }
@@ -1082,9 +1088,13 @@ select {
 }
 
 .active-clue-block + .active-clue-block {
-  margin-top: 12px;
-  padding-top: 12px;
+  margin-top: 8px;
   border-top: 1px solid #d3d8d2;
+}
+
+/* Below the divider, the icon column needs room from the line, like the text beside it. */
+.active-clue-block + .active-clue-block .active-clue-head-actions {
+  inset-block-start: 6px;
 }
 
 .active-clue-block-active {
@@ -1103,12 +1113,34 @@ select {
   line-height: 1.7;
 }
 
+/* A tinted pill in the direction's color, with an arrow showing which way the word runs. */
 .active-clue-label {
-  margin-inline-end: 4px;
-  color: #8a948d;
-  font-size: 0.85em;
-  font-weight: 500;
+  --label-fg: #1e5c38;
+  --label-bg: #e9efeb;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-inline-end: 6px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--label-bg);
+  color: var(--label-fg);
+  font-size: 0.75em;
+  font-weight: 600;
+  line-height: 1.35;
+  vertical-align: baseline;
   white-space: nowrap;
+}
+
+.active-clue-label-down {
+  --label-fg: #2f5673;
+  --label-bg: #eaeef1;
+}
+
+.active-clue-label svg {
+  width: 0.95em;
+  height: 0.95em;
+  opacity: 0.75;
 }
 
 .letter-tray {
@@ -1141,6 +1173,17 @@ select {
   flex-wrap: wrap;
   gap: 6px;
   margin-top: var(--stack-gap);
+}
+
+/* The delete key is the row's last box, so a long word wraps it along with its letters. */
+.word-cells-row > .clue-backspace-btn {
+  width: var(--tray-tile-size);
+  height: var(--tray-tile-size);
+}
+
+.word-cells-row > .clue-backspace-btn svg {
+  width: 60%;
+  height: 60%;
 }
 
 .word-cell {
@@ -1190,36 +1233,55 @@ select {
   gap: 8px;
 }
 
-/* Same top margin as the clue text, so the icons line up with its first line when it wraps. */
-.active-clue-head-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-  flex-shrink: 0;
+/* The icons stand in a column at the top of the block's left edge (RTL end): the block
+   reserves that strip, so they cost width but no height. */
+.active-clue-block {
+  position: relative;
+  padding-inline-end: calc(26px + var(--stack-gap));
 }
 
-/* Per-clue actions: round, each tinted in its own color. */
+.active-clue-head-actions {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Per-clue actions: small squares like the letter boxes, each in its own color; filled on hover. */
 .clue-icon-btn,
 .clue-backspace-btn {
   --icon-fg: #486151;
   --icon-bg: #eef3ef;
+  --icon-border: #c8d0cb;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 5px;
-  border: none;
-  border-radius: 999px;
+  box-sizing: border-box;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--icon-border);
+  border-radius: 4px;
   background: var(--icon-bg);
   color: var(--icon-fg);
   cursor: pointer;
-  transition: filter 0.15s, transform 0.1s;
+  transition: background-color 0.15s, color 0.15s, transform 0.1s;
+}
+
+.clue-icon-btn svg,
+.clue-backspace-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 .clue-icon-btn:hover,
 .clue-backspace-btn:hover {
-  filter: brightness(0.94) saturate(1.2);
+  background: var(--icon-fg);
+  color: #fff;
 }
 
 .clue-icon-btn:active,
@@ -1230,16 +1292,25 @@ select {
 .clue-icon-search {
   --icon-fg: #1a73e8;
   --icon-bg: #e8f0fe;
+  --icon-border: #bad5f8;
 }
 
 .clue-icon-ai {
   --icon-fg: #7c3aed;
   --icon-bg: #f1eafe;
+  --icon-border: #d8c4fa;
+}
+
+.clue-icon-edit {
+  --icon-fg: #b45309;
+  --icon-bg: #fdf1e3;
+  --icon-border: #e8cbb5;
 }
 
 .clue-backspace-btn {
   --icon-fg: #c62828;
   --icon-bg: #fdecec;
+  --icon-border: #eebfbf;
 }
 
 @media (max-width: 1024px) {
@@ -1292,8 +1363,7 @@ select {
     width: auto;
   }
 
-  .active-clue p,
-  .active-clue-head-actions {
+  .active-clue p {
     margin: 6px 0 0;
   }
 }
@@ -1386,9 +1456,14 @@ select {
     margin-inline: -2px;
   }
 
-  .active-clue p,
-  .active-clue-head-actions {
+  .active-clue p {
     margin: 4px 0 0;
+  }
+
+  /* Tighter gaps keep a 7-letter word and its delete key on one line. */
+  .word-cells-row,
+  .letter-tray {
+    gap: 4px;
   }
 }
 
