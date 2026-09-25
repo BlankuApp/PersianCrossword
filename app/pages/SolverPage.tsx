@@ -508,10 +508,32 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor,
     return { ...source, clues: { ...source.clues, [key]: { ...source.clues[key], [groupKey]: group } } };
   }
 
-  async function handleSaveClue(slot: Slot, newClue: string): Promise<void> {
+  // Answer letters per slot cell ("" = no letter yet) written into the disk-format grid (LTR rows).
+  function withUpdatedAnswer(source: CrosswordJson, slot: Slot, letters: readonly string[]): CrosswordJson {
+    const grid = source.grid.map((row) => [...row]);
+    slot.cells.forEach(({ row, col }, i) => {
+      const cells = grid[row]!;
+      cells[cells.length - 1 - col] = letters[i] || " ";
+    });
+    return { ...source, grid };
+  }
+
+  async function handleSaveClue(slot: Slot, newClue: string, newAnswer?: readonly string[]): Promise<void> {
+    let next = withUpdatedClue(editedJsonRef.current, slot, newClue);
+    const boardBefore = savedState;
+    if (newAnswer && puzzle) {
+      next = withUpdatedAnswer(next, slot, newAnswer);
+      // The board letters are what "save" writes as answers: keep them from undoing this edit.
+      // Done before saving, since a changed grid remounts the page with the stored letters;
+      // rolled back below if the save fails.
+      const nextState = createState(puzzle, savedState);
+      slot.cells.forEach((coord, i) => nextState.setCell(coord, newAnswer[i] || null));
+      saveEdit(nextState);
+    }
     try {
-      await saveJsonEdit(withUpdatedClue(editedJsonRef.current, slot, newClue));
+      await saveJsonEdit(next);
     } catch (e) {
+      if (newAnswer && puzzle) saveEdit(createState(puzzle, boardBefore));
       console.error("[admin] clue save failed", e);
       throw new Error(`ذخیره با خطا مواجه شد: ${e instanceof Error ? e.message : String(e)}`);
     }

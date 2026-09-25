@@ -675,6 +675,16 @@ select {
   resize: vertical;
 }
 
+.clue-edit-answer {
+  display: grid;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+
+.clue-edit-answer input {
+  min-height: 0;
+}
+
 .clue-edit-error {
   margin: 0;
   font-size: 0.85rem;
