@@ -70,7 +70,11 @@ function AdminContent() {
 function DraftRow({ draft }: { draft: Draft }) {
   const problems = useMemo(() => publishProblems(draft.json), [draft.json]);
   // The admin's own letters on this device (drafts save progress like any puzzle).
-  const percent = useMemo(() => computeProgress(draft.json, loadProgress(draft.id)).percent, [draft.id, draft.json]);
+  const { syncVersion } = useAuth();
+  const percent = useMemo(
+    () => computeProgress(draft.json, loadProgress(draft.id)).percent,
+    [draft.id, draft.json, syncVersion],
+  );
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const title = draft.json.meta?.title ?? draft.id;
