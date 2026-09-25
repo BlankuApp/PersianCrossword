@@ -520,10 +520,12 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor,
 
   async function handleSaveClue(slot: Slot, newClue: string, newAnswer?: readonly string[]): Promise<void> {
     let next = withUpdatedClue(editedJsonRef.current, slot, newClue);
+    const boardBefore = savedState;
     if (newAnswer && puzzle) {
       next = withUpdatedAnswer(next, slot, newAnswer);
       // The board letters are what "save" writes as answers: keep them from undoing this edit.
-      // Done before saving, since a changed grid remounts the page with the stored letters.
+      // Done before saving, since a changed grid remounts the page with the stored letters;
+      // rolled back below if the save fails.
       const nextState = createState(puzzle, savedState);
       slot.cells.forEach((coord, i) => nextState.setCell(coord, newAnswer[i] || null));
       saveEdit(nextState);
@@ -531,6 +533,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor,
     try {
       await saveJsonEdit(next);
     } catch (e) {
+      if (newAnswer && puzzle) saveEdit(createState(puzzle, boardBefore));
       console.error("[admin] clue save failed", e);
       throw new Error(`ذخیره با خطا مواجه شد: ${e instanceof Error ? e.message : String(e)}`);
     }
