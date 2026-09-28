@@ -1,6 +1,7 @@
-import { useMemo, useState, type ChangeEvent } from "react";
+import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import { ArrowRight, FilePlus2, Pencil, Trash2, Upload } from "lucide-react";
 import { useAuth } from "../AuthContext";
+import { PublishMetaFields, publishMetaOf, withPublishMeta, type PublishMeta } from "../components/PublishMetaFields";
 import { DifficultyBadge, ProgressBar } from "../pages/HomePage";
 import { computeProgress, loadProgress } from "../progress";
 import { usePuzzleLibrary } from "../puzzleLibrary";
@@ -77,6 +78,8 @@ function DraftRow({ draft }: { draft: Draft }) {
   );
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  // The metadata form, open while the admin reviews it before publishing.
+  const [meta, setMeta] = useState<PublishMeta | null>(null);
   const title = draft.json.meta?.title ?? draft.id;
 
   async function run(action: () => Promise<void>): Promise<void> {
@@ -90,10 +93,12 @@ function DraftRow({ draft }: { draft: Draft }) {
     }
   }
 
-  function publish(): void {
-    if (!window.confirm(`«${title}» برای همه بازیکنان منتشر شود؟`)) return;
+
+  function publish(e: FormEvent): void {
+    e.preventDefault();
+    if (!meta) return;
     void run(async () => {
-      await publishDraft(draft);
+      await publishDraft(draft, withPublishMeta(draft.json, meta));
       await refreshPuzzleCatalog();
     });
   }
@@ -127,7 +132,7 @@ function DraftRow({ draft }: { draft: Draft }) {
           <Pencil size={16} aria-hidden="true" />
           حل و ویرایش
         </a>
-        <button type="button" className="admin-button admin-button-primary" onClick={publish} disabled={busy || problems.length > 0}>
+        <button type="button" className="admin-button admin-button-primary" onClick={() => setMeta(publishMetaOf(draft.json))} disabled={busy || meta !== null || problems.length > 0}>
           <Upload size={16} aria-hidden="true" />
           انتشار
         </button>
@@ -136,6 +141,20 @@ function DraftRow({ draft }: { draft: Draft }) {
           حذف
         </button>
       </div>
+      {meta ? (
+        <form className="admin-publish-form" onSubmit={publish}>
+          <PublishMetaFields meta={meta} onChange={setMeta} disabled={busy} />
+          <div className="admin-draft-actions">
+            <button type="submit" className="admin-button admin-button-primary" disabled={busy}>
+              <Upload size={16} aria-hidden="true" />
+              {busy ? "در حال انتشار…" : "انتشار برای همه"}
+            </button>
+            <button type="button" className="admin-button" onClick={() => setMeta(null)} disabled={busy}>
+              انصراف
+            </button>
+          </div>
+        </form>
+      ) : null}
     </li>
   );
 }

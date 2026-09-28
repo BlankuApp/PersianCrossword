@@ -168,6 +168,10 @@ export async function deleteDraft(id: string): Promise<void> {
 }
 
 export async function publishDraft(draft: Draft, json: CrosswordJson = draft.json): Promise<void> {
+  // Players see the day it went live (local YYYY-MM-DD), not the date written in the file.
+  const now = new Date();
+  const today = new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+  json = { ...json, meta: { ...json.meta, publishedAt: today } };
   assertPublishable(json);
   const images = Object.entries(draft.images).map(([kind, image]): ImageRef => ({ kind: kind as ImageKind, name: image.name, hash: image.hash }));
   const entry: PackEntry = {
