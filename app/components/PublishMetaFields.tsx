@@ -14,7 +14,8 @@ type MetaField = (typeof META_FIELDS)[number][0];
 export type PublishMeta = Record<MetaField, string>;
 
 export function publishMetaOf(json: CrosswordJson): PublishMeta {
-  return Object.fromEntries(META_FIELDS.map(([field]) => [field, json.meta?.[field] ?? ""])) as PublishMeta;
+  // meta isn't validated on import: a number (e.g. "author": 12) must still reach the form as text.
+  return Object.fromEntries(META_FIELDS.map(([field]) => [field, String(json.meta?.[field] ?? "")])) as PublishMeta;
 }
 
 export function withPublishMeta(json: CrosswordJson, meta: PublishMeta): CrosswordJson {
@@ -35,7 +36,7 @@ export function PublishMetaFields({
   const { puzzles } = usePuzzleLibrary();
   // Values already used by published puzzles, offered so spellings stay consistent.
   const suggestions = useMemo(
-    () => Object.fromEntries(META_FIELDS.map(([field]) => [field, [...new Set(puzzles.flatMap((p) => p[field]?.trim() || []))]])) as Record<MetaField, string[]>,
+    () => Object.fromEntries(META_FIELDS.map(([field]) => [field, [...new Set(puzzles.flatMap((p) => String(p[field] ?? "").trim() || []))]])) as Record<MetaField, string[]>,
     [puzzles],
   );
 
