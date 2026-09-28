@@ -64,6 +64,7 @@ import { BoardWithLabels } from "../components/BoardWithLabels";
 import { CrosswordBoard } from "../components/CrosswordBoard";
 import { ActiveClue } from "../components/CluePanel";
 import { HelpTutorial } from "../components/HelpTutorial";
+import { PublishMetaFields, publishMetaOf, withPublishMeta, type PublishMeta } from "../components/PublishMetaFields";
 
 // Admin editing (app/admin): where the editing tools save, plus the admin's toolbar actions.
 export interface PuzzleEditor {
@@ -163,6 +164,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor,
   const [sourceCollapsed, setSourceCollapsed] = useState(true);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [publishMeta, setPublishMeta] = useState<PublishMeta>(() => publishMetaOf(json));
   const [isToolbarMenuOpen, setIsToolbarMenuOpen] = useState(false);
 
   const boardRef = useRef<HTMLDivElement>(null);
@@ -469,6 +471,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor,
 
   function openConfirm(action: ConfirmAction): void {
     setConfirmError(null);
+    if (action === "publish") setPublishMeta(publishMetaOf(editedJsonRef.current));
     setConfirmAction(action);
   }
 
@@ -486,7 +489,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor,
         const next = withSolvedGrid(editedJsonRef.current);
         if (next) await saveJsonEdit(next);
       } else if (action === "publish") {
-        await editor.publish?.(editedJsonRef.current);
+        await editor.publish?.(withPublishMeta(editedJsonRef.current, publishMeta));
       } else {
         await editor.unpublish?.();
       }
@@ -719,6 +722,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor,
                 ? "حرف‌های واردشده به‌عنوان پاسخ جدول ذخیره و برای همه بازیکنان منتشر می‌شوند. ادامه می‌دهید؟"
                 : CONFIRM_TEXT[confirmAction].body}
             </p>
+            {confirmAction === "publish" ? <PublishMetaFields meta={publishMeta} onChange={setPublishMeta} disabled={isSaving} /> : null}
             {confirmError ? <p className="clue-edit-error confirm-modal-error">{confirmError}</p> : null}
             <div className="solution-modal-actions">
               <button type="button" onClick={() => setConfirmAction(null)}>
