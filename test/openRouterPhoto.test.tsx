@@ -37,9 +37,9 @@ describe("OpenRouter photo extraction", () => {
     expect(gridBody.model).toBe("openai/gpt-6.1-sol");
     expect(gridBody.reasoning).toEqual({ effort: "low", exclude: true });
     expect(gridBody.response_format.json_schema.schema.properties.grid).toMatchObject({ minItems: 1, maxItems: 1, items: { minItems: 3, maxItems: 3 } });
-    expect(gridBody.messages[0].content[0].text).toMatch(/Rows top to bottom, columns physically left to right/);
-    expect(gridBody.messages[0].content[0].text).toContain('grid[0][0] must be the TOP-LEFT cell');
-    expect(gridBody.messages[0].content[0].text).toContain('["م","ا","ل","س"], never ["س","ل","ا","م"]');
+    expect(gridBody.messages[0].content[0].text).toMatch(/Rows top to bottom, columns physically right to left/);
+    expect(gridBody.messages[0].content[0].text).toContain('grid[0][0] must be the TOP-RIGHT cell');
+    expect(gridBody.messages[0].content[0].text).toContain('["س","ل","ا","م"], never ["م","ا","ل","س"]');
     expect(gridBody.messages[0].content[0].text).not.toContain("Read Persian words and sentences right to left");
   });
 

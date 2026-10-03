@@ -11,6 +11,7 @@ vi.mock("../app/admin/adminApi", () => ({ createDraft }));
 import { PhotoImportSection } from "../app/admin/PhotoImportSection";
 import { loadOpenRouterKey, saveOpenRouterKey } from "../app/progress";
 import { ADMIN_SETTINGS_KEY, loadPhotoSettings, loadCropSettings, saveAdminSettings } from "../app/admin/adminSettings";
+import referencePuzzle from "../puzzles/201-250/223_8004_normal.json";
 
 const clues = {
   clues: {
@@ -280,7 +281,7 @@ describe("photo import", () => {
     await userEvent.click(screen.getByRole("button", { name: "استخراج پرسش‌ها" }));
     await userEvent.click(screen.getByRole("button", { name: "استخراج جدول" }));
     fireEvent.change(screen.getByLabelText("شناسهٔ جدول"), { target: { value: "edited-grid" } });
-    const cell = screen.getByRole("textbox", { name: "خانهٔ ردیف ۱ ستون ۱ از چپ" });
+    const cell = screen.getByRole("textbox", { name: "خانهٔ ردیف ۱ ستون ۱ از راست" });
     const save = screen.getByRole("button", { name: "ساخت پیش‌نویس از نتیجه" });
     expect(save).toBeEnabled();
     fireEvent.change(cell, { target: { value: "اب" } });
@@ -294,8 +295,8 @@ describe("photo import", () => {
     expect(cell).toHaveValue("ی");
     expect(save).toBeEnabled();
     expect(JSON.parse((screen.getByLabelText("جدول استخراج‌شده (قابل ویرایش)") as HTMLTextAreaElement).value).grid).toEqual([["ی", "ب"], ["ک", "ی"]]);
-    cell.focus(); fireEvent.keyDown(cell, { key: "ArrowRight" });
-    expect(screen.getByRole("textbox", { name: "خانهٔ ردیف ۱ ستون ۲ از چپ" })).toHaveFocus();
+    cell.focus(); fireEvent.keyDown(cell, { key: "ArrowLeft" });
+    expect(screen.getByRole("textbox", { name: "خانهٔ ردیف ۱ ستون ۲ از راست" })).toHaveFocus();
     await userEvent.click(save);
     await waitFor(() => expect(createDraft).toHaveBeenCalledOnce());
     expect(JSON.parse(createDraft.mock.calls[0]![0].jsonText).grid[0][0]).toBe("ی");
@@ -317,11 +318,11 @@ describe("photo import", () => {
     fireEvent.change(screen.getByLabelText("شناسهٔ جدول"), { target: { value: "mirrored-grid" } });
     const mirror = screen.getByRole("button", { name: "برعکس کردن چپ و راست" });
     const result = screen.getByLabelText("جدول استخراج‌شده (قابل ویرایش)") as HTMLTextAreaElement;
-    expect(screen.getByRole("group", { name: "ویرایش خانه‌های جدول" })).toHaveAttribute("dir", "ltr");
+    expect(screen.getByRole("group", { name: "ویرایش خانه‌های جدول" })).toHaveAttribute("dir", "rtl");
     await userEvent.click(mirror);
     expect(JSON.parse(result.value).grid).toEqual(corrected);
-    expect(screen.getByRole("textbox", { name: "خانهٔ ردیف ۱ ستون ۱ از چپ" })).toHaveValue("س");
-    expect(screen.getByRole("textbox", { name: "خانهٔ ردیف ۱ ستون ۳ از چپ" })).toHaveClass("photo-grid-block");
+    expect(screen.getByRole("textbox", { name: "خانهٔ ردیف ۱ ستون ۱ از راست" })).toHaveValue("س");
+    expect(screen.getByRole("textbox", { name: "خانهٔ ردیف ۱ ستون ۳ از راست" })).toHaveClass("photo-grid-block");
     await userEvent.click(mirror);
     expect(JSON.parse(result.value).grid).toEqual(source);
     await userEvent.click(mirror);
@@ -330,6 +331,25 @@ describe("photo import", () => {
     expect(JSON.parse(createDraft.mock.calls[0]![0].jsonText).grid).toEqual(corrected);
     expect(JSON.parse(createDraft.mock.calls[0]![0].jsonText).clues).toEqual(clueResult.clues);
     expect(extract).toHaveBeenCalledTimes(2);
+  });
+
+  it("previews and saves the supplied repository puzzle in its original right-to-left row order", async () => {
+    extract.mockImplementation(async (input: Record<string, unknown>) => input.kind === "clues" ? { clues: referencePuzzle.clues } : { grid: referencePuzzle.grid });
+    createDraft.mockResolvedValue(undefined);
+    const view = render(<PhotoImportSection takenIds={new Set()} />);
+    for (const input of view.container.querySelectorAll<HTMLInputElement>("input[type=file]")) { pick(input); await wholeCrop(input); }
+    await userEvent.click(screen.getByRole("button", { name: "استخراج پرسش‌ها" }));
+    await userEvent.click(screen.getByRole("button", { name: "استخراج جدول" }));
+    fireEvent.change(screen.getByLabelText("شناسهٔ جدول"), { target: { value: "reference-223" } });
+    expect(screen.getByRole("group", { name: "ویرایش خانه‌های جدول" })).toHaveAttribute("dir", "rtl");
+    expect(screen.getByRole("textbox", { name: "خانهٔ ردیف ۱ ستون ۱ از راست" })).toHaveValue("ک");
+    expect(screen.getByRole("textbox", { name: "خانهٔ ردیف ۱ ستون ۱۵ از راست" })).toHaveValue("س");
+    await userEvent.click(screen.getByRole("button", { name: "ساخت پیش‌نویس از نتیجه" }));
+    await waitFor(() => expect(createDraft).toHaveBeenCalledOnce());
+    const json = JSON.parse(createDraft.mock.calls[0]![0].jsonText);
+    expect(json.version).toBe(3);
+    expect(json.grid).toEqual(referencePuzzle.grid);
+    expect(json.clues).toEqual(extractedClues({ clues: referencePuzzle.clues }, 15, 15));
   });
 
   it("extracts both photos, refuses mismatched clues and saves a reviewed draft with its cropped images", async () => {

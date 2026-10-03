@@ -125,7 +125,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor,
     }
   }, [normalizedJson]);
 
-  // Debug-only: recompile from the editable grid (reversed rows) with stub clues so the
+  // Debug-only: recompile from the editable RTL grid (reversed rows) with stub clues so the
   // board renders even when clues don't match the grid, and updates when blocks change.
   const debugPuzzle = useMemo((): CrosswordPuzzle | null => {
     if (!isDebugMode || normalizedJson.version !== 3) return null;
@@ -197,7 +197,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor,
     if (!puz || normalizedJson.version !== 3) return null;
     const cells: Record<string, string> = {};
     if (isDebugMode) {
-      // debugEditGrid is source-format (LTR for v3); reverse each row to get normalized cols.
+      // debugEditGrid is source-format (RTL for v3); reverse each row to get LTR board columns.
       // Skip space placeholders (open cell with no letter yet).
       debugEditGrid.forEach((row, r) => {
         [...row].reverse().forEach((letter, c) => {
@@ -452,7 +452,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor,
     setSelection(firstSlot ? selectSlot(firstSlot) : undefined);
   }
 
-  // The letters entered on the board become the puzzle's answers (disk format: LTR rows, "" for block).
+  // The letters entered on the board become the puzzle's answers (disk format: RTL rows, "" for block).
   function withSolvedGrid(source: CrosswordJson): CrosswordJson | null {
     if (!puzzle || !crosswordState) return null;
     const solvedGrid = Array.from({ length: puzzle.size.rows }, (_, row) =>
@@ -511,7 +511,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor,
     return { ...source, clues: { ...source.clues, [key]: { ...source.clues[key], [groupKey]: group } } };
   }
 
-  // Answer letters per slot cell ("" = no letter yet) written into the disk-format grid (LTR rows).
+  // Answer letters per slot cell ("" = no letter yet) written into the disk-format grid (RTL rows).
   function withUpdatedAnswer(source: CrosswordJson, slot: Slot, letters: readonly string[]): CrosswordJson {
     const grid = source.grid.map((row) => [...row]);
     slot.cells.forEach(({ row, col }, i) => {

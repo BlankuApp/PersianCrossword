@@ -41,7 +41,7 @@ describe("Gemini photo extraction", () => {
     expect(body.contents[0].parts[0]).toEqual({ inlineData: { mimeType: "image/png", data: png.toString("base64") } });
     expect(body.generationConfig).toMatchObject({ thinkingConfig: { thinkingLevel: "high" }, mediaResolution: "MEDIA_RESOLUTION_HIGH", responseFormat: { text: { mimeType: "application/json" } } });
     expect(body.generationConfig.responseFormat.text.schema.properties.grid).toMatchObject({ minItems: 2, maxItems: 2, items: { minItems: 3, maxItems: 3 } });
-    expect(body.contents[0].parts[1].text).toMatch(/left to right/);
+    expect(body.contents[0].parts[1].text).toMatch(/right to left/);
     expect(body.contents[0].parts[1].text).toMatch(/Do not infer or solve letters/);
     expect(body.tools).toBeUndefined();
   });

@@ -3,8 +3,8 @@ import type { CrosswordJson, CrosswordPuzzle, CrosswordState, SavedCrosswordStat
 
 export const STORAGE_PREFIX = "persian-crossword:";
 
-// Grid rows are stored LTR (index 0 = leftmost); reverse so col=0 stays
-// rightmost throughout the internal coord system.
+// Repository rows are RTL (index 0 = rightmost). Core/board coordinates are LTR
+// (col 0 = leftmost), so reverse only at this display/solver boundary.
 export function normalizeGridDirection(json: CrosswordJson): CrosswordJson {
   return { ...json, grid: json.grid.map((row) => [...row].reverse()) };
 }
