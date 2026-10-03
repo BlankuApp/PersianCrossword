@@ -30,7 +30,8 @@ import {
   type PackDoc,
   type PackEntry,
 } from "../../shared/cloudPuzzles";
-import { validatePuzzleJson, type CrosswordJson } from "../../src/index";
+import type { CrosswordJson } from "../../src/index";
+import { validateStoredPuzzleJson } from "./puzzleValidation";
 import { db, firebaseApp, storageFileUrl, usingEmulators } from "../firebase";
 import { isValidPuzzleId, type ImportFile, type PlannedDraft } from "./importPlan";
 import { toAsciiDigits } from "../persianNumbers";
@@ -101,7 +102,7 @@ export function listenDrafts(onChange: (drafts: Draft[]) => void, onError: (erro
 
 // Problems that stop a puzzle from being published, in Persian for the admin UI.
 export function publishProblems(json: CrosswordJson): string[] {
-  const problems = validatePuzzleJson(json).issues.map((i) => i.message);
+  const problems = validateStoredPuzzleJson(json).issues.map((i) => i.message);
   const missing = countMissingLetters(json);
   if (missing) problems.push(`${missing.toLocaleString("fa-IR")} خانه هنوز حرف پاسخ ندارد؛ اول جدول را حل و ذخیره کنید.`);
   return problems;
@@ -160,7 +161,7 @@ async function commitPuzzle(
 
 export async function saveDraft(draft: Draft, json: CrosswordJson): Promise<void> {
   // A draft that fails validation could no longer be opened in the solver.
-  const problems = validatePuzzleJson(json).issues.map((i) => i.message);
+  const problems = validateStoredPuzzleJson(json).issues.map((i) => i.message);
   if (problems.length) throw new Error(problems.join("\n"));
   await setDoc(draftRef(draft.id), { json: toJsonText(json), updatedAt: Date.now() }, { merge: true });
 }
@@ -212,7 +213,7 @@ export async function publishDraft(draft: Draft, json: CrosswordJson = draft.jso
 
 // A fix to a published puzzle goes straight to players.
 export async function savePublishedPuzzle(id: string, json: CrosswordJson): Promise<void> {
-  const problems = validatePuzzleJson(json).issues.map((i) => i.message);
+  const problems = validateStoredPuzzleJson(json).issues.map((i) => i.message);
   if (problems.length) throw new Error(problems.join("\n"));
   await commitPuzzle(id, async (current) => {
     if (!current) throw new Error("این جدول منتشر نشده است.");

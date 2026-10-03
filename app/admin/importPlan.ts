@@ -2,7 +2,8 @@
 // the way a local puzzle folder does: {name}.png is the solution image, meta.sourceFile the
 // source image. Pure, so it's testable without Firebase.
 import type { ImageKind } from "../../shared/cloudPuzzles";
-import { validatePuzzleJson, type CrosswordJson } from "../../src/index";
+import type { CrosswordJson } from "../../src/index";
+import { validateStoredPuzzleJson } from "./puzzleValidation";
 
 export interface ImportFile {
   readonly name: string;
@@ -53,7 +54,7 @@ export function planImport(files: readonly ImportFile[], takenIds: ReadonlySet<s
     }
     // The solver can't open a puzzle that fails validation, and the editor fixes answers and
     // clue wording, not structure: such a file has to be fixed and picked again.
-    const validation = validatePuzzleJson(json);
+    const validation = validateStoredPuzzleJson(json);
     if (!validation.valid) {
       problems.push(`${file.name}: ${validation.issues.map((i) => i.message).join("؛ ")}`);
       continue;

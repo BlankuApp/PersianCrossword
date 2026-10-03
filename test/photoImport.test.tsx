@@ -370,7 +370,7 @@ describe("photo import", () => {
     expect(save).toBeEnabled();
     fireEvent.change(screen.getByLabelText("پرسش‌های استخراج‌شده (قابل ویرایش)"), { target: { value: JSON.stringify({ clues: { ...clues.clues, horizontal: { ...clues.clues.horizontal, "1": ["یک", "اضافی"] } } }) } });
     expect(save).toBeDisabled();
-    expect(screen.getByRole("alert")).toHaveTextContent("clues.horizontal.۱ has ۲ entries, expected ۱");
+    expect(screen.getByRole("alert")).toHaveTextContent("ردیف ۱: ۲ پرسش وارد شده، اما شبکه ۱ بخش پیوستهٔ حداقل دوخانه‌ای دارد");
     fireEvent.change(screen.getByLabelText("پرسش‌های استخراج‌شده (قابل ویرایش)"), { target: { value: JSON.stringify(clues) } });
     await user.click(save);
     await waitFor(() => expect(createDraft).toHaveBeenCalledOnce());

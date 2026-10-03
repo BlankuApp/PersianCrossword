@@ -1,4 +1,5 @@
-import { normalizePersianText, validatePuzzleJson, type CrosswordJson } from "../../src/index";
+import { normalizePersianText, type CrosswordJson } from "../../src/index";
+import { validateStoredPuzzleJson } from "./puzzleValidation";
 
 export interface CropBox { x: number; y: number; width: number; height: number }
 export const MAX_CROP_BYTES = 5 * 1024 * 1024;
@@ -97,7 +98,7 @@ export function extractedGrid(value: unknown, rows: number, cols: number): strin
 
 export function photoPuzzle(clueText: string, gridText: string, rows: number, cols: number): CrosswordJson {
   const json: CrosswordJson = { version: 3, clues: extractedClues(JSON.parse(clueText), rows, cols), grid: extractedGrid(JSON.parse(gridText), rows, cols) };
-  const validation = validatePuzzleJson(json);
+  const validation = validateStoredPuzzleJson(json);
   if (!validation.valid) throw new Error(validation.issues.map((i) => i.message).join("\n"));
   if (!json.grid.some((r) => r.some(Boolean))) throw new Error("جدول هیچ حرفی ندارد؛ تصویر پاسخ یا نتیجه را بررسی کنید.");
   return json;

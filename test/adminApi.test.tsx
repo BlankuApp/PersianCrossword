@@ -6,6 +6,9 @@ import { basicPuzzleV3 } from "./fixtures";
 import { publishDraft, type Draft } from "../app/admin/adminApi";
 import { loadMirror, loadProgress, saveProgress } from "../app/progress";
 
+// The core fixture uses LTR board coordinates; Firebase stores repository-format RTL rows.
+const storedPuzzle = { ...basicPuzzleV3, grid: basicPuzzleV3.grid.map((row) => [...row].reverse()) };
+
 type Data = Record<string, unknown>;
 const fake = vi.hoisted(() => ({ store: new Map<string, Data>(), transactions: 0, failCommit: false }));
 vi.mock("../app/firebase", () => ({ db: {}, firebaseApp: {}, usingEmulators: false, storageFileUrl: (path: string) => path }));
@@ -32,7 +35,7 @@ vi.mock("firebase/firestore", () => ({
 const images = { solution: { path: "puzzles/old/hash-old.png", name: "old.png", hash: "solution-hash" },
   source: { path: "puzzles/old/hash-source.webp", name: "source.webp", hash: "source-hash" } };
 const original = { schema: 1, file: "admin/old.json", createdAt: 10, updatedAt: 20, images,
-  json: JSON.stringify({ ...basicPuzzleV3, meta: { id: "old", title: "آخرین اصلاح", sourceFile: "source.webp" } }) };
+  json: JSON.stringify({ ...storedPuzzle, meta: { id: "old", title: "آخرین اصلاح", sourceFile: "source.webp" } }) };
 
 const draft = (): Draft => ({ id: "old", json: JSON.parse(original.json), jsonText: original.json,
   file: original.file, images, updatedAt: original.updatedAt, solutionImageUrl: undefined, sourceImageUrl: undefined });
@@ -58,7 +61,7 @@ describe("publishing with a new ID", () => {
     expect(fake.store.has("drafts/8050")).toBe(false);
     const entry = published("8050");
     expect(entry).toMatchObject({ file: "admin/8050.json", images: { solution: images.solution.path, source: images.source.path } });
-    expect(JSON.parse(entry.json)).toMatchObject({ ...basicPuzzleV3, meta: { id: "8050", title: "عنوان جدید", author: "طراح", sourceFile: "source.webp", publishedAt: expect.any(String) } });
+    expect(JSON.parse(entry.json)).toMatchObject({ ...storedPuzzle, meta: { id: "8050", title: "عنوان جدید", author: "طراح", sourceFile: "source.webp", publishedAt: expect.any(String) } });
     expect(fake.transactions).toBe(1);
     expect(loadProgress("8050")).toEqual(loadProgress("old"));
     expect(loadMirror().entries["8050"]).toMatchObject({ dirty: true, v: 0 });
