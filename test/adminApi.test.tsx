@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { webcrypto } from "node:crypto";
-import type { CatalogDoc, PackDoc } from "../shared/cloudPuzzles";
+import { entryImageRefs, type CatalogDoc, type PackDoc } from "../shared/cloudPuzzles";
 import { basicPuzzleV3 } from "./fixtures";
-import { publishDraft, type Draft } from "../app/admin/adminApi";
+import { createDraft, publishDraft, savePublishedPuzzle, unpublishPuzzle, type Draft } from "../app/admin/adminApi";
 import { loadMirror, loadProgress, saveProgress } from "../app/progress";
 
 // The core fixture uses LTR board coordinates; Firebase stores repository-format RTL rows.
@@ -52,6 +52,29 @@ beforeEach(() => {
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("publishing with a new ID", () => {
+  it.each(["foo$&bar", "foo$`bar", "foo$'bar", "foo$$bar", "foo$1bar"])("keeps replacement tokens literal when publishing as %s", async (id) => {
+    await publishDraft(draft(), undefined, id);
+    const entry = published(id), json = JSON.parse(entry.json);
+    expect(entry.file).toBe(`admin/${id}.json`);
+    expect(json.meta.id).toBe(id);
+    expect(entryImageRefs(entry, json).find((image) => image.kind === "solution")?.name).toBe(`${id}.png`);
+    expect(fake.store.has("drafts/old")).toBe(false);
+  });
+
+  it("rejects prototype keys at API boundaries without transactions, uploads or losing the source draft", async () => {
+    for (const id of Object.getOwnPropertyNames(Object.prototype)) {
+      const current = draft();
+      await expect(publishDraft(current, undefined, id)).rejects.toThrow(/شناسه/);
+      await expect(publishDraft({ ...current, id })).rejects.toThrow(/شناسه/);
+      await expect(createDraft({ id, jsonText: current.jsonText, file: current.file, title: "", images: [{ kind: "solution", name: "solution.png", file: { name: "solution.png", bytes: new Uint8Array([1]) } }] })).rejects.toThrow(/شناسه/);
+      await expect(savePublishedPuzzle(id, current.json)).rejects.toThrow(/شناسه/);
+      await expect(unpublishPuzzle(id)).rejects.toThrow(/شناسه/);
+    }
+    expect(fake.transactions).toBe(0);
+    expect(fake.store.get("drafts/old")).toEqual(original);
+    expect(fake.store.has("catalog/index")).toBe(false);
+  });
+
   it("publishes the ID and edited metadata atomically, preserves images and copies saved letters", async () => {
     vi.spyOn(Date, "now").mockReturnValue(100);
     saveProgress("old", { cells: { "0,0": "س" } });

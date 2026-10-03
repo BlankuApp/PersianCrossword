@@ -121,6 +121,7 @@ async function commitPuzzle(
   nextEntry: (current: PackEntry | undefined, tx: Transaction) => Promise<PackEntry | null>,
   extra?: (tx: Transaction) => void,
 ): Promise<void> {
+  if (!isValidPuzzleId(id)) throw new Error("شناسهٔ جدول نامعتبر است.");
   await runTransaction(db, async (tx) => {
     const catalogSnap = await tx.get(catalogRef);
     const catalog = catalogSnap.data() as CatalogDoc | undefined;
@@ -173,7 +174,7 @@ export async function deleteDraft(id: string): Promise<void> {
 export async function publishDraft(draft: Draft, json: CrosswordJson = draft.json, nextId = draft.id): Promise<void> {
   const id = nextId === draft.id ? draft.id : toAsciiDigits(nextId.trim());
   const renamed = id !== draft.id;
-  if (renamed && !isValidPuzzleId(id)) throw new Error("شناسهٔ کوتاه و بدون نقطه، / یا نویسه‌های ویژهٔ نام فایل وارد کنید.");
+  if (!isValidPuzzleId(id)) throw new Error("شناسهٔ کوتاه و بدون نقطه، / یا نویسه‌های ویژهٔ نام فایل وارد کنید.");
   // Players see the day it went live (local YYYY-MM-DD), not the date written in the file.
   const now = new Date();
   const today = new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
@@ -182,7 +183,7 @@ export async function publishDraft(draft: Draft, json: CrosswordJson = draft.jso
   const images = Object.entries(draft.images).map(([kind, image]): ImageRef => ({ kind: kind as ImageKind, name: renamed && kind === "solution" ? `${id}.png` : image.name, hash: image.hash }));
   const entry: PackEntry = {
     hash: await puzzleHash(json, images),
-    file: renamed ? draft.file.replace(/[^/]+$/, `${id}.json`) : draft.file,
+    file: renamed ? draft.file.replace(/[^/]+$/, () => `${id}.json`) : draft.file,
     json: toJsonText(json),
     images: Object.fromEntries(Object.entries(draft.images).map(([kind, image]) => [kind, image.path])),
   };
@@ -263,6 +264,7 @@ async function uploadImage(id: string, file: ImportFile, name: string): Promise<
 }
 
 export async function createDraft(planned: PlannedDraft): Promise<void> {
+  if (!isValidPuzzleId(planned.id)) throw new Error("شناسهٔ جدول نامعتبر است.");
   const images: Partial<Record<ImageKind, DraftImage>> = {};
   for (const image of planned.images) images[image.kind] = await uploadImage(planned.id, image.file, image.name);
   const now = Date.now();

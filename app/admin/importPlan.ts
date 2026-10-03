@@ -28,7 +28,7 @@ export interface ImportPlan {
 const IMAGE_EXTENSIONS = /\.(png|jpe?g|webp)$/i;
 
 export function isValidPuzzleId(id: string): boolean {
-  return !!id && id === id.trim() && !/[<>:"|?*/.\\\u0000-\u001f]/.test(id) && new TextEncoder().encode(id).length <= 120;
+  return !!id && id === id.trim() && !Object.prototype.hasOwnProperty.call(Object.prototype, id) && !/[<>:"|?*/.\\\u0000-\u001f]/.test(id) && new TextEncoder().encode(id).length <= 120;
 }
 
 export function planImport(files: readonly ImportFile[], takenIds: ReadonlySet<string>): ImportPlan {
@@ -61,6 +61,10 @@ export function planImport(files: readonly ImportFile[], takenIds: ReadonlySet<s
     }
     const slug = file.name.replace(/\.json$/i, "");
     const id = String(json.meta?.id ?? slug);
+    if (!isValidPuzzleId(id)) {
+      problems.push(`${file.name}: شناسهٔ «${id}» مجاز نیست.`);
+      continue;
+    }
     if (takenIds.has(id) || seen.has(id)) {
       problems.push(`${file.name}: شناسهٔ «${id}» قبلاً استفاده شده است.`);
       continue;
