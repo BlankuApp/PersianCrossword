@@ -10,6 +10,7 @@ vi.mock("../app/admin/openRouterPhoto", async (original) => ({ ...await original
 vi.mock("../app/admin/adminApi", () => ({ createDraft }));
 import { PhotoImportSection } from "../app/admin/PhotoImportSection";
 import { loadOpenRouterKey, saveOpenRouterKey } from "../app/progress";
+import { ADMIN_SETTINGS_KEY, loadPhotoSettings, loadCropSettings, saveAdminSettings } from "../app/admin/adminSettings";
 
 const clues = {
   clues: {
@@ -66,7 +67,7 @@ describe("photo import", () => {
     expect(screen.getByRole("button", { name: "استخراج پرسش‌ها" })).toBeDisabled();
     fireEvent.change(key, { target: { value: "  supplied-key  " } });
     expect(loadOpenRouterKey()).toBe("supplied-key");
-    expect([...Array(localStorage.length)].map((_, i) => localStorage.key(i))).toEqual(["persian-crossword-openrouter-key"]);
+    expect([...Array(localStorage.length)].map((_, i) => localStorage.key(i))).toEqual(expect.arrayContaining(["persian-crossword-openrouter-key", ADMIN_SETTINGS_KEY]));
     fireEvent.change(screen.getByLabelText("مدل OpenRouter"), { target: { value: "openai/gpt-6.1-sol" } });
     await userEvent.selectOptions(screen.getByLabelText("میزان استدلال (Reasoning effort)"), "low");
     extract.mockResolvedValue(clues);
@@ -77,7 +78,61 @@ describe("photo import", () => {
     expect(screen.getByLabelText("کلید API در OpenRouter")).toHaveValue("supplied-key");
     fireEvent.change(screen.getByLabelText("کلید API در OpenRouter"), { target: { value: "" } });
     expect(loadOpenRouterKey()).toBe("");
-    expect(localStorage.length).toBe(0);
+    expect(localStorage.getItem("persian-crossword-openrouter-key")).toBeNull();
+    expect(localStorage.getItem(ADMIN_SETTINGS_KEY)).not.toBeNull();
+  });
+
+  it("restores all photo form settings after reopening without storing the key in settings or issuing OCR requests", async () => {
+    const view = render(<PhotoImportSection takenIds={new Set()} />);
+    fireEvent.change(screen.getByLabelText("مدل OpenRouter"), { target: { value: "custom/vision" } });
+    await userEvent.selectOptions(screen.getByLabelText("میزان استدلال (Reasoning effort)"), "medium");
+    await userEvent.selectOptions(screen.getByLabelText("نوع شرح"), "special");
+    for (const [label, value] of [["شمارهٔ جدول (اختیاری)", "8050"], ["تعداد ردیف‌ها", "12"], ["تعداد ستون‌ها", "10"], ["شناسهٔ جدول", "8050-special"], ["عنوان", "عنوان 8050"], ["روزنامه", "ایران"], ["سطح", "سخت"], ["طراح", "طراح 2"]]) {
+      fireEvent.change(screen.getByLabelText(label!), { target: { value } });
+    }
+    const stored = localStorage.getItem(ADMIN_SETTINGS_KEY)!;
+    expect(stored).not.toContain("test-openrouter-key");
+    expect(ADMIN_SETTINGS_KEY).not.toMatch(/^persian-crossword:/);
+    view.unmount();
+    render(<PhotoImportSection takenIds={new Set()} />);
+    for (const [label, value] of [["مدل OpenRouter", "custom/vision"], ["میزان استدلال (Reasoning effort)", "medium"], ["نوع شرح", "special"], ["شمارهٔ جدول (اختیاری)", "۸۰۵۰"], ["تعداد ردیف‌ها", "۱۲"], ["تعداد ستون‌ها", "۱۰"], ["شناسهٔ جدول", "۸۰۵۰-special"], ["عنوان", "عنوان ۸۰۵۰"], ["روزنامه", "ایران"], ["سطح", "سخت"], ["طراح", "طراح ۲"]]) {
+      expect(screen.getByLabelText(label!)).toHaveValue(value);
+    }
+    expect(extract).not.toHaveBeenCalled();
+  });
+
+  it("falls back safely for corrupt settings and remains editable when localStorage writes fail", () => {
+    localStorage.setItem(ADMIN_SETTINGS_KEY, "broken JSON");
+    expect(loadPhotoSettings()).toMatchObject({ rows: 15, cols: 15, reasoningEffort: "high", variant: "normal" });
+    localStorage.setItem(ADMIN_SETTINGS_KEY, JSON.stringify({ photo: { model: 42, rows: 0, cols: 100, reasoningEffort: "invalid", variant: "invalid", puzzleNumber: {}, meta: { title: {}, author: [] } }, clueCrop: { mode: "invalid", zoom: 500 } }));
+    expect(loadPhotoSettings()).toMatchObject({ rows: 15, cols: 15, reasoningEffort: "high", variant: "normal", puzzleNumber: "", meta: { title: "", author: "" } });
+    expect(loadCropSettings(true)).toEqual({ mode: "draw", zoom: 100 });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new DOMException("Full", "QuotaExceededError"); });
+    expect(saveAdminSettings({ tab: "ai" })).toBe(false);
+    render(<PhotoImportSection takenIds={new Set()} />);
+    fireEvent.change(screen.getByLabelText("مدل OpenRouter"), { target: { value: "still/editable" } });
+    expect(screen.getByLabelText("مدل OpenRouter")).toHaveValue("still/editable");
+    expect(screen.getAllByRole("alert").some((alert) => alert.textContent?.includes("مرورگر اجازهٔ ذخیرهٔ تنظیمات را نداد"))).toBe(true);
+  });
+
+  it("remembers each cropper's zoom and tool independently across images and remounts", async () => {
+    const changes = vi.fn();
+    const view = render(<ImageCropper multiple disabled={false} onChange={changes} />);
+    pick(view.container.querySelector<HTMLInputElement>("input[type=file]")!);
+    await userEvent.click(screen.getByRole("button", { name: /ویرایش برش‌ها در صفحهٔ بزرگ/ }));
+    fireEvent.change(screen.getByLabelText("بزرگ‌نمایی"), { target: { value: "200" } });
+    await userEvent.click(screen.getByRole("button", { name: "جابه‌جایی تصویر" }));
+    expect(loadCropSettings(true)).toEqual({ zoom: 200, mode: "pan" });
+    // Saving the other cropper or form must not overwrite this cropper's preferences.
+    saveAdminSettings({ gridCrop: { zoom: 125, mode: "adjust" }, photo: { rows: 12 } });
+    view.unmount();
+    const reopened = render(<ImageCropper multiple disabled={false} onChange={changes} />);
+    pick(reopened.container.querySelector<HTMLInputElement>("input[type=file]")!);
+    await userEvent.click(screen.getByRole("button", { name: /ویرایش برش‌ها در صفحهٔ بزرگ/ }));
+    expect(screen.getByLabelText("بزرگ‌نمایی")).toHaveValue("200");
+    expect(screen.getByRole("button", { name: "جابه‌جایی تصویر" })).toHaveAttribute("aria-pressed", "true");
+    expect(loadCropSettings(false)).toEqual({ zoom: 125, mode: "adjust" });
+    expect(loadPhotoSettings().rows).toBe(12);
   });
 
   it("clamps reverse drags and stacks sections in selection order at original resolution", () => {

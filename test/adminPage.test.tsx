@@ -18,6 +18,15 @@ vi.mock("../app/admin/adminApi", () => ({ createDraft: vi.fn(), deleteDraft: vi.
 beforeEach(() => { localStorage.clear(); draftState.drafts = []; vi.resetAllMocks(); });
 
 describe("admin tabs", () => {
+  it("restores the last selected tab when the admin page reopens", async () => {
+    const view = render(<AdminPage />);
+    await userEvent.click(screen.getByRole("tab", { name: "ساخت با هوش‌واره" }));
+    view.unmount();
+    render(<AdminPage />);
+    expect(screen.getByRole("tab", { name: "ساخت با هوش‌واره" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("id", "admin-panel-ai");
+  });
+
   it("displays typed English and Arabic digits as Persian digits while keeping dimensions numeric", async () => {
     render(<AdminPage />);
     await userEvent.click(screen.getByRole("tab", { name: "ساخت با هوش‌واره" }));

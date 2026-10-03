@@ -4,6 +4,7 @@ import { AdminHelp } from "./AdminHelp";
 import { PersianNumberInput } from "../components/PersianNumberInput";
 import { toPersianDigits } from "../persianNumbers";
 import { boxFromPoints, composeCrops, type CropBox } from "./photoImport";
+import { loadCropSettings, saveAdminSettings, type CropMode } from "./adminSettings";
 
 type Drag = { x: number; y: number; pointerId: number } & (
   { mode: "draw" } | { mode: "pan"; left: number; top: number; clientX: number; clientY: number }
@@ -14,6 +15,7 @@ export function ImageCropper({ multiple, disabled, onChange, resetKey = "" }: {
   multiple: boolean; disabled: boolean; onChange: (image: string | null) => void; resetKey?: string;
 }) {
   const id = useId();
+  const [initial] = useState(() => loadCropSettings(multiple));
   const [file, setFile] = useState<File | null>(null);
   const [photo, setPhoto] = useState<HTMLImageElement | null>(null);
   const [boxes, setBoxes] = useState<CropBox[]>([]);
@@ -21,13 +23,18 @@ export function ImageCropper({ multiple, disabled, onChange, resetKey = "" }: {
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(false);
-  const [zoom, setZoom] = useState(100);
-  const [mode, setMode] = useState<"draw" | "pan" | "adjust">("draw");
+  const [zoom, setZoom] = useState(initial.zoom);
+  const [mode, setMode] = useState<CropMode>(initial.mode);
+  const [settingsError, setSettingsError] = useState("");
   const [active, setActive] = useState(0);
   const dialog = useRef<HTMLDialogElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const drag = useRef<Drag | null>(null);
   const closing = useRef<Animation | null>(null);
+  useEffect(() => {
+    const saved = saveAdminSettings({ [multiple ? "clueCrop" : "gridCrop"]: { zoom, mode } });
+    setSettingsError(saved ? "" : "ذخیرهٔ تنظیمات ابزار برش در این مرورگر ممکن نیست.");
+  }, [multiple, zoom, mode]);
 
   useEffect(() => { setBoxes([]); setDrawing(null); setActive(0); drag.current = null; }, [resetKey]);
   useEffect(() => {
@@ -44,7 +51,7 @@ export function ImageCropper({ multiple, disabled, onChange, resetKey = "" }: {
   }, [editing, photo]);
 
   useEffect(() => {
-    setPhoto(null); setBoxes([]); setDrawing(null); setError(""); setEditing(false); setZoom(100); setMode("draw"); setActive(0); drag.current = null;
+    setPhoto(null); setBoxes([]); setDrawing(null); setError(""); setEditing(false); setActive(0); drag.current = null;
     if (!file) return;
     if (!/^image\/(png|jpeg|webp)$/.test(file.type) || file.size > 20 * 1024 * 1024) {
       setError("تصویر PNG، JPG یا WebP تا ۲۰ مگابایت انتخاب کنید."); return;
@@ -166,6 +173,7 @@ export function ImageCropper({ multiple, disabled, onChange, resetKey = "" }: {
 
   return (
     <div className="photo-cropper">
+      {settingsError ? <p className="admin-error" role="alert">{settingsError}</p> : null}
       <label className="admin-button admin-file-picker">
         انتخاب تصویر
         <input type="file" accept="image/png,image/jpeg,image/webp" disabled={disabled} onChange={(e) => { const next = e.target.files?.[0]; if (next) setFile(next); e.target.value = ""; }} />

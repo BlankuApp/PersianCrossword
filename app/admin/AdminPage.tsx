@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { ArrowRight, FileJson, FilePlus2, Files, Pencil, Sparkles, Trash2, Upload } from "lucide-react";
 import { useAuth } from "../AuthContext";
 import { PublishMetaFields, publishMetaOf, withPublishMeta, type PublishMeta } from "../components/PublishMetaFields";
@@ -13,6 +13,7 @@ import { useDrafts } from "./useDrafts";
 import { PhotoImportSection } from "./PhotoImportSection";
 import { AdminHelp } from "./AdminHelp";
 import { localizeInputDigits, toAsciiDigits, toPersianDigits } from "../persianNumbers";
+import { readAdminSettings, saveAdminSettings } from "./adminSettings";
 
 const fa = (n: number) => n.toLocaleString("fa-IR");
 const adminTabs = [
@@ -50,7 +51,11 @@ export default function AdminPage() {
 }
 
 function AdminContent() {
-  const [tab, setTab] = useState<(typeof adminTabs)[number]["id"]>("drafts");
+  const [tab, setTab] = useState<(typeof adminTabs)[number]["id"]>(() => {
+    const saved = readAdminSettings().tab;
+    return adminTabs.find((item) => item.id === saved)?.id ?? "drafts";
+  });
+  useEffect(() => { saveAdminSettings({ tab }); }, [tab]);
   const tabIndex = adminTabs.findIndex((item) => item.id === tab);
   const { drafts, loaded, error } = useDrafts();
   const { puzzles } = usePuzzleLibrary();

@@ -9,31 +9,38 @@ import { AdminHelp } from "./AdminHelp";
 import { ImageCropper } from "./ImageCropper";
 import { isValidPuzzleId, planImport, type ImportFile } from "./importPlan";
 import { extractedGrid, photoPuzzle, reviewClues } from "./photoImport";
-import { DEFAULT_PHOTO_MODEL, REASONING_EFFORTS, extractOpenRouterPhoto, type ReasoningEffort } from "./openRouterPhoto";
+import { REASONING_EFFORTS, extractOpenRouterPhoto, type ReasoningEffort } from "./openRouterPhoto";
+import { loadPhotoSettings, saveAdminSettings } from "./adminSettings";
 
 const errorText = (e: unknown) => e instanceof Error ? e.message : String(e);
 
 export function PhotoImportSection({ takenIds }: { takenIds: ReadonlySet<string> }) {
   const fieldId = useId();
+  const [initial] = useState(loadPhotoSettings);
   const [apiKey, setApiKey] = useState(loadOpenRouterKey);
-  const [model, setModel] = useState(DEFAULT_PHOTO_MODEL);
-  const [reasoningEffort, setReasoningEffort] = useState<ReasoningEffort>("high");
+  const [model, setModel] = useState(initial.model);
+  const [reasoningEffort, setReasoningEffort] = useState<ReasoningEffort>(initial.reasoningEffort);
+  const [settingsError, setSettingsError] = useState("");
   const [keyError, setKeyError] = useState("");
   const [clueImage, setClueImage] = useState<string | null>(null);
   const [gridImage, setGridImage] = useState<string | null>(null);
   const [clueText, setClueText] = useState("");
   const [gridText, setGridText] = useState("");
-  const [rows, setRows] = useState(15);
-  const [cols, setCols] = useState(15);
-  const [variant, setVariant] = useState<PuzzleVariant>("normal");
-  const [puzzleNumber, setPuzzleNumber] = useState("");
-  const [id, setId] = useState("");
-  const [meta, setMeta] = useState<PublishMeta>({ title: "", newspaper: "", difficulty: "عادی", author: "" });
+  const [rows, setRows] = useState(initial.rows);
+  const [cols, setCols] = useState(initial.cols);
+  const [variant, setVariant] = useState<PuzzleVariant>(initial.variant);
+  const [puzzleNumber, setPuzzleNumber] = useState(initial.puzzleNumber);
+  const [id, setId] = useState(initial.id);
+  const [meta, setMeta] = useState<PublishMeta>(initial.meta);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [savedId, setSavedId] = useState("");
   const [cellError, setCellError] = useState("");
   const gridEditor = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const saved = saveAdminSettings({ photo: { model, reasoningEffort, rows, cols, variant, puzzleNumber, id, meta } });
+    setSettingsError(saved ? "" : "مرورگر اجازهٔ ذخیرهٔ تنظیمات را نداد؛ تنظیمات تا بستن صفحه قابل استفاده‌اند.");
+  }, [model, reasoningEffort, rows, cols, variant, puzzleNumber, id, meta]);
   useEffect(() => { setCellError(""); }, [gridText]);
   const changeClues = useCallback((image: string | null) => { setClueImage(image); setClueText(""); setSavedId(""); }, []);
   const changeGrid = useCallback((image: string | null) => { setGridImage(image); setGridText(""); setSavedId(""); }, []);
@@ -88,6 +95,7 @@ export function PhotoImportSection({ takenIds }: { takenIds: ReadonlySet<string>
     <section className="admin-section" aria-labelledby="admin-photo-title">
       <h2 id="admin-photo-title">ساخت جدول با هوش‌واره <AdminHelp label="ساخت با هوش‌واره">ستون‌های پرسش‌ها را از تصویر اول به ترتیب خواندن انتخاب کنید و خود جدول پاسخ را از تصویر دوم برش بزنید. OpenRouter هر تصویر را جداگانه استخراج می‌کند. نتیجه‌ها را بررسی و اصلاح کنید، سپس پیش‌نویس بسازید. استخراج ممکن است چند دقیقه طول بکشد.</AdminHelp></h2>
       <p className="admin-note">انتخاب تصویر و برش ← استخراج پرسش‌ها و جدول ← بررسی و ساخت پیش‌نویس</p>
+      {settingsError ? <p className="admin-error" role="alert">{settingsError}</p> : null}
       <div className="publish-meta-fields photo-credentials">
         <div className="photo-field"><span className="photo-field-heading"><label htmlFor={`${fieldId}-key`}>کلید API در OpenRouter</label> <AdminHelp label="کلید OpenRouter">کلید در localStorage همین مرورگر ذخیره و دوباره بازیابی می‌شود. برای حذف آن، فیلد کلید را خالی کنید. کلید در JSON یا پیش‌نویس ذخیره نمی‌شود.</AdminHelp></span><input id={`${fieldId}-key`} aria-label="کلید API در OpenRouter" type="password" dir="ltr" autoComplete="off" spellCheck={false} value={apiKey} disabled={busy} placeholder="sk-or-…" onChange={(e) => {
           const key = e.target.value.trim(); setApiKey(key);
