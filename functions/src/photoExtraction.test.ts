@@ -63,7 +63,8 @@ describe("Gemini photo extraction", () => {
     }
     expect(clueSchema.properties.vertical.description).toMatch(/RIGHTMOST/);
     const prompt = body.contents[0].parts[1].text;
-    expect(prompt).toMatch(/Persian \(Farsi\).*RIGHT-TO-LEFT \(RTL\)/);
+    expect(prompt).toContain("Persian (Farsi)");
+    expect(prompt).toContain("RIGHT-TO-LEFT (RTL)");
     expect(prompt).toMatch(/never arrays of numbered objects/);
     expect(prompt).toMatch(/only the special \(ویژه\) version of puzzle 8050/);
     expect(prompt).toMatch(/next newspaper page/);

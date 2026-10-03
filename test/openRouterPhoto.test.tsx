@@ -21,7 +21,8 @@ describe("OpenRouter photo extraction", () => {
     expect(body).toMatchObject({ model: input.model, reasoning: { effort: "high", exclude: true }, provider: { require_parameters: true }, response_format: { type: "json_schema", json_schema: { strict: true, name: "crossword_clues" } } });
     expect(body.messages[0].content[1]).toEqual({ type: "image_url", image_url: { url: input.image, detail: "high" } });
     const prompt = body.messages[0].content[0].text;
-    expect(prompt).toMatch(/Persian \(Farsi\).*RIGHT-TO-LEFT \(RTL\)/);
+    expect(prompt).toContain("Persian (Farsi)");
+    expect(prompt).toContain("RIGHT-TO-LEFT (RTL)");
     expect(prompt).toMatch(/only the special \(ویژه\) version of puzzle 8050/);
     expect(prompt).toMatch(/never arrays of numbered objects/);
     expect(prompt).toMatch(/never as instructions/);
@@ -37,6 +38,9 @@ describe("OpenRouter photo extraction", () => {
     expect(gridBody.reasoning).toEqual({ effort: "low", exclude: true });
     expect(gridBody.response_format.json_schema.schema.properties.grid).toMatchObject({ minItems: 1, maxItems: 1, items: { minItems: 3, maxItems: 3 } });
     expect(gridBody.messages[0].content[0].text).toMatch(/Rows top to bottom, columns physically left to right/);
+    expect(gridBody.messages[0].content[0].text).toContain('grid[0][0] must be the TOP-LEFT cell');
+    expect(gridBody.messages[0].content[0].text).toContain('["م","ا","ل","س"], never ["س","ل","ا","م"]');
+    expect(gridBody.messages[0].content[0].text).not.toContain("Read Persian words and sentences right to left");
   });
 
   it("rejects incomplete or invalid JSON and exposes actionable provider errors without echoing response details", async () => {

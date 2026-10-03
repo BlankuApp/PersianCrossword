@@ -246,6 +246,37 @@ describe("photo import", () => {
     expect(JSON.parse(createDraft.mock.calls[0]![0].jsonText).grid[0][0]).toBe("ی");
   });
 
+  it("mirrors every row including black cells, can undo the mirror, and saves the corrected grid without another OCR request", async () => {
+    const source = [["", "ل", "س"], ["ا", "ی", "ر"], ["ب", "ت", "ک"]];
+    const corrected = [["س", "ل", ""], ["ر", "ی", "ا"], ["ک", "ت", "ب"]];
+    const groups = { "1": ["یک"], "2": ["دو"], "3": ["سه"] };
+    const clueResult = { clues: { horizontal: groups, vertical: groups } };
+    extract.mockImplementation(async (input: Record<string, unknown>) => input.kind === "clues" ? clueResult : { grid: source });
+    createDraft.mockResolvedValue(undefined);
+    const view = render(<PhotoImportSection takenIds={new Set()} />);
+    fireEvent.change(screen.getByLabelText("تعداد ردیف‌ها"), { target: { value: "3" } });
+    fireEvent.change(screen.getByLabelText("تعداد ستون‌ها"), { target: { value: "3" } });
+    for (const input of view.container.querySelectorAll<HTMLInputElement>("input[type=file]")) { pick(input); await wholeCrop(input); }
+    await userEvent.click(screen.getByRole("button", { name: "استخراج پرسش‌ها" }));
+    await userEvent.click(screen.getByRole("button", { name: "استخراج جدول" }));
+    fireEvent.change(screen.getByLabelText("شناسهٔ جدول"), { target: { value: "mirrored-grid" } });
+    const mirror = screen.getByRole("button", { name: "برعکس کردن چپ و راست" });
+    const result = screen.getByLabelText("جدول استخراج‌شده (قابل ویرایش)") as HTMLTextAreaElement;
+    expect(screen.getByRole("group", { name: "ویرایش خانه‌های جدول" })).toHaveAttribute("dir", "ltr");
+    await userEvent.click(mirror);
+    expect(JSON.parse(result.value).grid).toEqual(corrected);
+    expect(screen.getByRole("textbox", { name: "خانهٔ ردیف ۱ ستون ۱ از چپ" })).toHaveValue("س");
+    expect(screen.getByRole("textbox", { name: "خانهٔ ردیف ۱ ستون ۳ از چپ" })).toHaveClass("photo-grid-block");
+    await userEvent.click(mirror);
+    expect(JSON.parse(result.value).grid).toEqual(source);
+    await userEvent.click(mirror);
+    await userEvent.click(screen.getByRole("button", { name: "ساخت پیش‌نویس از نتیجه" }));
+    await waitFor(() => expect(createDraft).toHaveBeenCalledOnce());
+    expect(JSON.parse(createDraft.mock.calls[0]![0].jsonText).grid).toEqual(corrected);
+    expect(JSON.parse(createDraft.mock.calls[0]![0].jsonText).clues).toEqual(clueResult.clues);
+    expect(extract).toHaveBeenCalledTimes(2);
+  });
+
   it("extracts both photos, refuses mismatched clues and saves a reviewed draft with its cropped images", async () => {
     extract.mockImplementation(async (input: Record<string, unknown>) => input.kind === "clues" ? clues : grid);
     createDraft.mockResolvedValue(undefined);

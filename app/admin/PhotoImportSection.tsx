@@ -143,6 +143,12 @@ export function PhotoImportSection({ takenIds }: { takenIds: ReadonlySet<string>
       </> : null}
       {gridReview.grid ? <div className="photo-grid-editor">
         <h3>ویرایش خانه‌های جدول <AdminHelp label="ویرایش خانه‌های جدول">روی هر خانه کلیک کنید و یک حرف فارسی بنویسید؛ خالی کردن خانه آن را سیاه می‌کند. ردیف‌ها از بالا به پایین و ستون‌ها از چپ به راست در JSON ذخیره می‌شوند. کلیدهای جهت برای رفتن به خانه‌های کناری هستند. هر تغییر، JSON و بررسی تعداد پرسش‌ها را به‌روز می‌کند.</AdminHelp></h3>
+        <div className="admin-draft-actions">
+          <button type="button" className="admin-button" disabled={busy} onClick={() => {
+            setGridText(JSON.stringify({ grid: gridReview.grid!.map((row) => [...row].reverse()) }, null, 2)); setSavedId("");
+          }}>برعکس کردن چپ و راست</button>
+          <AdminHelp label="برعکس کردن چپ و راست">اگر شبکه نسبت به عکس آینه‌ای شده، این دکمه ترتیب خانه‌های هر ردیف را برعکس می‌کند. JSON و بررسی پرسش‌ها هم به‌روز می‌شوند. زدن دوباره، شبکه را به حالت قبل برمی‌گرداند.</AdminHelp>
+        </div>
         <div ref={gridEditor} className="photo-grid-preview" dir="ltr" role="group" aria-label="ویرایش خانه‌های جدول" style={{ gridTemplateColumns: `repeat(${cols}, 2.2em)` }}>
           {gridReview.grid.flatMap((row, r) => row.map((letter, c) => <input key={`${r},${c}`} aria-label={`خانهٔ ردیف ${toPersianDigits(r + 1)} ستون ${toPersianDigits(c + 1)} از چپ`} className={letter ? "" : "photo-grid-block"} value={letter} disabled={busy} autoComplete="off" spellCheck={false} onFocus={(e) => e.currentTarget.select()} onChange={(e) => editCell(r, c, e.target.value)} onKeyDown={(e) => {
             const nextRow = r + (e.key === "ArrowDown" ? 1 : e.key === "ArrowUp" ? -1 : 0);
