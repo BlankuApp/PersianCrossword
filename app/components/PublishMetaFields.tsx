@@ -1,6 +1,7 @@
 import { useId, useMemo } from "react";
 import type { CrosswordJson } from "../../src/index";
 import { usePuzzleLibrary } from "../puzzleLibrary";
+import { localizeInputDigits, toPersianDigits } from "../persianNumbers";
 
 // Metadata the admin can change right before publishing; publishedAt is set to the publish day
 // (adminApi.publishDraft).
@@ -45,10 +46,10 @@ export function PublishMetaFields({
       {META_FIELDS.map(([field, label]) => (
         <label key={field}>
           {label}
-          <input value={meta[field]} onChange={(e) => onChange({ ...meta, [field]: e.target.value })} list={`${id}-${field}`} disabled={disabled} />
+          <input value={toPersianDigits(meta[field])} onChange={(e) => onChange({ ...meta, [field]: localizeInputDigits(e.currentTarget) })} list={`${id}-${field}`} disabled={disabled} />
           <datalist id={`${id}-${field}`}>
             {suggestions[field].map((v) => (
-              <option key={v} value={v} />
+              <option key={v} value={toPersianDigits(v)} />
             ))}
           </datalist>
         </label>

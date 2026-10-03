@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { planImport, type ImportFile } from "../app/admin/importPlan";
+import { isValidPuzzleId, planImport, type ImportFile } from "../app/admin/importPlan";
 import sample10 from "../samples/sample-10x10-garden.json";
 
 const encode = (text: string) => new TextEncoder().encode(text);
@@ -10,6 +10,22 @@ const jsonFile = (name: string, meta: Record<string, unknown>): ImportFile => ({
 const image = (name: string): ImportFile => ({ name, bytes: new Uint8Array([1, 2, 3]) });
 
 describe("planImport", () => {
+  it("rejects prototype keys from metadata and filename IDs, while allowing literal replacement tokens", () => {
+    const reserved = Object.getOwnPropertyNames(Object.prototype);
+    for (const id of reserved) {
+      expect(isValidPuzzleId(id)).toBe(false);
+      for (const file of [jsonFile("puzzle.json", { id }), jsonFile(`${id}.json`, { id: undefined })]) {
+        const plan = planImport([file], new Set());
+        expect(plan.drafts).toEqual([]);
+        expect(plan.problems[0]).toContain("مجاز نیست");
+      }
+    }
+    for (const id of ["foo$&bar", "foo$`bar", "foo$'bar", "__proto__-safe", "Constructor"]) {
+      expect(isValidPuzzleId(id)).toBe(true);
+      expect(planImport([jsonFile("puzzle.json", { id })], new Set()).drafts[0]?.id).toBe(id);
+    }
+  });
+
   it("pairs each puzzle with its solution and source images", () => {
     const plan = planImport([jsonFile("301.json", { id: "301", sourceFile: "9100.webp" }), image("301.png"), image("9100.WEBP")], new Set());
     expect(plan.problems).toEqual([]);

@@ -30,9 +30,12 @@ import {
   type PackDoc,
   type PackEntry,
 } from "../../shared/cloudPuzzles";
-import { validatePuzzleJson, type CrosswordJson } from "../../src/index";
+import type { CrosswordJson } from "../../src/index";
+import { validateStoredPuzzleJson } from "./puzzleValidation";
 import { db, firebaseApp, storageFileUrl, usingEmulators } from "../firebase";
-import type { ImportFile, PlannedDraft } from "./importPlan";
+import { isValidPuzzleId, type ImportFile, type PlannedDraft } from "./importPlan";
+import { toAsciiDigits } from "../persianNumbers";
+import { computeProgress, loadProgress, localProgressIds, recordEdit } from "../progress";
 
 export interface DraftImage {
   readonly path: string;
@@ -99,7 +102,7 @@ export function listenDrafts(onChange: (drafts: Draft[]) => void, onError: (erro
 
 // Problems that stop a puzzle from being published, in Persian for the admin UI.
 export function publishProblems(json: CrosswordJson): string[] {
-  const problems = validatePuzzleJson(json).issues.map((i) => i.message);
+  const problems = validateStoredPuzzleJson(json).issues.map((i) => i.message);
   const missing = countMissingLetters(json);
   if (missing) problems.push(`${missing.toLocaleString("fa-IR")} خانه هنوز حرف پاسخ ندارد؛ اول جدول را حل و ذخیره کنید.`);
   return problems;
@@ -115,9 +118,10 @@ function assertPublishable(json: CrosswordJson): void {
 // draft) to the same transaction.
 async function commitPuzzle(
   id: string,
-  nextEntry: (current: PackEntry | undefined) => Promise<PackEntry | null>,
+  nextEntry: (current: PackEntry | undefined, tx: Transaction) => Promise<PackEntry | null>,
   extra?: (tx: Transaction) => void,
 ): Promise<void> {
+  if (!isValidPuzzleId(id)) throw new Error("شناسهٔ جدول نامعتبر است.");
   await runTransaction(db, async (tx) => {
     const catalogSnap = await tx.get(catalogRef);
     const catalog = catalogSnap.data() as CatalogDoc | undefined;
@@ -128,7 +132,7 @@ async function commitPuzzle(
     const packSnap = await tx.get(packRef(packId));
     const stored = (packSnap.data() as PackDoc | undefined)?.puzzles ?? {};
 
-    const entry = await nextEntry(existingPack ? stored[id] : undefined);
+    const entry = await nextEntry(existingPack ? stored[id] : undefined, tx);
     const hashes: Record<string, string> = { ...packs[packId]?.puzzles };
     // The catalog lists what the pack holds; entries it doesn't list are leftovers.
     const entries: Record<string, PackEntry> = Object.fromEntries(Object.keys(hashes).flatMap((p) => (stored[p] ? [[p, stored[p]]] : [])));
@@ -158,7 +162,7 @@ async function commitPuzzle(
 
 export async function saveDraft(draft: Draft, json: CrosswordJson): Promise<void> {
   // A draft that fails validation could no longer be opened in the solver.
-  const problems = validatePuzzleJson(json).issues.map((i) => i.message);
+  const problems = validateStoredPuzzleJson(json).issues.map((i) => i.message);
   if (problems.length) throw new Error(problems.join("\n"));
   await setDoc(draftRef(draft.id), { json: toJsonText(json), updatedAt: Date.now() }, { merge: true });
 }
@@ -167,33 +171,50 @@ export async function deleteDraft(id: string): Promise<void> {
   await deleteDoc(draftRef(id));
 }
 
-export async function publishDraft(draft: Draft, json: CrosswordJson = draft.json): Promise<void> {
+export async function publishDraft(draft: Draft, json: CrosswordJson = draft.json, nextId = draft.id): Promise<void> {
+  const id = nextId === draft.id ? draft.id : toAsciiDigits(nextId.trim());
+  const renamed = id !== draft.id;
+  if (!isValidPuzzleId(id)) throw new Error("شناسهٔ کوتاه و بدون نقطه، / یا نویسه‌های ویژهٔ نام فایل وارد کنید.");
   // Players see the day it went live (local YYYY-MM-DD), not the date written in the file.
   const now = new Date();
   const today = new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
-  json = { ...json, meta: { ...json.meta, publishedAt: today } };
+  json = { ...json, meta: { ...json.meta, id, publishedAt: today } };
   assertPublishable(json);
-  const images = Object.entries(draft.images).map(([kind, image]): ImageRef => ({ kind: kind as ImageKind, name: image.name, hash: image.hash }));
+  const images = Object.entries(draft.images).map(([kind, image]): ImageRef => ({ kind: kind as ImageKind, name: renamed && kind === "solution" ? `${id}.png` : image.name, hash: image.hash }));
   const entry: PackEntry = {
     hash: await puzzleHash(json, images),
-    file: draft.file,
+    file: renamed ? draft.file.replace(/[^/]+$/, () => `${id}.json`) : draft.file,
     json: toJsonText(json),
     images: Object.fromEntries(Object.entries(draft.images).map(([kind, image]) => [kind, image.path])),
   };
   await commitPuzzle(
-    draft.id,
-    async (current) => {
+    id,
+    async (current, tx) => {
       // A draft made from an unpublished puzzle reuses its id; a different live puzzle is never replaced.
-      if (current) throw new Error(`جدول دیگری با شناسهٔ «${draft.id}» منتشر شده است.`);
+      if (current) throw new Error(`جدول دیگری با شناسهٔ «${id}» منتشر شده است.`);
+      const original = await tx.get(draftRef(draft.id));
+      if (!original.exists()) throw new Error("این پیش‌نویس دیگر وجود ندارد؛ فهرست را دوباره بررسی کنید.");
+      if (renamed && (await tx.get(draftRef(id))).exists()) throw new Error(`شناسهٔ «${id}» قبلاً استفاده شده است.`);
+      // A newer draft must be reviewed instead of publishing a stale snapshot over another admin's edits.
+      if ((original.data() as DraftDoc).json !== draft.jsonText) throw new Error("محتوای پیش‌نویس تغییر کرده است؛ آن را دوباره بررسی و منتشر کنید.");
       return entry;
     },
     (tx) => tx.delete(draftRef(draft.id)),
   );
+  if (renamed) {
+    // Retain the old local copy for other devices syncing the previous ID.
+    try {
+      if (localProgressIds().includes(draft.id)) {
+        const saved = loadProgress(draft.id);
+        recordEdit(id, saved, computeProgress(json, saved));
+      }
+    } catch (error) { console.warn("[admin] puzzle published; original local progress retained", error); }
+  }
 }
 
 // A fix to a published puzzle goes straight to players.
 export async function savePublishedPuzzle(id: string, json: CrosswordJson): Promise<void> {
-  const problems = validatePuzzleJson(json).issues.map((i) => i.message);
+  const problems = validateStoredPuzzleJson(json).issues.map((i) => i.message);
   if (problems.length) throw new Error(problems.join("\n"));
   await commitPuzzle(id, async (current) => {
     if (!current) throw new Error("این جدول منتشر نشده است.");
@@ -243,6 +264,7 @@ async function uploadImage(id: string, file: ImportFile, name: string): Promise<
 }
 
 export async function createDraft(planned: PlannedDraft): Promise<void> {
+  if (!isValidPuzzleId(planned.id)) throw new Error("شناسهٔ جدول نامعتبر است.");
   const images: Partial<Record<ImageKind, DraftImage>> = {};
   for (const image of planned.images) images[image.kind] = await uploadImage(planned.id, image.file, image.name);
   const now = Date.now();

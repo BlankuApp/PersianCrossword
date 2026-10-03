@@ -7,6 +7,9 @@ import { SolverPage } from "../app/pages/SolverPage";
 import sample10 from "../samples/sample-10x10-garden.json";
 import sample11 from "../samples/sample-11x11-city.json";
 import type { CrosswordJson } from "../src/index";
+import { compilePuzzle } from "../src/index";
+import { normalizeGridDirection } from "../app/progress";
+import referencePuzzle from "../puzzles/201-250/223_8004_normal.json";
 
 const json10 = sample10 as CrosswordJson;
 const json11 = sample11 as CrosswordJson;
@@ -37,6 +40,21 @@ describe("Persian crossword UI", () => {
     expect(activeClue.getByText("۱ افقی")).toHaveClass("active-clue-label");
     expect(activeClue.getByText("نمونه افقی 1، 2 حرف")).toBeInTheDocument();
     expect(screen.queryByRole("tablist", { name: "نوع پرسش" })).not.toBeInTheDocument();
+  });
+
+  it.each([false, true])("shows the repository puzzle's answer in the correct physical order (draft: %s)", async (draft) => {
+    const original = JSON.stringify(referencePuzzle);
+    const json = referencePuzzle as CrosswordJson;
+    const puzzle = compilePuzzle(normalizeGridDirection(json));
+    const firstAcross = puzzle.slots.filter((slot) => slot.direction === "across" && slot.groupNum === 1);
+    expect(firstAcross.map((slot) => slot.answer)).toEqual(["کولر", "بوینوسایرس"]);
+    render(<SolverPage id="223" json={json} editor={draft ? { kind: "draft", save: vi.fn() } : undefined} />);
+    await userEvent.click(screen.getByRole("button", { name: "نمایش پاسخ" }));
+    const cells = within(screen.getByRole("dialog", { name: "پاسخ جدول" })).getAllByRole("gridcell");
+    expect(cells.slice(0, 15).map((cell) => cell.textContent?.trim() ?? "")).toEqual([...referencePuzzle.grid[0]!].reverse());
+    expect(cells[14]).toHaveTextContent("ک"); // right edge of the LTR board
+    expect(cells[0]).toHaveTextContent("س"); // left edge
+    expect(JSON.stringify(referencePuzzle)).toBe(original);
   });
 
   it("adds both RTL clues to intersecting cells", () => {
@@ -196,4 +214,3 @@ describe("Persian crossword UI", () => {
     expect(clues).toContain("دوم");
   });
 });
-

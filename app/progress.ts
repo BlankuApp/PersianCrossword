@@ -3,8 +3,8 @@ import type { CrosswordJson, CrosswordPuzzle, CrosswordState, SavedCrosswordStat
 
 export const STORAGE_PREFIX = "persian-crossword:";
 
-// Grid rows are stored LTR (index 0 = leftmost); reverse so col=0 stays
-// rightmost throughout the internal coord system.
+// Repository rows are RTL (index 0 = rightmost). Core/board coordinates are LTR
+// (col 0 = leftmost), so reverse only at this display/solver boundary.
 export function normalizeGridDirection(json: CrosswordJson): CrosswordJson {
   return { ...json, grid: json.grid.map((row) => [...row].reverse()) };
 }
@@ -65,6 +65,20 @@ export function loadGeminiKey(): string {
 export function saveGeminiKey(value: string): void {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(GEMINI_KEY_KEY, value);
+}
+
+// Dash, not STORAGE_PREFIX: credentials must never be synced as puzzle progress.
+const OPENROUTER_KEY_KEY = "persian-crossword-openrouter-key";
+
+export function loadOpenRouterKey(): string {
+  try { return window.localStorage.getItem(OPENROUTER_KEY_KEY) ?? ""; }
+  catch { return ""; }
+}
+
+export function saveOpenRouterKey(value: string): void {
+  const key = value.trim();
+  if (key) window.localStorage.setItem(OPENROUTER_KEY_KEY, key);
+  else window.localStorage.removeItem(OPENROUTER_KEY_KEY);
 }
 
 export type PuzzleStatus = "new" | "progress" | "done";

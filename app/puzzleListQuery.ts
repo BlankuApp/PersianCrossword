@@ -1,4 +1,5 @@
 import { normalizePersianText } from "../src/index";
+import { toAsciiDigits } from "./persianNumbers";
 import type { ProgressInfo } from "./progress";
 import type { PuzzleSummary } from "./puzzleLibrary";
 
@@ -56,9 +57,7 @@ export function puzzleStatus(progress: ProgressInfo | undefined): Exclude<Status
 
 // Fold Persian/Arabic-Indic digits to ASCII so typing "8036" or "۸۰۳۶" both find "جدول ۸۰۳۶".
 function searchKey(value: string): string {
-  return normalizePersianText(value)
-    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
-    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+  return toAsciiDigits(normalizePersianText(value))
     .toLowerCase()
     .trim();
 }
