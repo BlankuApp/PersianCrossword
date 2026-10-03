@@ -3,7 +3,7 @@
      ≤1024px → toolbar shrinks to icon-only (still 2-column solver layout)
      ≤860px  → main layout shift: 2-column grid → 1-column stack
      ≤480px  → extreme mobile: hide row/col index labels, board bleeds into shell padding
-     ≤640px  → unrelated axis: home/library page table columns
+     ≤640px  → compact admin tools and home/library page table columns
    Do not add a 5th breakpoint without folding it into one of these tiers' purpose.
    ────────────────────────────────────────────────────────── */
 @font-face {
@@ -2810,6 +2810,116 @@ select {
 
 /* Admin panel (app/admin) */
 
+/* Transitions.dev: sliding tabs, panel reveal, modal scale, and delayed tooltip.
+   https://transitions.dev/library.html — Copyright 2026 Jakub Antalik / Transitions.dev. */
+.admin-tabs { position: relative; display: flex; gap: 6px; padding: 5px; margin-bottom: 20px; border: 1px solid #dde3de; border-radius: 14px; background: #f0f4f1; }
+.admin-tab-pill { position: absolute; top: 5px; bottom: 5px; right: 5px; width: calc((100% - 22px) / 3); border-radius: 10px; background: #fff; box-shadow: 0 2px 6px #17201b12; pointer-events: none; transition: transform 250ms cubic-bezier(0.22, 1, 0.36, 1); }
+.admin-tabs [role="tab"] { position: relative; display: flex; flex: 1 1 0; min-width: 0; align-items: center; justify-content: center; gap: 8px; padding: 12px 10px; border: 0; border-radius: 10px; background: transparent; color: #5b6b61; font: inherit; cursor: pointer; transition: color 250ms cubic-bezier(0.22, 1, 0.36, 1); }
+.admin-tabs [aria-selected="true"] { color: #1e5c38; font-weight: 700; }
+.admin-tab-count { border-radius: 12px; padding: 1px 7px; background: #e4eee7; color: #285438; font-size: 0.8rem; }
+.admin-shell [role="tabpanel"][hidden] { display: none; }
+.admin-shell [role="tabpanel"]:not([hidden]), .photo-preview, .photo-grid-editor, .admin-import-plan, .admin-publish-form { animation: admin-panel-in 400ms cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes admin-panel-in { from { opacity: 0; transform: translateY(8px); } }
+.admin-shell .admin-error, .photo-crop-dialog .admin-error { animation: error-shake 0.36s cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+.photo-field-heading { display: flex; align-items: center; gap: 5px; }
+.photo-field { display: grid; gap: 4px; font-size: 0.85rem; }
+.photo-field-heading label { display: inline; }
+.photo-credentials { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+.photo-credentials .photo-field { min-width: 0; }
+.admin-help { position: relative; display: inline-flex; vertical-align: middle; font-size: 0.85rem; font-weight: 400; }
+.admin-help-button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #6b7d70; cursor: help; }
+.admin-help-button:hover, .admin-help-button:focus-visible { background: #e4eee7; color: #1e5c38; }
+.admin-help-tooltip { position: absolute; z-index: 30; top: 100%; width: 300px; max-width: 75vw; padding: 12px 14px; border-radius: 10px; background: #203c2d; color: white; font-size: 0.85rem; line-height: 1.9; text-align: right; box-shadow: 0 6px 20px #17201b26; transform-origin: top right; animation: admin-tooltip-in 150ms ease-out 80ms backwards; }
+@keyframes admin-tooltip-in { from { opacity: 0; transform: translateY(-3px) scale(0.98); } }
+.photo-open-editor { display: grid; justify-items: center; gap: 9px; padding: 14px; border: 1px dashed #bacbbc; border-radius: 12px; color: #285438; background: #f7faf7; font: inherit; cursor: pointer; }
+.photo-open-editor img { max-width: 100%; max-height: 190px; border-radius: 6px; object-fit: contain; }
+.photo-open-editor span { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.photo-open-editor small { color: #6b7d70; }
+.photo-crop-dialog { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: #fff; color: #17201b; }
+.photo-crop-dialog:not([open]) { display: none; }
+.photo-crop-dialog[open] { display: flex; flex-direction: column; animation: photo-crop-in 250ms cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes photo-crop-in { from { opacity: 0; transform: scale(0.96); } }
+.photo-crop-dialog::backdrop { background: #17201b99; }
+.photo-crop-header, .photo-crop-toolbar, .photo-crop-footer { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 12px 20px; flex-shrink: 0; }
+.photo-crop-header { border-bottom: 1px solid #dde3de; }
+.photo-crop-header h2 { margin: 0; font-size: 1.2rem; }
+.photo-crop-close { margin-inline-start: auto; }
+.photo-crop-toolbar { justify-content: space-between; background: #f7faf7; border-bottom: 1px solid #dde3de; }
+.photo-crop-modes, .photo-crop-zoom { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.photo-crop-modes [aria-pressed="true"] { background: #e4eee7; border-color: #4c9f70; color: #1e5c38; }
+.photo-crop-zoom label { display: grid; gap: 3px; font-size: 0.8rem; }
+.photo-crop-zoom input { width: 110px; accent-color: #1e5c38; }
+.photo-crop-zoom output { min-width: 3em; font-size: 0.85rem; }
+.photo-crop-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 300px; flex: 1; min-height: 0; }
+.photo-crop-viewport { min-width: 0; overflow: auto; background: #e8eeea; overscroll-behavior: contain; }
+.photo-crop-settings { min-width: 0; overflow: auto; padding: 16px; border-inline-start: 1px solid #dde3de; }
+.photo-crop-settings h3 { margin: 0 0 14px; }
+.photo-crop-settings .photo-coordinates { display: grid; grid-template-columns: 1fr 1fr; }
+.photo-crop-settings .photo-coordinates input { width: 100%; min-width: 0; }
+.photo-crop-settings .photo-crop-list { padding-inline-start: 22px; }
+.photo-crop-selected { border-radius: 8px; outline: 1px solid #cbded0; background: #f7faf7; padding: 7px; }
+.photo-crop-footer { justify-content: space-between; border-top: 1px solid #dde3de; }
+.photo-crop-footer p { margin: 0; font-size: 0.85rem; }
+.photo-crop-pan { cursor: grab !important; }
+.photo-crop-pan:active { cursor: grabbing !important; }
+.photo-crop-adjust { cursor: move !important; }
+.photo-crop-surface .photo-crop-active > rect { stroke: #ce7420; fill: #e9a44522; }
+.photo-crop-surface .photo-crop-handle { fill: #fff; stroke: #ce7420; }
+.photo-grid-editor { border-top: 1px solid #dde3de; margin-top: 16px; padding-top: 5px; }
+
+.photo-import-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+}
+
+.photo-import-columns > div { min-width: 0; }
+.photo-import-columns h3 { margin: 12px 0; }
+.photo-cropper { display: grid; gap: 10px; }
+.photo-crop-surface { position: relative; touch-action: none; user-select: none; cursor: crosshair; direction: ltr; }
+.photo-crop-surface > img { display: block; width: 100%; height: auto; }
+.photo-crop-surface svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+.photo-crop-surface rect { fill: #1e5c3826; stroke: #1e5c38; stroke-width: 2; }
+.photo-crop-surface text { fill: #fff; stroke: #1e5c38; stroke-width: 2; paint-order: stroke; }
+.photo-crop-list { margin: 0; padding-inline-start: 24px; }
+.photo-crop-list li { margin-block: 8px; }
+.photo-crop-list summary { cursor: pointer; margin-bottom: 6px; }
+.photo-coordinates { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 10px; }
+.photo-coordinates label { display: grid; gap: 4px; font-size: 0.85rem; }
+.photo-coordinates input, .photo-coordinates select { width: 120px; }
+.photo-coordinates input, .photo-coordinates select, .photo-result textarea { border: 1px solid #bac3bc; border-radius: 8px; padding: 8px; font: inherit; }
+.photo-preview > div { max-height: 420px; overflow: auto; margin-top: 8px; border: 1px solid #dde3de; }
+.photo-preview img { display: block; max-width: 100%; height: auto; margin-inline: auto; }
+.photo-extract { margin-block: 12px; }
+.photo-result { display: grid; gap: 6px; }
+.photo-result textarea { width: 100%; min-height: 180px; resize: vertical; font-family: monospace; }
+.photo-grid-preview { display: grid; width: max-content; max-width: 100%; overflow: auto; margin-block: 12px; }
+.photo-grid-preview input { width: 2.2em; height: 2.2em; min-width: 0; padding: 0; border: 1px solid #bac3bc; border-radius: 0; background: #fff; color: #17201b; text-align: center; font: inherit; }
+.photo-grid-preview input:focus { position: relative; z-index: 1; outline: 2px solid #4c9f70; outline-offset: -2px; }
+.photo-grid-preview .photo-grid-block { background: #17201b; }
+.photo-coordinates input:focus-visible, .photo-coordinates select:focus-visible, .photo-result textarea:focus-visible { outline: 2px solid #4c9f70; outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-tab-pill, .admin-tabs [role="tab"] { transition: none; }
+  .admin-shell [role="tabpanel"]:not([hidden]), .photo-preview, .photo-grid-editor, .admin-import-plan, .admin-publish-form,
+  .admin-help-tooltip, .photo-crop-dialog[open], .admin-shell .admin-error, .photo-crop-dialog .admin-error { animation: none; }
+}
+
+@media (max-width: 860px) {
+  .photo-import-columns { grid-template-columns: minmax(0, 1fr); }
+  .photo-crop-workspace { grid-template-columns: minmax(0, 1fr) 230px; }
+  .photo-crop-header, .photo-crop-toolbar, .photo-crop-footer { padding: 10px; }
+  .admin-tabs [role="tab"] { font-size: 0.85rem; gap: 5px; }
+}
+
+@media (max-width: 640px) {
+  .photo-crop-workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 150px); }
+  .photo-crop-settings { padding: 10px; border-top: 1px solid #dde3de; }
+  .admin-tabs [role="tab"] { flex-direction: column; padding: 9px 4px; }
+  .photo-crop-header h2 { font-size: 1rem; }
+  .photo-credentials { grid-template-columns: minmax(0, 1fr) !important; }
+}
+
 .admin-header {
   display: flex;
   align-items: center;
@@ -2973,6 +3083,8 @@ select {
   flex-basis: 100%;
 }
 
+.publish-meta-fields.admin-publish-id { grid-template-columns: minmax(0, 320px); margin-block: 4px; }
+
 .publish-meta-fields {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -2986,7 +3098,7 @@ select {
   font-size: 0.85rem;
 }
 
-.publish-meta-fields input {
+.publish-meta-fields input, .publish-meta-fields select {
   min-width: 0;
   padding: 8px 10px;
   border: 1px solid #bac3bc;

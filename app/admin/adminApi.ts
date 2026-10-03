@@ -32,7 +32,9 @@ import {
 } from "../../shared/cloudPuzzles";
 import { validatePuzzleJson, type CrosswordJson } from "../../src/index";
 import { db, firebaseApp, storageFileUrl, usingEmulators } from "../firebase";
-import type { ImportFile, PlannedDraft } from "./importPlan";
+import { isValidPuzzleId, type ImportFile, type PlannedDraft } from "./importPlan";
+import { toAsciiDigits } from "../persianNumbers";
+import { computeProgress, loadProgress, localProgressIds, recordEdit } from "../progress";
 
 export interface DraftImage {
   readonly path: string;
@@ -115,7 +117,7 @@ function assertPublishable(json: CrosswordJson): void {
 // draft) to the same transaction.
 async function commitPuzzle(
   id: string,
-  nextEntry: (current: PackEntry | undefined) => Promise<PackEntry | null>,
+  nextEntry: (current: PackEntry | undefined, tx: Transaction) => Promise<PackEntry | null>,
   extra?: (tx: Transaction) => void,
 ): Promise<void> {
   await runTransaction(db, async (tx) => {
@@ -128,7 +130,7 @@ async function commitPuzzle(
     const packSnap = await tx.get(packRef(packId));
     const stored = (packSnap.data() as PackDoc | undefined)?.puzzles ?? {};
 
-    const entry = await nextEntry(existingPack ? stored[id] : undefined);
+    const entry = await nextEntry(existingPack ? stored[id] : undefined, tx);
     const hashes: Record<string, string> = { ...packs[packId]?.puzzles };
     // The catalog lists what the pack holds; entries it doesn't list are leftovers.
     const entries: Record<string, PackEntry> = Object.fromEntries(Object.keys(hashes).flatMap((p) => (stored[p] ? [[p, stored[p]]] : [])));
@@ -167,28 +169,45 @@ export async function deleteDraft(id: string): Promise<void> {
   await deleteDoc(draftRef(id));
 }
 
-export async function publishDraft(draft: Draft, json: CrosswordJson = draft.json): Promise<void> {
+export async function publishDraft(draft: Draft, json: CrosswordJson = draft.json, nextId = draft.id): Promise<void> {
+  const id = nextId === draft.id ? draft.id : toAsciiDigits(nextId.trim());
+  const renamed = id !== draft.id;
+  if (renamed && !isValidPuzzleId(id)) throw new Error("شناسهٔ کوتاه و بدون نقطه، / یا نویسه‌های ویژهٔ نام فایل وارد کنید.");
   // Players see the day it went live (local YYYY-MM-DD), not the date written in the file.
   const now = new Date();
   const today = new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
-  json = { ...json, meta: { ...json.meta, publishedAt: today } };
+  json = { ...json, meta: { ...json.meta, id, publishedAt: today } };
   assertPublishable(json);
-  const images = Object.entries(draft.images).map(([kind, image]): ImageRef => ({ kind: kind as ImageKind, name: image.name, hash: image.hash }));
+  const images = Object.entries(draft.images).map(([kind, image]): ImageRef => ({ kind: kind as ImageKind, name: renamed && kind === "solution" ? `${id}.png` : image.name, hash: image.hash }));
   const entry: PackEntry = {
     hash: await puzzleHash(json, images),
-    file: draft.file,
+    file: renamed ? draft.file.replace(/[^/]+$/, `${id}.json`) : draft.file,
     json: toJsonText(json),
     images: Object.fromEntries(Object.entries(draft.images).map(([kind, image]) => [kind, image.path])),
   };
   await commitPuzzle(
-    draft.id,
-    async (current) => {
+    id,
+    async (current, tx) => {
       // A draft made from an unpublished puzzle reuses its id; a different live puzzle is never replaced.
-      if (current) throw new Error(`جدول دیگری با شناسهٔ «${draft.id}» منتشر شده است.`);
+      if (current) throw new Error(`جدول دیگری با شناسهٔ «${id}» منتشر شده است.`);
+      const original = await tx.get(draftRef(draft.id));
+      if (!original.exists()) throw new Error("این پیش‌نویس دیگر وجود ندارد؛ فهرست را دوباره بررسی کنید.");
+      if (renamed && (await tx.get(draftRef(id))).exists()) throw new Error(`شناسهٔ «${id}» قبلاً استفاده شده است.`);
+      // A newer draft must be reviewed instead of publishing a stale snapshot over another admin's edits.
+      if ((original.data() as DraftDoc).json !== draft.jsonText) throw new Error("محتوای پیش‌نویس تغییر کرده است؛ آن را دوباره بررسی و منتشر کنید.");
       return entry;
     },
     (tx) => tx.delete(draftRef(draft.id)),
   );
+  if (renamed) {
+    // Retain the old local copy for other devices syncing the previous ID.
+    try {
+      if (localProgressIds().includes(draft.id)) {
+        const saved = loadProgress(draft.id);
+        recordEdit(id, saved, computeProgress(json, saved));
+      }
+    } catch (error) { console.warn("[admin] puzzle published; original local progress retained", error); }
+  }
 }
 
 // A fix to a published puzzle goes straight to players.

@@ -67,6 +67,20 @@ export function saveGeminiKey(value: string): void {
   window.localStorage.setItem(GEMINI_KEY_KEY, value);
 }
 
+// Dash, not STORAGE_PREFIX: credentials must never be synced as puzzle progress.
+const OPENROUTER_KEY_KEY = "persian-crossword-openrouter-key";
+
+export function loadOpenRouterKey(): string {
+  try { return window.localStorage.getItem(OPENROUTER_KEY_KEY) ?? ""; }
+  catch { return ""; }
+}
+
+export function saveOpenRouterKey(value: string): void {
+  const key = value.trim();
+  if (key) window.localStorage.setItem(OPENROUTER_KEY_KEY, key);
+  else window.localStorage.removeItem(OPENROUTER_KEY_KEY);
+}
+
 export type PuzzleStatus = "new" | "progress" | "done";
 
 export interface ProgressInfo {

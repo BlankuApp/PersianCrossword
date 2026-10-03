@@ -1,5 +1,5 @@
-import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
-import { ArrowRight, FilePlus2, Pencil, Trash2, Upload } from "lucide-react";
+import { useId, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { ArrowRight, FileJson, FilePlus2, Files, Pencil, Sparkles, Trash2, Upload } from "lucide-react";
 import { useAuth } from "../AuthContext";
 import { PublishMetaFields, publishMetaOf, withPublishMeta, type PublishMeta } from "../components/PublishMetaFields";
 import { DifficultyBadge, ProgressBar } from "../pages/HomePage";
@@ -8,10 +8,18 @@ import { usePuzzleLibrary } from "../puzzleLibrary";
 import { refreshPuzzleCatalog } from "../puzzleSync";
 import { goHome } from "../router";
 import { createDraft, deleteDraft, publishDraft, publishProblems, type Draft } from "./adminApi";
-import { planImport, type ImportFile, type ImportPlan } from "./importPlan";
+import { isValidPuzzleId, planImport, type ImportFile, type ImportPlan } from "./importPlan";
 import { useDrafts } from "./useDrafts";
+import { PhotoImportSection } from "./PhotoImportSection";
+import { AdminHelp } from "./AdminHelp";
+import { localizeInputDigits, toAsciiDigits, toPersianDigits } from "../persianNumbers";
 
 const fa = (n: number) => n.toLocaleString("fa-IR");
+const adminTabs = [
+  { id: "drafts", label: "پیش‌نویس‌ها", Icon: Files },
+  { id: "ai", label: "ساخت با هوش‌واره", Icon: Sparkles },
+  { id: "json", label: "افزودن با JSON", Icon: FileJson },
+] as const;
 
 function errorText(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
@@ -42,33 +50,54 @@ export default function AdminPage() {
 }
 
 function AdminContent() {
+  const [tab, setTab] = useState<(typeof adminTabs)[number]["id"]>("drafts");
+  const tabIndex = adminTabs.findIndex((item) => item.id === tab);
   const { drafts, loaded, error } = useDrafts();
   const { puzzles } = usePuzzleLibrary();
   const takenIds = useMemo(() => new Set([...puzzles.map((p) => p.id), ...drafts.map((d) => d.id)]), [puzzles, drafts]);
 
   return (
     <>
-      <ImportSection takenIds={takenIds} />
-      <section className="admin-section" aria-labelledby="admin-drafts-title">
-        <h2 id="admin-drafts-title">پیش‌نویس‌ها{loaded ? ` (${fa(drafts.length)})` : ""}</h2>
-        {error ? <p className="admin-error">خواندن پیش‌نویس‌ها انجام نشد: {error}</p> : null}
-        {!loaded ? (
-          <p className="admin-note">در حال بارگذاری…</p>
-        ) : drafts.length === 0 ? (
-          <p className="admin-note">پیش‌نویسی نیست. جدول تازه را از بخش بالا اضافه کنید.</p>
-        ) : (
-          <ul className="admin-drafts">
-            {drafts.map((draft) => (
-              <DraftRow key={draft.id} draft={draft} />
-            ))}
-          </ul>
-        )}
-      </section>
+      <div className="admin-tabs" role="tablist" aria-label="بخش‌های مدیریت">
+        <span className="admin-tab-pill" aria-hidden="true" style={{ transform: `translateX(calc(-${tabIndex * 100}% - ${tabIndex * 6}px))` }} />
+        {adminTabs.map(({ id, label, Icon }, index) => <button key={id} type="button" role="tab" id={`admin-tab-${id}`} aria-controls={`admin-panel-${id}`} aria-selected={tab === id} tabIndex={tab === id ? 0 : -1} onClick={() => setTab(id)} onKeyDown={(e) => {
+          // The tabs follow RTL visual order; right goes to the preceding tab.
+          const next = e.key === "ArrowLeft" ? (index + 1) % adminTabs.length
+            : e.key === "ArrowRight" ? (index + adminTabs.length - 1) % adminTabs.length
+            : e.key === "Home" ? 0 : e.key === "End" ? adminTabs.length - 1 : null;
+          if (next === null) return;
+          e.preventDefault(); setTab(adminTabs[next]!.id);
+          document.getElementById(`admin-tab-${adminTabs[next]!.id}`)?.focus();
+        }}><Icon size={18} aria-hidden="true" />{label}{id === "drafts" && loaded ? <span className="admin-tab-count">{fa(drafts.length)}</span> : null}</button>)}
+      </div>
+      <div role="tabpanel" id="admin-panel-drafts" aria-labelledby="admin-tab-drafts" hidden={tab !== "drafts"} tabIndex={0}>
+        <section className="admin-section" aria-labelledby="admin-drafts-title">
+          <h2 id="admin-drafts-title">پیش‌نویس‌ها{loaded ? ` (${fa(drafts.length)})` : ""}</h2>
+          {error ? <p className="admin-error">خواندن پیش‌نویس‌ها انجام نشد: {error}</p> : null}
+          {!loaded ? (
+            <p className="admin-note">در حال بارگذاری…</p>
+          ) : drafts.length === 0 ? (
+            <p className="admin-note">پیش‌نویسی نیست. از تب «ساخت با هوش‌واره» یا «افزودن با JSON» جدول تازه اضافه کنید.</p>
+          ) : (
+            <ul className="admin-drafts">
+              {drafts.map((draft) => (
+                <DraftRow key={draft.id} draft={draft} takenIds={takenIds} />
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+      <div role="tabpanel" id="admin-panel-ai" aria-labelledby="admin-tab-ai" hidden={tab !== "ai"} tabIndex={0}>
+        <PhotoImportSection takenIds={takenIds} />
+      </div>
+      <div role="tabpanel" id="admin-panel-json" aria-labelledby="admin-tab-json" hidden={tab !== "json"} tabIndex={0}>
+        <ImportSection takenIds={takenIds} />
+      </div>
     </>
   );
 }
 
-function DraftRow({ draft }: { draft: Draft }) {
+function DraftRow({ draft, takenIds }: { draft: Draft; takenIds: ReadonlySet<string> }) {
   const problems = useMemo(() => publishProblems(draft.json), [draft.json]);
   // The admin's own letters on this device (drafts save progress like any puzzle).
   const { syncVersion } = useAuth();
@@ -80,6 +109,12 @@ function DraftRow({ draft }: { draft: Draft }) {
   const [message, setMessage] = useState<string | null>(null);
   // The metadata form, open while the admin reviews it before publishing.
   const [meta, setMeta] = useState<PublishMeta | null>(null);
+  const [nextId, setNextId] = useState(draft.id);
+  const publishButton = useRef<HTMLButtonElement>(null);
+  const publishFormId = useId();
+  const newId = toAsciiDigits(nextId).trim();
+  const idProblem = !isValidPuzzleId(newId) ? "شناسهٔ کوتاه و بدون نقطه، / یا نویسه‌های ویژهٔ نام فایل وارد کنید."
+    : newId !== draft.id && takenIds.has(newId) ? "این شناسه قبلاً استفاده شده است." : "";
   const title = draft.json.meta?.title ?? draft.id;
 
   async function run(action: () => Promise<void>): Promise<void> {
@@ -89,16 +124,20 @@ function DraftRow({ draft }: { draft: Draft }) {
       await action();
     } catch (e) {
       setMessage(errorText(e));
+    } finally {
       setBusy(false);
     }
   }
 
+  function cancelPublish(): void {
+    setMeta(null); setMessage(null); publishButton.current?.focus();
+  }
 
   function publish(e: FormEvent): void {
     e.preventDefault();
-    if (!meta) return;
+    if (!meta || idProblem || busy || problems.length) return;
     void run(async () => {
-      await publishDraft(draft, withPublishMeta(draft.json, meta));
+      await publishDraft(draft, withPublishMeta(draft.json, meta), newId);
       await refreshPuzzleCatalog();
     });
   }
@@ -111,8 +150,8 @@ function DraftRow({ draft }: { draft: Draft }) {
   return (
     <li className="admin-draft">
       <div className="admin-draft-info">
-        <strong>{title}</strong>
-        <span className="admin-draft-id">شناسه: {draft.id}</span>
+        <strong>{toPersianDigits(title)}</strong>
+        <span className="admin-draft-id">شناسه: <bdi>{toPersianDigits(draft.id)}</bdi></span>
         <span className="admin-draft-meta">
           <DifficultyBadge difficulty={draft.json.meta?.difficulty} />
           {percent > 0 ? <ProgressBar percent={percent} /> : <span className="progress-empty">شروع نشده</span>}
@@ -125,31 +164,37 @@ function DraftRow({ draft }: { draft: Draft }) {
         ) : (
           <span className="admin-draft-status admin-draft-status-ready">آماده انتشار</span>
         )}
-        {message ? <span className="admin-error">{message}</span> : null}
+        {message ? <span className="admin-error" role="alert">{toPersianDigits(message)}</span> : null}
       </div>
       <div className="admin-draft-actions">
         <a className="admin-button" href={`#/admin/draft/${encodeURIComponent(draft.id)}`}>
           <Pencil size={16} aria-hidden="true" />
           حل و ویرایش
         </a>
-        <button type="button" className="admin-button admin-button-primary" onClick={() => setMeta(publishMetaOf(draft.json))} disabled={busy || meta !== null || problems.length > 0}>
+        <button ref={publishButton} type="button" className="admin-button admin-button-primary" aria-expanded={meta !== null} aria-controls={publishFormId} onClick={() => {
+          if (meta) cancelPublish(); else { setMeta(publishMetaOf(draft.json)); setNextId(draft.id); setMessage(null); }
+        }} disabled={busy || problems.length > 0}>
           <Upload size={16} aria-hidden="true" />
           انتشار
         </button>
-        <button type="button" className="admin-button admin-button-danger" onClick={remove} disabled={busy} aria-label={`حذف ${title}`}>
+        <button type="button" className="admin-button admin-button-danger" onClick={remove} disabled={busy || meta !== null} aria-label={`حذف ${title}`}>
           <Trash2 size={16} aria-hidden="true" />
           حذف
         </button>
       </div>
       {meta ? (
-        <form className="admin-publish-form" onSubmit={publish}>
+        <form id={publishFormId} className="admin-publish-form" aria-label={`انتشار ${title}`} onSubmit={publish} onKeyDown={(e) => { if (e.key === "Escape" && !busy) { e.preventDefault(); cancelPublish(); } }}>
+          <div className="publish-meta-fields admin-publish-id">
+            <div className="photo-field"><span className="photo-field-heading"><label htmlFor={`${publishFormId}-id`}>شناسهٔ انتشار</label> <AdminHelp label="شناسهٔ انتشار">شناسهٔ فعلی را نگه دارید یا شناسهٔ تازه و یکتا وارد کنید. با زدن «انتشار برای همه»، جدول با همین شناسه و مشخصات منتشر می‌شود؛ تصاویر و محتوای جدول حفظ می‌شوند. انصراف هیچ تغییری ذخیره نمی‌کند.</AdminHelp></span><input id={`${publishFormId}-id`} autoFocus dir="ltr" value={toPersianDigits(nextId)} disabled={busy} aria-invalid={!!idProblem} aria-describedby={idProblem ? `${publishFormId}-error` : undefined} onChange={(e) => { setNextId(toAsciiDigits(localizeInputDigits(e.currentTarget))); setMessage(null); }} /></div>
+          </div>
+          {idProblem ? <p id={`${publishFormId}-error`} className="admin-error" role="alert">{idProblem}</p> : null}
           <PublishMetaFields meta={meta} onChange={setMeta} disabled={busy} />
           <div className="admin-draft-actions">
-            <button type="submit" className="admin-button admin-button-primary" disabled={busy}>
+            <button type="submit" className="admin-button admin-button-primary" disabled={busy || !!idProblem || problems.length > 0}>
               <Upload size={16} aria-hidden="true" />
               {busy ? "در حال انتشار…" : "انتشار برای همه"}
             </button>
-            <button type="button" className="admin-button" onClick={() => setMeta(null)} disabled={busy}>
+            <button type="button" className="admin-button" onClick={cancelPublish} disabled={busy}>
               انصراف
             </button>
           </div>
@@ -204,7 +249,7 @@ function ImportSection({ takenIds }: { takenIds: ReadonlySet<string> }) {
 
   return (
     <section className="admin-section" aria-labelledby="admin-import-title">
-      <h2 id="admin-import-title">افزودن جدول</h2>
+      <h2 id="admin-import-title">افزودن جدول با JSON</h2>
       <p className="admin-note">
         فایل JSON جدول‌ها را همراه تصویرهایشان انتخاب کنید: تصویر پاسخ با همان نام فایل و پسوند png، و تصویر منبع با نامی
         که در sourceFile آمده است. هر جدول به‌صورت پیش‌نویس ساخته می‌شود تا آن را حل، اصلاح و منتشر کنید.

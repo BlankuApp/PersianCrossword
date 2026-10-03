@@ -26,6 +26,10 @@ export interface ImportPlan {
 
 const IMAGE_EXTENSIONS = /\.(png|jpe?g|webp)$/i;
 
+export function isValidPuzzleId(id: string): boolean {
+  return !!id && id === id.trim() && !/[<>:"|?*/.\\\u0000-\u001f]/.test(id) && new TextEncoder().encode(id).length <= 120;
+}
+
 export function planImport(files: readonly ImportFile[], takenIds: ReadonlySet<string>): ImportPlan {
   const images = new Map(files.filter((f) => IMAGE_EXTENSIONS.test(f.name)).map((f) => [f.name.toLowerCase(), f]));
   const usedImages = new Set<string>();
