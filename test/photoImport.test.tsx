@@ -88,7 +88,7 @@ describe("photo import", () => {
     fireEvent.change(screen.getByLabelText("مدل OpenRouter"), { target: { value: "custom/vision" } });
     await userEvent.selectOptions(screen.getByLabelText("میزان استدلال (Reasoning effort)"), "medium");
     await userEvent.selectOptions(screen.getByLabelText("نوع شرح"), "special");
-    for (const [label, value] of [["شمارهٔ جدول (اختیاری)", "8050"], ["تعداد ردیف‌ها", "12"], ["تعداد ستون‌ها", "10"], ["شناسهٔ جدول", "8050-special"], ["عنوان", "عنوان 8050"], ["روزنامه", "ایران"], ["سطح", "سخت"], ["طراح", "طراح 2"]]) {
+    for (const [label, value] of [["شمارهٔ جدول (اختیاری)", "8050"], ["تعداد ردیف‌ها", "12"], ["تعداد ستون‌ها", "10"], ["شناسهٔ جدول", "8050-special"], ["عنوان", "عنوان 8050"], ["روزنامه", "ایران"], ["سطح", "عادی"], ["طراح", "طراح 2"]]) {
       fireEvent.change(screen.getByLabelText(label!), { target: { value } });
     }
     const stored = localStorage.getItem(ADMIN_SETTINGS_KEY)!;
@@ -96,10 +96,25 @@ describe("photo import", () => {
     expect(ADMIN_SETTINGS_KEY).not.toMatch(/^persian-crossword:/);
     view.unmount();
     render(<PhotoImportSection takenIds={new Set()} />);
-    for (const [label, value] of [["مدل OpenRouter", "custom/vision"], ["میزان استدلال (Reasoning effort)", "medium"], ["نوع شرح", "special"], ["شمارهٔ جدول (اختیاری)", "۸۰۵۰"], ["تعداد ردیف‌ها", "۱۲"], ["تعداد ستون‌ها", "۱۰"], ["شناسهٔ جدول", "۸۰۵۰-special"], ["عنوان", "عنوان ۸۰۵۰"], ["روزنامه", "ایران"], ["سطح", "سخت"], ["طراح", "طراح ۲"]]) {
+    for (const [label, value] of [["مدل OpenRouter", "custom/vision"], ["میزان استدلال (Reasoning effort)", "medium"], ["نوع شرح", "special"], ["شمارهٔ جدول (اختیاری)", "۸۰۵۰"], ["تعداد ردیف‌ها", "۱۲"], ["تعداد ستون‌ها", "۱۰"], ["شناسهٔ جدول", "۸۰۵۰-special"], ["عنوان", "عنوان ۸۰۵۰"], ["روزنامه", "ایران"], ["سطح", "عادی"], ["طراح", "طراح ۲"]]) {
       expect(screen.getByLabelText(label!)).toHaveValue(value);
     }
     expect(extract).not.toHaveBeenCalled();
+  });
+
+  it("keeps an unknown saved difficulty selectable and shows the derived source file and size", () => {
+    saveAdminSettings({ photo: { id: "9", rows: 4, cols: 5, meta: { title: "t", difficulty: "سخت" } } });
+    const { container } = render(<PhotoImportSection takenIds={new Set()} />);
+    expect(screen.getByLabelText("سطح")).toHaveValue("سخت");
+    expect(screen.getByLabelText("نام تصویر منبع")).toHaveValue("9-clues.png");
+    expect(screen.getByLabelText("نام تصویر منبع")).toBeDisabled();
+    expect(container.querySelector(".meta-editor-advanced")).toHaveTextContent("۴ × ۵");
+  });
+
+  it("flags a used id in the form but not after the draft was just saved with it", () => {
+    saveAdminSettings({ photo: { id: "used" } });
+    render(<PhotoImportSection takenIds={new Set(["used"])} />);
+    expect(screen.getByRole("alert")).toHaveTextContent("قبلاً استفاده شده");
   });
 
   it("falls back safely for corrupt settings and remains editable when localStorage writes fail", () => {

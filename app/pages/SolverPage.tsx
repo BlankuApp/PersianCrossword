@@ -16,6 +16,7 @@ import {
   Save,
   Upload,
   Undo2,
+  Tag,
 } from "lucide-react";
 import {
   useEffect,
@@ -64,7 +65,8 @@ import { BoardWithLabels } from "../components/BoardWithLabels";
 import { CrosswordBoard } from "../components/CrosswordBoard";
 import { ActiveClue } from "../components/CluePanel";
 import { HelpTutorial } from "../components/HelpTutorial";
-import { PublishMetaFields, publishMetaOf, withPublishMeta, type PublishMeta } from "../components/PublishMetaFields";
+import { MetaSummary } from "../components/MetaSummary";
+import { PuzzleMetaDialog } from "../components/PuzzleMetaDialog";
 
 // Admin editing (app/admin): where the editing tools save, plus the admin's toolbar actions.
 export interface PuzzleEditor {
@@ -73,6 +75,10 @@ export interface PuzzleEditor {
   readonly save: (json: CrosswordJson) => Promise<void>;
   readonly publish?: ((json: CrosswordJson) => Promise<void>) | undefined;
   readonly unpublish?: (() => Promise<void>) | undefined;
+  // Saves edited metadata. A draft's changed id renames it (DraftPage); a published puzzle's id never changes.
+  readonly saveMeta?: ((json: CrosswordJson, newId: string) => Promise<void>) | undefined;
+  // Ids a draft can't be renamed to (published puzzles and other drafts).
+  readonly takenIds?: ReadonlySet<string> | undefined;
 }
 
 type ConfirmAction = "reset" | "save" | "publish" | "unpublish";
@@ -164,7 +170,8 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor,
   const [sourceCollapsed, setSourceCollapsed] = useState(true);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
-  const [publishMeta, setPublishMeta] = useState<PublishMeta>(() => publishMetaOf(json));
+  // The JSON the metadata dialog was opened on (null = closed).
+  const [metaJson, setMetaJson] = useState<CrosswordJson | null>(null);
   const [isToolbarMenuOpen, setIsToolbarMenuOpen] = useState(false);
 
   const boardRef = useRef<HTMLDivElement>(null);
@@ -469,9 +476,15 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor,
     editedJsonRef.current = next;
   }
 
+  // Metadata saves update the same ref, so a later clue/answer save can't revert them.
+  async function saveMetaEdit(next: CrosswordJson, newId: string): Promise<void> {
+    if (!editor?.saveMeta) return;
+    await editor.saveMeta(next, newId);
+    editedJsonRef.current = next;
+  }
+
   function openConfirm(action: ConfirmAction): void {
     setConfirmError(null);
-    if (action === "publish") setPublishMeta(publishMetaOf(editedJsonRef.current));
     setConfirmAction(action);
   }
 
@@ -489,7 +502,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor,
         const next = withSolvedGrid(editedJsonRef.current);
         if (next) await saveJsonEdit(next);
       } else if (action === "publish") {
-        await editor.publish?.(withPublishMeta(editedJsonRef.current, publishMeta));
+        await editor.publish?.(editedJsonRef.current);
       } else {
         await editor.unpublish?.();
       }
@@ -691,6 +704,12 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor,
                 <span>ذخیره پاسخ‌ها</span>
               </button>
             ) : null}
+            {editor?.saveMeta ? (
+              <button type="button" onClick={() => setMetaJson(editedJsonRef.current)} disabled={isSaving}>
+                <Tag size={18} aria-hidden="true" />
+                <span>مشخصات</span>
+              </button>
+            ) : null}
             {editor?.publish ? (
               <button type="button" onClick={() => openConfirm("publish")} disabled={isSaving}>
                 <Upload size={18} aria-hidden="true" />
@@ -722,7 +741,9 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor,
                 ? "حرف‌های واردشده به‌عنوان پاسخ جدول ذخیره و برای همه بازیکنان منتشر می‌شوند. ادامه می‌دهید؟"
                 : CONFIRM_TEXT[confirmAction].body}
             </p>
-            {confirmAction === "publish" ? <PublishMetaFields meta={publishMeta} onChange={setPublishMeta} disabled={isSaving} /> : null}
+            {confirmAction === "publish" ? (
+              <MetaSummary json={editedJsonRef.current} id={id} onEdit={editor?.saveMeta ? () => { setConfirmAction(null); setMetaJson(editedJsonRef.current); } : undefined} />
+            ) : null}
             {confirmError ? <p className="clue-edit-error confirm-modal-error">{confirmError}</p> : null}
             <div className="solution-modal-actions">
               <button type="button" onClick={() => setConfirmAction(null)}>
@@ -739,6 +760,10 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor,
             </div>
           </div>
         </div>
+      ) : null}
+
+      {metaJson && editor?.saveMeta ? (
+        <PuzzleMetaDialog json={metaJson} id={id} kind={editor.kind} takenIds={editor.takenIds} hasSourceImage={!!sourceImageUrl} onSave={saveMetaEdit} onClose={() => setMetaJson(null)} />
       ) : null}
 
       {showHelp ? <HelpTutorial onClose={closeHelp} /> : null}

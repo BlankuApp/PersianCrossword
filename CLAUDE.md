@@ -90,6 +90,9 @@ against fixed values — changing it would make every published puzzle look chan
   puzzle back to drafts. Publishing requires `validatePuzzleJson` to pass and every open cell to hold its
   answer (`countMissingLetters`). Pack + catalog (+ draft) writes happen in one transaction (`adminApi.ts`).
   The editing tools are `SolverPage`'s `editor` prop; there's no local-file debug mode any more.
+  Metadata (id, title, newspaper, difficulty, author; advanced: sourceFile, size, publishedAt) is edited in one
+  `PuzzleMetaDialog` (`app/components/`): drafts can change their id (`renameDraft`), published puzzles keep it;
+  saves go through `PuzzleEditor.saveMeta`. Publishing only shows a summary.
 - `scripts/uploadPuzzles.ts` bulk-publishes a folder after validating every puzzle. It adds new puzzles but
   skips published ones that differ (the admin panel may have fixed them) unless `--overwrite`; `--prune`
   unpublishes puzzles missing locally. Needs `GOOGLE_APPLICATION_CREDENTIALS` (service account) or the

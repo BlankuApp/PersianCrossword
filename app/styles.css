@@ -2818,7 +2818,7 @@ select {
 .admin-tabs [aria-selected="true"] { color: #1e5c38; font-weight: 700; }
 .admin-tab-count { border-radius: 12px; padding: 1px 7px; background: #e4eee7; color: #285438; font-size: 0.8rem; }
 .admin-shell [role="tabpanel"][hidden] { display: none; }
-.admin-shell [role="tabpanel"]:not([hidden]), .photo-preview, .photo-grid-editor, .admin-import-plan, .admin-publish-form { animation: admin-panel-in 400ms cubic-bezier(0.22, 1, 0.36, 1); }
+.admin-shell [role="tabpanel"]:not([hidden]), .photo-preview, .photo-grid-editor, .admin-import-plan { animation: admin-panel-in 400ms cubic-bezier(0.22, 1, 0.36, 1); }
 @keyframes admin-panel-in { from { opacity: 0; transform: translateY(8px); } }
 .admin-shell .admin-error, .photo-crop-dialog .admin-error { animation: error-shake 0.36s cubic-bezier(0.36, 0.07, 0.19, 0.97); }
 .photo-field-heading { display: flex; align-items: center; gap: 5px; }
@@ -2901,7 +2901,7 @@ select {
 
 @media (prefers-reduced-motion: reduce) {
   .admin-tab-pill, .admin-tabs [role="tab"] { transition: none; }
-  .admin-shell [role="tabpanel"]:not([hidden]), .photo-preview, .photo-grid-editor, .admin-import-plan, .admin-publish-form,
+  .admin-shell [role="tabpanel"]:not([hidden]), .photo-preview, .photo-grid-editor, .admin-import-plan,
   .admin-help-tooltip, .photo-crop-dialog[open], .admin-shell .admin-error, .photo-crop-dialog .admin-error { animation: none; }
 }
 
@@ -3077,14 +3077,6 @@ select {
   gap: 8px;
 }
 
-.admin-publish-form {
-  display: grid;
-  gap: 10px;
-  flex-basis: 100%;
-}
-
-.publish-meta-fields.admin-publish-id { grid-template-columns: minmax(0, 320px); margin-block: 4px; }
-
 .publish-meta-fields {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -3116,3 +3108,14 @@ select {
 .confirm-modal-error {
   white-space: pre-line;
 }
+
+.meta-editor-advanced { grid-column: 1 / -1; font-size: 0.85rem; }
+.meta-editor-advanced summary { cursor: pointer; color: #5b6b61; }
+.meta-editor-advanced-body { display: grid; gap: 10px; margin-top: 8px; }
+.meta-summary { display: grid; gap: 4px; margin: 8px 0; }
+.meta-summary > div { display: flex; gap: 8px; }
+.meta-summary dt { color: #5b6b61; }
+.meta-summary dd { margin: 0; }
+.meta-summary-edit { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; }
+.meta-dialog { max-height: 90vh; overflow-y: auto; text-align: start; }
+.meta-dialog-note { margin: 0 0 8px; color: #5b6b61; font-size: 0.85rem; }

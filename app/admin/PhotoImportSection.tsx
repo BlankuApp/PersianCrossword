@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useId } from "react";
 import type { PhotoKind, PuzzleVariant } from "../../functions/src/photoFormat";
 import { loadOpenRouterKey, saveOpenRouterKey } from "../progress";
-import { PublishMetaFields, withPublishMeta, type PublishMeta } from "../components/PublishMetaFields";
+import { PuzzleMetaEditor } from "../components/PuzzleMetaEditor";
+import { applyMetaForm, type MetaTextFields } from "../components/puzzleMeta";
 import { PersianNumberInput } from "../components/PersianNumberInput";
-import { localizeInputDigits, toAsciiDigits, toPersianDigits } from "../persianNumbers";
+import { localizeInputDigits, toPersianDigits } from "../persianNumbers";
 import { createDraft } from "./adminApi";
 import { AdminHelp } from "./AdminHelp";
 import { ImageCropper } from "./ImageCropper";
@@ -31,7 +32,7 @@ export function PhotoImportSection({ takenIds }: { takenIds: ReadonlySet<string>
   const [variant, setVariant] = useState<PuzzleVariant>(initial.variant);
   const [puzzleNumber, setPuzzleNumber] = useState(initial.puzzleNumber);
   const [id, setId] = useState(initial.id);
-  const [meta, setMeta] = useState<PublishMeta>(initial.meta);
+  const [meta, setMeta] = useState<MetaTextFields>(initial.meta);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [savedId, setSavedId] = useState("");
@@ -75,9 +76,8 @@ export function PhotoImportSection({ takenIds }: { takenIds: ReadonlySet<string>
     setBusy(true); setMessage("");
     try {
       const slug = id.trim();
-      const json = withPublishMeta({ ...review.json, meta: {
-        id: slug, sourceFile: `${slug}-clues.png`, size: { rows, cols }, language: "fa", direction: "rtl",
-      } }, { ...meta, title: meta.title.trim() || (puzzleNumber ? `جدول ${puzzleNumber}` : "") });
+      const json = applyMetaForm({ ...review.json, meta: { id: slug, language: "fa", direction: "rtl" } },
+        { id: slug, ...meta, title: meta.title.trim() || (puzzleNumber ? `جدول ${puzzleNumber}` : ""), sourceFile: `${slug}-clues.png` }, true);
       const imageFile = (name: string, image: string): ImportFile => ({ name, bytes: Uint8Array.from(atob(image.split(",")[1]!), (c) => c.charCodeAt(0)) });
       const files: ImportFile[] = [
         { name: `${slug}.json`, bytes: new TextEncoder().encode(JSON.stringify(json, null, 2)) },
@@ -169,11 +169,16 @@ export function PhotoImportSection({ takenIds }: { takenIds: ReadonlySet<string>
         {cellError ? <p className="admin-error" role="alert">{toPersianDigits(cellError)}</p> : null}
       </div> : null}
       {review.error ? <p className="admin-error" role="alert">بررسی نهایی پرسش‌ها و جای واژه‌ها در جدول انجام نشد؛ نتیجه را اصلاح یا دوباره استخراج کنید:{"\n"}{toPersianDigits(review.error)}</p> : null}
-      <div className="publish-meta-fields">
-        <label>شناسهٔ جدول<input value={toPersianDigits(id)} disabled={busy} onChange={(e) => { setId(toAsciiDigits(localizeInputDigits(e.currentTarget))); setSavedId(""); }} placeholder={variant === "special" ? "مثلاً ۸۰۵۰-special" : "مثلاً ۸۰۵۰-normal"} /></label>
-        {id && (!validId || taken) && !savedId ? <p className="admin-error">{taken ? "این شناسه قبلاً استفاده شده است." : "شناسهٔ کوتاه و بدون نقطه، / یا نویسه‌های ویژهٔ نام فایل وارد کنید."}</p> : null}
-      </div>
-      <PublishMetaFields meta={meta} onChange={setMeta} disabled={busy} />
+      <PuzzleMetaEditor
+        value={{ id, ...meta, sourceFile: `${id.trim()}-clues.png` }}
+        onChange={({ id: nextId, title, newspaper, difficulty, author }) => { setId(nextId); setMeta({ title, newspaper, difficulty, author }); setSavedId(""); }}
+        takenIds={takenIds}
+        sourceFile="auto"
+        size={validSize ? { rows, cols } : undefined}
+        disabled={busy}
+        hideIdProblem={!!savedId}
+        idPlaceholder={variant === "special" ? "مثلاً ۸۰۵۰-special" : "مثلاً ۸۰۵۰-normal"}
+      />
       <button type="button" className="admin-button admin-button-primary" disabled={busy || !validSize || !validNumber || !review.json || !validId || taken || !clueImage || !gridImage || !!savedId} onClick={() => void save()}>{busy ? "در حال پردازش…" : "ساخت پیش‌نویس از نتیجه"}</button>
       {message ? <p className="admin-error" role="alert">{message}</p> : null}
       {savedId ? <p className="admin-note" role="status">پیش‌نویس ساخته شد. <a href={`#/admin/draft/${encodeURIComponent(savedId)}`}>باز کردن برای حل و ویرایش</a></p> : null}
