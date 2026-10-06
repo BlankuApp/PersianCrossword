@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SolverPage } from "../app/pages/SolverPage";
@@ -212,5 +212,50 @@ describe("Persian crossword UI", () => {
     const clues = JSON.stringify(saved[1]!.clues);
     expect(clues).toContain("اول");
     expect(clues).toContain("دوم");
+  });
+
+  it("offers the metadata dialog only when the editor can save metadata, and keeps it through later clue saves", async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<SolverPage id="sample-10x10-garden" json={json10} editor={{ kind: "draft", save: vi.fn() }} />);
+    expect(screen.queryByRole("button", { name: "مشخصات" })).not.toBeInTheDocument();
+    unmount();
+
+    const metaSaves: Array<[CrosswordJson, string]> = [];
+    const editor = {
+      kind: "draft" as const,
+      save: vi.fn(async (_json: CrosswordJson) => {}),
+      saveMeta: vi.fn(async (json: CrosswordJson, newId: string) => void metaSaves.push([json, newId])),
+    };
+    render(<SolverPage id="sample-10x10-garden" json={json10} editor={editor} />);
+    await user.click(screen.getByRole("button", { name: "مشخصات" }));
+    const dialog = screen.getByRole("dialog", { name: "مشخصات جدول" });
+    fireEvent.change(within(dialog).getByLabelText("عنوان"), { target: { value: "عنوان تازه" } });
+    await user.click(within(dialog).getByRole("button", { name: "ذخیره مشخصات" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "مشخصات جدول" })).not.toBeInTheDocument());
+    expect(metaSaves).toHaveLength(1);
+    expect(metaSaves[0]![1]).toBe("sample-10x10-garden");
+    expect(metaSaves[0]![0].meta).toMatchObject({ title: "عنوان تازه", id: "sample-10x10-garden", size: { rows: 10, cols: 10 } });
+
+    // The page's json prop never changed, yet a later clue save must build on the new metadata.
+    await user.click(screen.getAllByTitle("ویرایش متن پرسش (دیباگ)")[0]!);
+    const box = screen.getByRole("textbox", { name: "" });
+    await user.clear(box);
+    await user.type(box, "پرسش اصلاح‌شده");
+    await user.click(screen.getByRole("button", { name: "ذخیره" }));
+    await waitFor(() => expect(editor.save).toHaveBeenCalledOnce());
+    expect(editor.save.mock.calls[0]![0].meta?.title).toBe("عنوان تازه");
+  });
+
+  it("shows a metadata summary in the publish confirmation and opens the editor from it", async () => {
+    const user = userEvent.setup();
+    const editor = { kind: "draft" as const, save: vi.fn(), publish: vi.fn(async () => {}), saveMeta: vi.fn(async () => {}) };
+    render(<SolverPage id="sample-10x10-garden" json={json10} editor={editor} />);
+    await user.click(screen.getByRole("button", { name: "انتشار" }));
+    const confirm = screen.getByRole("dialog", { name: "تایید عملیات" });
+    expect(within(confirm).getByText("sample-10x10-garden")).toBeInTheDocument();
+    await user.click(within(confirm).getByRole("button", { name: "ویرایش مشخصات" }));
+    expect(screen.queryByRole("dialog", { name: "تایید عملیات" })).not.toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "مشخصات جدول" })).toBeInTheDocument();
+    expect(editor.publish).not.toHaveBeenCalled();
   });
 });

@@ -26,7 +26,6 @@ import {
   type CatalogDoc,
   type CatalogPack,
   type ImageKind,
-  type ImageRef,
   type PackDoc,
   type PackEntry,
 } from "../../shared/cloudPuzzles";
@@ -35,6 +34,7 @@ import { validateStoredPuzzleJson } from "./puzzleValidation";
 import { db, firebaseApp, storageFileUrl, usingEmulators } from "../firebase";
 import { isValidPuzzleId, type ImportFile, type PlannedDraft } from "./importPlan";
 import { toAsciiDigits } from "../persianNumbers";
+import { ID_INVALID } from "../components/puzzleMeta";
 import { computeProgress, loadProgress, localProgressIds, recordEdit } from "../progress";
 
 export interface DraftImage {
@@ -171,49 +171,88 @@ export async function deleteDraft(id: string): Promise<void> {
   await deleteDoc(draftRef(id));
 }
 
-export async function publishDraft(draft: Draft, json: CrosswordJson = draft.json, nextId = draft.id): Promise<void> {
-  const id = nextId === draft.id ? draft.id : toAsciiDigits(nextId.trim());
-  const renamed = id !== draft.id;
-  if (!isValidPuzzleId(id)) throw new Error("شناسهٔ کوتاه و بدون نقطه، / یا نویسه‌های ویژهٔ نام فایل وارد کنید.");
-  // Players see the day it went live (local YYYY-MM-DD), not the date written in the file.
+// The old local letters stay for other devices still syncing the previous id.
+function copyLocalProgress(fromId: string, toId: string, json: CrosswordJson): void {
+  try {
+    if (localProgressIds().includes(fromId)) {
+      const saved = loadProgress(fromId);
+      recordEdit(toId, saved, computeProgress(json, saved));
+    }
+  } catch (error) {
+    console.warn("[admin] draft renamed; original local progress retained", error);
+  }
+}
+
+// Gives a draft a new id. Only drafts: a published puzzle's id keys players' progress for life.
+// The draft document moves; its images stay where they are (storage paths are content-addressed).
+export async function renameDraft(draft: Draft, json: CrosswordJson, newId: string): Promise<void> {
+  const id = toAsciiDigits(newId.trim());
+  if (!isValidPuzzleId(id)) throw new Error(ID_INVALID);
+  if (id === draft.id) throw new Error("شناسهٔ تازه با شناسهٔ فعلی یکی است.");
+  const problems = validateStoredPuzzleJson(json).issues.map((i) => i.message);
+  if (problems.length) throw new Error(problems.join("\n"));
+  const next: CrosswordJson = { ...json, meta: { ...json.meta, id } };
+  await runTransaction(db, async (tx) => {
+    const original = await tx.get(draftRef(draft.id));
+    const target = await tx.get(draftRef(id));
+    const catalogSnap = await tx.get(catalogRef);
+    if (!original.exists()) throw new Error("این پیش‌نویس دیگر وجود ندارد؛ فهرست را دوباره بررسی کنید.");
+    const source = original.data() as DraftDoc;
+    // A newer draft must be reviewed instead of moving a stale snapshot over another admin's edits.
+    if (source.json !== draft.jsonText) throw new Error("محتوای پیش‌نویس تغییر کرده است؛ آن را دوباره بررسی و ذخیره کنید.");
+    if (target.exists()) throw new Error(`شناسهٔ «${id}» قبلاً استفاده شده است.`);
+    if (packOf((catalogSnap.data() as CatalogDoc | undefined)?.packs ?? {}, id)) throw new Error(`جدول دیگری با شناسهٔ «${id}» منتشر شده است.`);
+    const moved: DraftDoc = {
+      schema: 1,
+      json: toJsonText(next),
+      file: draft.file.replace(/[^/]+$/, () => `${id}.json`),
+      images: Object.fromEntries(Object.entries(draft.images).map(([kind, image]) => [kind, kind === "solution" ? { ...image, name: `${id}.png` } : image])),
+      createdAt: source.createdAt,
+      updatedAt: Date.now(),
+    };
+    tx.set(draftRef(id), moved);
+    tx.delete(draftRef(draft.id));
+  });
+  copyLocalProgress(draft.id, id, next);
+}
+
+// A metadata save: the id only changes (a rename) when the form says so.
+export async function saveDraftMeta(draft: Draft, json: CrosswordJson, newId: string): Promise<void> {
+  if (newId.trim() === draft.id) await saveDraft(draft, json);
+  else await renameDraft(draft, json, newId);
+}
+
+// Publishing never changes the id (rename the draft first). Players see the day it went live.
+export async function publishDraft(draft: Draft, json: CrosswordJson = draft.json): Promise<void> {
+  const id = draft.id;
+  if (!isValidPuzzleId(id)) throw new Error(ID_INVALID);
   const now = new Date();
   const today = new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
   json = { ...json, meta: { ...json.meta, id, publishedAt: today } };
   assertPublishable(json);
-  const images = Object.entries(draft.images).map(([kind, image]): ImageRef => ({ kind: kind as ImageKind, name: renamed && kind === "solution" ? `${id}.png` : image.name, hash: image.hash }));
-  const entry: PackEntry = {
-    hash: await puzzleHash(json, images),
-    file: renamed ? draft.file.replace(/[^/]+$/, () => `${id}.json`) : draft.file,
-    json: toJsonText(json),
-    images: Object.fromEntries(Object.entries(draft.images).map(([kind, image]) => [kind, image.path])),
-  };
+  const imagePaths = Object.fromEntries(Object.entries(draft.images).map(([kind, image]) => [kind, image.path]));
+  const entry: PackEntry = { hash: "", file: draft.file, json: toJsonText(json), images: imagePaths };
+  // Same fingerprint savePublishedPuzzle recomputes later (source image name = meta.sourceFile).
+  const published: PackEntry = { ...entry, hash: await puzzleHash(json, entryImageRefs(entry, json)) };
   await commitPuzzle(
     id,
     async (current, tx) => {
       // A draft made from an unpublished puzzle reuses its id; a different live puzzle is never replaced.
       if (current) throw new Error(`جدول دیگری با شناسهٔ «${id}» منتشر شده است.`);
-      const original = await tx.get(draftRef(draft.id));
+      const original = await tx.get(draftRef(id));
       if (!original.exists()) throw new Error("این پیش‌نویس دیگر وجود ندارد؛ فهرست را دوباره بررسی کنید.");
-      if (renamed && (await tx.get(draftRef(id))).exists()) throw new Error(`شناسهٔ «${id}» قبلاً استفاده شده است.`);
       // A newer draft must be reviewed instead of publishing a stale snapshot over another admin's edits.
       if ((original.data() as DraftDoc).json !== draft.jsonText) throw new Error("محتوای پیش‌نویس تغییر کرده است؛ آن را دوباره بررسی و منتشر کنید.");
-      return entry;
+      return published;
     },
-    (tx) => tx.delete(draftRef(draft.id)),
+    (tx) => tx.delete(draftRef(id)),
   );
-  if (renamed) {
-    // Retain the old local copy for other devices syncing the previous ID.
-    try {
-      if (localProgressIds().includes(draft.id)) {
-        const saved = loadProgress(draft.id);
-        recordEdit(id, saved, computeProgress(json, saved));
-      }
-    } catch (error) { console.warn("[admin] puzzle published; original local progress retained", error); }
-  }
 }
 
 // A fix to a published puzzle goes straight to players.
 export async function savePublishedPuzzle(id: string, json: CrosswordJson): Promise<void> {
+  // String(): older published puzzles can carry a numeric meta.id.
+  if (json.meta?.id !== undefined && String(json.meta.id) !== id) throw new Error("شناسهٔ جدول منتشرشده قابل تغییر نیست.");
   const problems = validateStoredPuzzleJson(json).issues.map((i) => i.message);
   if (problems.length) throw new Error(problems.join("\n"));
   await commitPuzzle(id, async (current) => {

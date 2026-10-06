@@ -1,4 +1,4 @@
-import type { PublishMeta } from "../components/PublishMetaFields";
+import type { MetaTextFields } from "../components/puzzleMeta";
 import { toAsciiDigits, toPersianDigits } from "../persianNumbers";
 import { DEFAULT_PHOTO_MODEL, REASONING_EFFORTS, type ReasoningEffort } from "./openRouterPhoto";
 import type { PuzzleVariant } from "../../functions/src/photoFormat";
@@ -30,7 +30,7 @@ export function loadPhotoSettings() {
     variant: (photo.variant === "special" ? "special" : "normal") as PuzzleVariant,
     puzzleNumber: /^[0-9۰-۹٠-٩]{0,8}$/.test(text(photo.puzzleNumber)) ? toPersianDigits(text(photo.puzzleNumber)) : "",
     id: toAsciiDigits(text(photo.id)),
-    meta: { title: text(meta.title), newspaper: text(meta.newspaper), difficulty: text(meta.difficulty, photo.variant === "special" ? "ویژه" : "عادی"), author: text(meta.author) } satisfies PublishMeta,
+    meta: { title: text(meta.title), newspaper: text(meta.newspaper), difficulty: text(meta.difficulty, photo.variant === "special" ? "ویژه" : "عادی"), author: text(meta.author) } satisfies MetaTextFields,
   };
 }
 

@@ -15,12 +15,15 @@ const adminApi = () => import("./admin/adminApi");
 
 // An admin's fixes to a published puzzle go straight to players.
 function publishedEditor(id: string): PuzzleEditor {
+  const save = async (json: CrosswordJson) => {
+    await (await adminApi()).savePublishedPuzzle(id, json);
+    await refreshPuzzleCatalog();
+  };
   return {
     kind: "published",
-    save: async (json: CrosswordJson) => {
-      await (await adminApi()).savePublishedPuzzle(id, json);
-      await refreshPuzzleCatalog();
-    },
+    save,
+    // A published puzzle's id is locked, so the new id is ignored.
+    saveMeta: (json: CrosswordJson) => save(json),
     unpublish: async () => {
       await (await adminApi()).unpublishPuzzle(id);
       navigate(`#/admin/draft/${encodeURIComponent(id)}`);

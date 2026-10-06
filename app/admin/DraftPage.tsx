@@ -5,7 +5,8 @@ import { useAuth } from "../AuthContext";
 import { SolverPage, type PuzzleEditor } from "../pages/SolverPage";
 import { refreshPuzzleCatalog } from "../puzzleSync";
 import { navigate } from "../router";
-import { publishDraft, saveDraft } from "./adminApi";
+import { usePuzzleLibrary } from "../puzzleLibrary";
+import { publishDraft, saveDraft, saveDraftMeta } from "./adminApi";
 import { gridKey } from "./gridKey";
 import { useDrafts } from "./useDrafts";
 
@@ -16,19 +17,26 @@ export default function DraftPage({ id }: { id: string }) {
   const { isAdmin } = useAuth();
   const { drafts, loaded } = useDrafts();
   const draft = drafts.find((d) => d.id === id);
+  const { puzzles } = usePuzzleLibrary();
+  const takenIds = useMemo(() => new Set([...puzzles.map((p) => p.id), ...drafts.map((d) => d.id)]), [puzzles, drafts]);
 
   const editor = useMemo((): PuzzleEditor | undefined => {
     if (!draft) return undefined;
     return {
       kind: "draft",
+      takenIds,
       save: (json: CrosswordJson) => saveDraft(draft, json),
+      saveMeta: async (json: CrosswordJson, newId: string) => {
+        await saveDraftMeta(draft, json, newId);
+        if (newId !== draft.id) navigate(`#/admin/draft/${encodeURIComponent(newId)}`);
+      },
       publish: async (json: CrosswordJson) => {
         await publishDraft(draft, json);
         await refreshPuzzleCatalog();
         navigate(`#/puzzle/${encodeURIComponent(draft.id)}`);
       },
     };
-  }, [draft]);
+  }, [draft, takenIds]);
 
   if (!isAdmin || !loaded || !draft || !editor) {
     return (

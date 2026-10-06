@@ -6,14 +6,14 @@ import AdminPage from "../app/admin/AdminPage";
 import type { Draft } from "../app/admin/adminApi";
 import { basicPuzzleV3 } from "./fixtures";
 
-const { draftState, publishDraft } = vi.hoisted(() => ({ draftState: { drafts: [] as Draft[] }, publishDraft: vi.fn() }));
+const { draftState, publishDraft, saveDraftMeta } = vi.hoisted(() => ({ draftState: { drafts: [] as Draft[] }, publishDraft: vi.fn(), saveDraftMeta: vi.fn() }));
 
 vi.mock("../app/AuthContext", () => ({ useAuth: () => ({ user: { uid: "admin" }, loading: false, isAdmin: true, syncVersion: 0 }) }));
 vi.mock("../app/admin/useDrafts", () => ({ useDrafts: () => ({ drafts: draftState.drafts, loaded: true, error: null }) }));
 vi.mock("../app/puzzleLibrary", () => ({ usePuzzleLibrary: () => ({ puzzles: [] }) }));
 vi.mock("../app/puzzleSync", () => ({ refreshPuzzleCatalog: vi.fn() }));
 vi.mock("../app/pages/HomePage", () => ({ DifficultyBadge: () => null, ProgressBar: () => null }));
-vi.mock("../app/admin/adminApi", () => ({ createDraft: vi.fn(), deleteDraft: vi.fn(), publishDraft, publishProblems: () => [] }));
+vi.mock("../app/admin/adminApi", () => ({ createDraft: vi.fn(), deleteDraft: vi.fn(), publishDraft, publishProblems: () => [], saveDraftMeta }));
 
 beforeEach(() => { localStorage.clear(); draftState.drafts = []; vi.resetAllMocks(); });
 
@@ -98,49 +98,62 @@ describe("admin tabs", () => {
     fireEvent.keyDown(help, { key: "Escape" });
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
+});
 
-  it("edits the ID with publishing metadata, cancels without saving and preserves both for a failed publish retry", async () => {
-    const draft: Draft = { id: "8050", json: { ...basicPuzzleV3, meta: { id: "8050", title: "جدول قدیم" } },
-      jsonText: "{}", file: "admin/8050.json", images: {}, updatedAt: 1, solutionImageUrl: undefined, sourceImageUrl: undefined };
+describe("draft metadata and publishing", () => {
+  const draft: Draft = { id: "8050", json: { ...basicPuzzleV3, meta: { id: "8050", title: "جدول قدیم" } },
+    jsonText: "{}", file: "admin/8050.json", images: {}, updatedAt: 1, solutionImageUrl: undefined, sourceImageUrl: undefined };
+  function setup() {
     draftState.drafts = [draft, { ...draft, id: "8051", json: { ...draft.json, meta: { id: "8051", title: "دیگری" } } }];
-    const view = render(<AdminPage />);
-    const row = screen.getByText("جدول قدیم").closest("li")!;
-    expect(screen.queryByRole("button", { name: "تغییر شناسه" })).not.toBeInTheDocument();
-    const edit = within(row).getByRole("button", { name: "انتشار" });
-    await userEvent.click(edit);
-    const initialField = within(row).getByLabelText("شناسهٔ انتشار");
-    expect(initialField).toHaveValue("۸۰۵۰"); expect(initialField).toHaveFocus();
-    expect(within(row).getByRole("button", { name: "انتشار برای همه" })).toBeEnabled();
-    fireEvent.change(initialField, { target: { value: "8052" } });
-    fireEvent.keyDown(initialField, { key: "Escape" });
-    expect(within(row).queryByLabelText("شناسهٔ انتشار")).not.toBeInTheDocument();
-    expect(edit).toHaveFocus(); expect(publishDraft).not.toHaveBeenCalled();
-    await userEvent.click(edit);
-    const field = within(row).getByLabelText("شناسهٔ انتشار");
-    const save = within(row).getByRole("button", { name: "انتشار برای همه" });
-    expect(field).toHaveValue("۸۰۵۰");
-    fireEvent.change(field, { target: { value: "bad/id" } });
-    expect(field).toHaveAttribute("aria-invalid", "true"); expect(save).toBeDisabled();
-    fireEvent.change(field, { target: { value: "8051" } });
-    expect(within(row).getByRole("alert")).toHaveTextContent("قبلاً استفاده شده");
-    expect(save).toBeDisabled(); expect(publishDraft).not.toHaveBeenCalled();
-    fireEvent.change(field, { target: { value: "8052" } });
-    expect(field).toHaveValue("۸۰۵۲");
-    fireEvent.change(within(row).getByLabelText("عنوان"), { target: { value: "عنوان تازه 8052" } });
+    render(<AdminPage />);
+    return screen.getByText("جدول قدیم").closest("li")!;
+  }
+
+  it("edits metadata in a dialog, blocks used ids and saves with the new id", async () => {
+    const row = setup();
+    await userEvent.click(within(row).getByRole("button", { name: "مشخصات" }));
+    const dialog = screen.getByRole("dialog", { name: "مشخصات جدول" });
+    const id = within(dialog).getByLabelText("شناسهٔ جدول");
+    expect(id).toHaveValue("۸۰۵۰");
+    fireEvent.change(id, { target: { value: "8051" } });
+    expect(within(dialog).getByRole("alert")).toHaveTextContent("قبلاً استفاده شده");
+    expect(within(dialog).getByRole("button", { name: "ذخیره مشخصات" })).toBeDisabled();
+    fireEvent.change(id, { target: { value: "8052" } });
+    fireEvent.change(within(dialog).getByLabelText("عنوان"), { target: { value: "عنوان تازه 8052" } });
+    saveDraftMeta.mockResolvedValueOnce(undefined);
+    await userEvent.click(within(dialog).getByRole("button", { name: "ذخیره مشخصات" }));
+    await waitFor(() => expect(saveDraftMeta).toHaveBeenCalledOnce());
+    expect(saveDraftMeta).toHaveBeenCalledWith(draft, expect.objectContaining({ meta: expect.objectContaining({ id: "8052", title: "عنوان تازه ۸۰۵۲" }) }), "8052");
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "مشخصات جدول" })).not.toBeInTheDocument());
+    expect(publishDraft).not.toHaveBeenCalled();
+  });
+
+  it("shows a summary before publishing, keeps the dialog on failure and retries", async () => {
+    const row = setup();
+    await userEvent.click(within(row).getByRole("button", { name: "انتشار" }));
+    const dialog = screen.getByRole("dialog", { name: "انتشار جدول قدیم" });
+    expect(within(dialog).getByText("جدول قدیم")).toBeInTheDocument();
+    expect(within(dialog).getByText("آماده انتشار")).toBeInTheDocument();
     publishDraft.mockRejectedValueOnce(new Error("خطای ارتباط"));
-    await userEvent.click(save);
-    expect(await within(row).findByRole("alert")).toHaveTextContent("خطای ارتباط");
-    expect(field).toHaveValue("۸۰۵۲"); expect(save).toBeEnabled();
-    expect(within(row).getByLabelText("عنوان")).toHaveValue("عنوان تازه ۸۰۵۲");
-    publishDraft.mockImplementationOnce(async () => {
-      draftState.drafts = draftState.drafts.filter((d) => d.id !== "8050");
-    });
-    await userEvent.click(save);
+    await userEvent.click(within(dialog).getByRole("button", { name: "انتشار برای همه" }));
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("خطای ارتباط");
+    publishDraft.mockResolvedValueOnce(undefined);
+    await userEvent.click(within(dialog).getByRole("button", { name: "انتشار برای همه" }));
     await waitFor(() => expect(publishDraft).toHaveBeenCalledTimes(2));
-    // Simulate the Firestore listener removing the published draft.
-    view.rerender(<AdminPage />);
-    expect(screen.queryByText("جدول قدیم")).not.toBeInTheDocument();
-    expect(publishDraft.mock.calls[0]).toEqual([draft, expect.objectContaining({ meta: expect.objectContaining({ title: "عنوان تازه ۸۰۵۲" }) }), "8052"]);
-    expect(publishDraft.mock.calls[1]).toEqual(publishDraft.mock.calls[0]);
+    expect(publishDraft).toHaveBeenLastCalledWith(draft);
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "انتشار جدول قدیم" })).not.toBeInTheDocument());
+  });
+
+  it("cancels the publish dialog with Escape without publishing and can jump to the metadata dialog", async () => {
+    const row = setup();
+    const publish = within(row).getByRole("button", { name: "انتشار" });
+    await userEvent.click(publish);
+    fireEvent.keyDown(screen.getByRole("dialog", { name: "انتشار جدول قدیم" }), { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(publishDraft).not.toHaveBeenCalled();
+    await userEvent.click(publish);
+    await userEvent.click(screen.getByRole("button", { name: "ویرایش مشخصات" }));
+    expect(screen.queryByRole("dialog", { name: "انتشار جدول قدیم" })).not.toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "مشخصات جدول" })).toBeInTheDocument();
   });
 });

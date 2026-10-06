@@ -1,18 +1,18 @@
-import { useEffect, useId, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
-import { ArrowRight, FileJson, FilePlus2, Files, Pencil, Sparkles, Trash2, Upload } from "lucide-react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { ArrowRight, FileJson, FilePlus2, Files, Pencil, Sparkles, Tag, Trash2, Upload } from "lucide-react";
 import { useAuth } from "../AuthContext";
-import { PublishMetaFields, publishMetaOf, withPublishMeta, type PublishMeta } from "../components/PublishMetaFields";
+import { PuzzleMetaDialog } from "../components/PuzzleMetaDialog";
 import { DifficultyBadge, ProgressBar } from "../pages/HomePage";
 import { computeProgress, loadProgress } from "../progress";
 import { usePuzzleLibrary } from "../puzzleLibrary";
 import { refreshPuzzleCatalog } from "../puzzleSync";
 import { goHome } from "../router";
-import { createDraft, deleteDraft, publishDraft, publishProblems, type Draft } from "./adminApi";
-import { isValidPuzzleId, planImport, type ImportFile, type ImportPlan } from "./importPlan";
+import { createDraft, deleteDraft, publishDraft, publishProblems, saveDraftMeta, type Draft } from "./adminApi";
+import { planImport, type ImportFile, type ImportPlan } from "./importPlan";
 import { useDrafts } from "./useDrafts";
 import { PhotoImportSection } from "./PhotoImportSection";
-import { AdminHelp } from "./AdminHelp";
-import { localizeInputDigits, toAsciiDigits, toPersianDigits } from "../persianNumbers";
+import { PublishConfirmDialog } from "./PublishConfirmDialog";
+import { toPersianDigits } from "../persianNumbers";
 import { readAdminSettings, saveAdminSettings } from "./adminSettings";
 
 const fa = (n: number) => n.toLocaleString("fa-IR");
@@ -112,14 +112,7 @@ function DraftRow({ draft, takenIds }: { draft: Draft; takenIds: ReadonlySet<str
   );
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  // The metadata form, open while the admin reviews it before publishing.
-  const [meta, setMeta] = useState<PublishMeta | null>(null);
-  const [nextId, setNextId] = useState(draft.id);
-  const publishButton = useRef<HTMLButtonElement>(null);
-  const publishFormId = useId();
-  const newId = toAsciiDigits(nextId).trim();
-  const idProblem = !isValidPuzzleId(newId) ? "شناسهٔ کوتاه و بدون نقطه، / یا نویسه‌های ویژهٔ نام فایل وارد کنید."
-    : newId !== draft.id && takenIds.has(newId) ? "این شناسه قبلاً استفاده شده است." : "";
+  const [dialog, setDialog] = useState<"meta" | "publish" | null>(null);
   const title = draft.json.meta?.title ?? draft.id;
 
   async function run(action: () => Promise<void>): Promise<void> {
@@ -132,19 +125,6 @@ function DraftRow({ draft, takenIds }: { draft: Draft; takenIds: ReadonlySet<str
     } finally {
       setBusy(false);
     }
-  }
-
-  function cancelPublish(): void {
-    setMeta(null); setMessage(null); publishButton.current?.focus();
-  }
-
-  function publish(e: FormEvent): void {
-    e.preventDefault();
-    if (!meta || idProblem || busy || problems.length) return;
-    void run(async () => {
-      await publishDraft(draft, withPublishMeta(draft.json, meta), newId);
-      await refreshPuzzleCatalog();
-    });
   }
 
   function remove(): void {
@@ -169,41 +149,34 @@ function DraftRow({ draft, takenIds }: { draft: Draft; takenIds: ReadonlySet<str
         ) : (
           <span className="admin-draft-status admin-draft-status-ready">آماده انتشار</span>
         )}
-        {message ? <span className="admin-error" role="alert">{toPersianDigits(message)}</span> : null}
+        {message && dialog !== "publish" ? <span className="admin-error" role="alert">{toPersianDigits(message)}</span> : null}
       </div>
       <div className="admin-draft-actions">
         <a className="admin-button" href={`#/admin/draft/${encodeURIComponent(draft.id)}`}>
           <Pencil size={16} aria-hidden="true" />
           حل و ویرایش
         </a>
-        <button ref={publishButton} type="button" className="admin-button admin-button-primary" aria-expanded={meta !== null} aria-controls={publishFormId} onClick={() => {
-          if (meta) cancelPublish(); else { setMeta(publishMetaOf(draft.json)); setNextId(draft.id); setMessage(null); }
-        }} disabled={busy || problems.length > 0}>
+        <button type="button" className="admin-button" onClick={() => setDialog("meta")} disabled={busy}>
+          <Tag size={16} aria-hidden="true" />
+          مشخصات
+        </button>
+        <button type="button" className="admin-button admin-button-primary" onClick={() => { setMessage(null); setDialog("publish"); }} disabled={busy || problems.length > 0}>
           <Upload size={16} aria-hidden="true" />
           انتشار
         </button>
-        <button type="button" className="admin-button admin-button-danger" onClick={remove} disabled={busy || meta !== null} aria-label={`حذف ${title}`}>
+        <button type="button" className="admin-button admin-button-danger" onClick={remove} disabled={busy} aria-label={`حذف ${title}`}>
           <Trash2 size={16} aria-hidden="true" />
           حذف
         </button>
       </div>
-      {meta ? (
-        <form id={publishFormId} className="admin-publish-form" aria-label={`انتشار ${title}`} onSubmit={publish} onKeyDown={(e) => { if (e.key === "Escape" && !busy) { e.preventDefault(); cancelPublish(); } }}>
-          <div className="publish-meta-fields admin-publish-id">
-            <div className="photo-field"><span className="photo-field-heading"><label htmlFor={`${publishFormId}-id`}>شناسهٔ انتشار</label> <AdminHelp label="شناسهٔ انتشار">شناسهٔ فعلی را نگه دارید یا شناسهٔ تازه و یکتا وارد کنید. با زدن «انتشار برای همه»، جدول با همین شناسه و مشخصات منتشر می‌شود؛ تصاویر و محتوای جدول حفظ می‌شوند. انصراف هیچ تغییری ذخیره نمی‌کند.</AdminHelp></span><input id={`${publishFormId}-id`} autoFocus dir="ltr" value={toPersianDigits(nextId)} disabled={busy} aria-invalid={!!idProblem} aria-describedby={idProblem ? `${publishFormId}-error` : undefined} onChange={(e) => { setNextId(toAsciiDigits(localizeInputDigits(e.currentTarget))); setMessage(null); }} /></div>
-          </div>
-          {idProblem ? <p id={`${publishFormId}-error`} className="admin-error" role="alert">{idProblem}</p> : null}
-          <PublishMetaFields meta={meta} onChange={setMeta} disabled={busy} />
-          <div className="admin-draft-actions">
-            <button type="submit" className="admin-button admin-button-primary" disabled={busy || !!idProblem || problems.length > 0}>
-              <Upload size={16} aria-hidden="true" />
-              {busy ? "در حال انتشار…" : "انتشار برای همه"}
-            </button>
-            <button type="button" className="admin-button" onClick={cancelPublish} disabled={busy}>
-              انصراف
-            </button>
-          </div>
-        </form>
+      {dialog === "meta" ? (
+        <PuzzleMetaDialog json={draft.json} id={draft.id} kind="draft" takenIds={takenIds} hasSourceImage={!!draft.images.source}
+          onSave={(json, newId) => saveDraftMeta(draft, json, newId)} onClose={() => setDialog(null)} />
+      ) : null}
+      {dialog === "publish" ? (
+        <PublishConfirmDialog draft={draft} problems={problems} busy={busy} error={message}
+          onPublish={() => void run(async () => { await publishDraft(draft); await refreshPuzzleCatalog(); setDialog(null); })}
+          onEdit={() => { setMessage(null); setDialog("meta"); }} onCancel={() => { setMessage(null); setDialog(null); }} />
       ) : null}
     </li>
   );
