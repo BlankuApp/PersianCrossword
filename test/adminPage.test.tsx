@@ -17,6 +17,9 @@ vi.mock("../app/admin/adminApi", () => ({ createDraft: vi.fn(), deleteDraft: vi.
 
 beforeEach(() => { localStorage.clear(); draftState.drafts = []; vi.resetAllMocks(); });
 
+// The AI tab has its own clue/grid tabs; the admin page's panel is the outermost visible one.
+const adminPanel = () => screen.getAllByRole("tabpanel")[0]!;
+
 describe("admin tabs", () => {
   it("restores the last selected tab when the admin page reopens", async () => {
     const view = render(<AdminPage />);
@@ -24,7 +27,7 @@ describe("admin tabs", () => {
     view.unmount();
     render(<AdminPage />);
     expect(screen.getByRole("tab", { name: "ساخت با هوش‌واره" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("tabpanel")).toHaveAttribute("id", "admin-panel-ai");
+    expect(adminPanel()).toHaveAttribute("id", "admin-panel-ai");
   });
 
   it("displays typed English and Arabic digits as Persian digits while keeping dimensions numeric", async () => {
@@ -59,18 +62,18 @@ describe("admin tabs", () => {
 
   it("shows drafts first, supports RTL keyboard navigation, and preserves the AI form when switching tabs", async () => {
     render(<AdminPage />);
-    const tabs = screen.getAllByRole("tab");
+    const tabs = within(screen.getByRole("tablist", { name: "بخش‌های مدیریت" })).getAllByRole("tab");
     expect(tabs).toHaveLength(3);
     expect(tabs[0]).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("tabpanel")).toHaveAttribute("id", "admin-panel-drafts");
+    expect(adminPanel()).toHaveAttribute("id", "admin-panel-drafts");
     fireEvent.keyDown(tabs[0]!, { key: "ArrowLeft" });
     expect(tabs[1]).toHaveFocus();
-    expect(screen.getByRole("tabpanel")).toHaveAttribute("id", "admin-panel-ai");
+    expect(adminPanel()).toHaveAttribute("id", "admin-panel-ai");
     fireEvent.change(screen.getByLabelText("مدل OpenRouter"), { target: { value: "chosen/vision-model" } });
     await userEvent.selectOptions(screen.getByLabelText("میزان استدلال (Reasoning effort)"), "medium");
     fireEvent.change(screen.getByLabelText("جدول استخراج‌شده (قابل ویرایش)"), { target: { value: '{"grid":[]}' } });
     await userEvent.click(tabs[2]!);
-    expect(screen.getByRole("tabpanel")).toHaveAttribute("id", "admin-panel-json");
+    expect(adminPanel()).toHaveAttribute("id", "admin-panel-json");
     expect(screen.getByRole("heading", { name: "افزودن جدول با JSON" })).toBeInTheDocument();
     fireEvent.keyDown(tabs[2]!, { key: "Home" });
     expect(tabs[0]).toHaveFocus();

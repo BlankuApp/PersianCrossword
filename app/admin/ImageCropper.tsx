@@ -11,8 +11,10 @@ type Drag = { x: number; y: number; pointerId: number } & (
   | { mode: "move" | "resize"; index: number; box: CropBox }
 );
 
-export function ImageCropper({ multiple, disabled, onChange, resetKey = "" }: {
+export function ImageCropper({ multiple, disabled, onChange, resetKey = "", showPreview = true }: {
   multiple: boolean; disabled: boolean; onChange: (image: string | null) => void; resetKey?: string;
+  // The AI build tab shows the cropped image beside the extracted data, so it hides the built-in preview.
+  showPreview?: boolean;
 }) {
   const id = useId();
   const [initial] = useState(() => loadCropSettings(multiple));
@@ -261,7 +263,7 @@ export function ImageCropper({ multiple, disabled, onChange, resetKey = "" }: {
           </footer>
         </dialog>
       </> : null}
-      {preview ? <details className="photo-preview" open>
+      {preview && showPreview ? <details className="photo-preview" open>
         <summary>{multiple ? "پیش‌نمایش ستون نهایی" : "پیش‌نمایش جدول برش‌خورده"}</summary>
         <a className="admin-button" href={preview} download={multiple ? "clues.png" : "grid.png"}>دریافت تصویر</a>
         <div><img src={preview} alt={multiple ? "کادرهای پرسش‌ها به ترتیب از بالا به پایین" : "جدول برش‌خورده برای استخراج"} /></div>
