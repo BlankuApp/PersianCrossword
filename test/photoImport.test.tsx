@@ -50,7 +50,15 @@ function pick(input: HTMLInputElement) {
   act(() => loadedImages.at(-1)!.onload!(new Event("load")));
 }
 
+// Clues and grid live in separate tabs of the AI build card; only the open tab is accessible.
+async function openTab(name: RegExp) {
+  await userEvent.click(screen.getByRole("tab", { name }));
+}
+const CLUES = /پرسش‌ها/, GRID = /جدول پاسخ/;
+
 async function wholeCrop(input: HTMLInputElement) {
+  const panel = input.closest<HTMLElement>("[role=tabpanel]")!;
+  await openTab(panel.id.endsWith("clues") ? CLUES : GRID);
   const cropper = input.closest<HTMLElement>(".photo-cropper")!;
   await userEvent.click(within(cropper).getByRole("button", { name: /ویرایش برش‌ها در صفحهٔ بزرگ/ }));
   await userEvent.click(within(cropper).getByRole("button", { name: "افزودن کادر کامل" }));
@@ -293,7 +301,9 @@ describe("photo import", () => {
     fireEvent.change(screen.getByLabelText("تعداد ردیف‌ها"), { target: { value: "2" } });
     fireEvent.change(screen.getByLabelText("تعداد ستون‌ها"), { target: { value: "2" } });
     for (const input of view.container.querySelectorAll<HTMLInputElement>("input[type=file]")) { pick(input); await wholeCrop(input); }
+    await openTab(CLUES);
     await userEvent.click(screen.getByRole("button", { name: "استخراج پرسش‌ها" }));
+    await openTab(GRID);
     await userEvent.click(screen.getByRole("button", { name: "استخراج جدول" }));
     fireEvent.change(screen.getByLabelText("شناسهٔ جدول"), { target: { value: "edited-grid" } });
     const cell = screen.getByRole("textbox", { name: "خانهٔ ردیف ۱ ستون ۱ از راست" });
@@ -328,7 +338,9 @@ describe("photo import", () => {
     fireEvent.change(screen.getByLabelText("تعداد ردیف‌ها"), { target: { value: "3" } });
     fireEvent.change(screen.getByLabelText("تعداد ستون‌ها"), { target: { value: "3" } });
     for (const input of view.container.querySelectorAll<HTMLInputElement>("input[type=file]")) { pick(input); await wholeCrop(input); }
+    await openTab(CLUES);
     await userEvent.click(screen.getByRole("button", { name: "استخراج پرسش‌ها" }));
+    await openTab(GRID);
     await userEvent.click(screen.getByRole("button", { name: "استخراج جدول" }));
     fireEvent.change(screen.getByLabelText("شناسهٔ جدول"), { target: { value: "mirrored-grid" } });
     const mirror = screen.getByRole("button", { name: "برعکس کردن چپ و راست" });
@@ -353,7 +365,9 @@ describe("photo import", () => {
     createDraft.mockResolvedValue(undefined);
     const view = render(<PhotoImportSection takenIds={new Set()} />);
     for (const input of view.container.querySelectorAll<HTMLInputElement>("input[type=file]")) { pick(input); await wholeCrop(input); }
+    await openTab(CLUES);
     await userEvent.click(screen.getByRole("button", { name: "استخراج پرسش‌ها" }));
+    await openTab(GRID);
     await userEvent.click(screen.getByRole("button", { name: "استخراج جدول" }));
     fireEvent.change(screen.getByLabelText("شناسهٔ جدول"), { target: { value: "reference-223" } });
     expect(screen.getByRole("group", { name: "ویرایش خانه‌های جدول" })).toHaveAttribute("dir", "rtl");
@@ -375,8 +389,10 @@ describe("photo import", () => {
     fireEvent.change(screen.getByLabelText("تعداد ردیف‌ها"), { target: { value: "2" } });
     fireEvent.change(screen.getByLabelText("تعداد ستون‌ها"), { target: { value: "2" } });
     for (const input of view.container.querySelectorAll<HTMLInputElement>("input[type=file]")) { pick(input); await wholeCrop(input); }
+    await openTab(CLUES);
     await user.click(screen.getByRole("button", { name: "استخراج پرسش‌ها" }));
     await waitFor(() => expect(screen.getByLabelText("پرسش‌های استخراج‌شده (قابل ویرایش)")).toHaveValue(JSON.stringify(clues, null, 2)));
+    await openTab(GRID);
     await user.click(screen.getByRole("button", { name: "استخراج جدول" }));
     await waitFor(() => expect(screen.getByLabelText("جدول استخراج‌شده (قابل ویرایش)")).toHaveValue(JSON.stringify(grid, null, 2)));
     await user.type(screen.getByLabelText("شناسهٔ جدول"), "photo-302");
@@ -423,6 +439,7 @@ describe("photo import", () => {
     fireEvent.change(screen.getByLabelText("پرسش‌های استخراج‌شده (قابل ویرایش)"), { target: { value: JSON.stringify({ clues: { horizontal: groups, vertical: groups } }) } });
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.getByLabelText("بررسی پرسش‌ها")).toHaveTextContent("اعتبار قالب و شماره‌ها: درست");
+    await openTab(GRID);
     fireEvent.change(screen.getByLabelText("جدول استخراج‌شده (قابل ویرایش)"), { target: { value: JSON.stringify({ grid: [["اب"]] }) } });
     expect(screen.getByRole("alert")).toHaveTextContent("اندازهٔ جدول باید ۱۵ ردیف و ۱۵ ستون باشد");
   });
@@ -433,6 +450,7 @@ describe("photo import", () => {
     const view = render(<PhotoImportSection takenIds={new Set()} />);
     await user.type(screen.getByLabelText("شمارهٔ جدول (اختیاری)"), "۸۰۵۰");
     for (const input of view.container.querySelectorAll<HTMLInputElement>("input[type=file]")) { pick(input); await wholeCrop(input); }
+    await openTab(CLUES);
     await user.click(screen.getByRole("button", { name: "استخراج پرسش‌ها" }));
     await waitFor(() => expect(screen.getByLabelText("پرسش‌های استخراج‌شده (قابل ویرایش)")).toHaveValue(JSON.stringify(clues, null, 2)));
     fireEvent.change(screen.getByLabelText("جدول استخراج‌شده (قابل ویرایش)"), { target: { value: JSON.stringify(grid) } });
@@ -442,11 +460,34 @@ describe("photo import", () => {
     expect(view.container.querySelectorAll(".photo-crop-surface")).toHaveLength(2);
     expect(view.container.querySelectorAll(".photo-crop-list li")).toHaveLength(0);
     expect(screen.getByLabelText("سطح")).toHaveValue("ویژه");
+    await openTab(CLUES);
     expect(screen.getByRole("button", { name: "استخراج پرسش‌ها" })).toBeDisabled();
     await wholeCrop(view.container.querySelector<HTMLInputElement>("input[type=file]")!);
     await user.click(screen.getByRole("button", { name: "استخراج پرسش‌ها" }));
     await waitFor(() => expect(extract).toHaveBeenCalledTimes(2));
     expect(extract.mock.calls[1]![0]).toMatchObject({ variant: "special", puzzleNumber: "۸۰۵۰" });
+  });
+
+  it("takes a pasted image into the cropper of the open tab only", async () => {
+    const view = render(<PhotoImportSection takenIds={new Set()} />);
+    const paste = (type: string) => {
+      const event = new Event("paste", { bubbles: true, cancelable: true });
+      Object.defineProperty(event, "clipboardData", { value: { files: [new File(["photo"], "image.png", { type })] } });
+      fireEvent(document.body, event);
+      return event;
+    };
+    expect(paste("text/plain").defaultPrevented).toBe(false);
+    expect(loadedImages).toHaveLength(0);
+    expect(paste("image/png").defaultPrevented).toBe(true);
+    act(() => loadedImages.at(-1)!.onload!(new Event("load")));
+    const [clueCropper, gridCropper] = view.container.querySelectorAll<HTMLElement>(".photo-cropper");
+    expect(within(clueCropper!).getByText("image.png")).toBeInTheDocument();
+    expect(within(gridCropper!).queryByText("image.png")).not.toBeInTheDocument();
+    await openTab(GRID);
+    paste("image/png");
+    act(() => loadedImages.at(-1)!.onload!(new Event("load")));
+    expect(within(gridCropper!).getByRole("button", { name: /ویرایش برش‌ها در صفحهٔ بزرگ/ })).toBeInTheDocument();
+    expect(loadedImages).toHaveLength(2);
   });
 
   it("keeps the crop and other result for an OpenRouter retry after a failed request", async () => {

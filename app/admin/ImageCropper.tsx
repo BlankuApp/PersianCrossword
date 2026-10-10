@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type PointerEvent } from "react";
-import { Check, Hand, Move, Scan, X, ZoomIn, ZoomOut } from "lucide-react";
+import { Check, ClipboardPaste, Hand, Move, Scan, X, ZoomIn, ZoomOut } from "lucide-react";
 import { AdminHelp } from "./AdminHelp";
 import { PersianNumberInput } from "../components/PersianNumberInput";
 import { toPersianDigits } from "../persianNumbers";
@@ -11,8 +11,10 @@ type Drag = { x: number; y: number; pointerId: number } & (
   | { mode: "move" | "resize"; index: number; box: CropBox }
 );
 
-export function ImageCropper({ multiple, disabled, onChange, resetKey = "" }: {
+export function ImageCropper({ multiple, disabled, onChange, resetKey = "", showPreview = true }: {
   multiple: boolean; disabled: boolean; onChange: (image: string | null) => void; resetKey?: string;
+  // The AI build tab shows the cropped image beside the extracted data, so it hides the built-in preview.
+  showPreview?: boolean;
 }) {
   const id = useId();
   const [initial] = useState(() => loadCropSettings(multiple));
@@ -28,6 +30,7 @@ export function ImageCropper({ multiple, disabled, onChange, resetKey = "" }: {
   const [settingsError, setSettingsError] = useState("");
   const [active, setActive] = useState(0);
   const dialog = useRef<HTMLDialogElement>(null);
+  const root = useRef<HTMLDivElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const drag = useRef<Drag | null>(null);
   const closing = useRef<Animation | null>(null);
@@ -49,6 +52,19 @@ export function ImageCropper({ multiple, disabled, onChange, resetKey = "" }: {
       modal.close(); document.body.style.overflow = overflow;
     };
   }, [editing, photo]);
+
+  // Ctrl+V anywhere on the page puts a copied image into the cropper the admin can see (the other tab's cropper is hidden).
+  useEffect(() => {
+    if (disabled || editing) return;
+    function paste(e: ClipboardEvent) {
+      if (!root.current || root.current.closest("[hidden]")) return;
+      const image = Array.from(e.clipboardData?.files ?? []).find((f) => f.type.startsWith("image/"));
+      if (!image) return;
+      e.preventDefault(); setFile(image);
+    }
+    document.addEventListener("paste", paste);
+    return () => document.removeEventListener("paste", paste);
+  }, [disabled, editing]);
 
   useEffect(() => {
     setPhoto(null); setBoxes([]); setDrawing(null); setError(""); setEditing(false); setActive(0); drag.current = null;
@@ -158,6 +174,17 @@ export function ImageCropper({ multiple, disabled, onChange, resetKey = "" }: {
     });
   }
 
+  async function pasteFromClipboard() {
+    try {
+      for (const item of await navigator.clipboard.read()) {
+        const type = item.types.find((t) => t.startsWith("image/"));
+        if (!type) continue;
+        setFile(new File([await item.getType(type)], `clipboard.${type.slice(6)}`, { type }));
+        return;
+      }
+      setError("در کلیپ‌بورد تصویری نیست؛ ابتدا تصویر را کپی کنید.");
+    } catch { setError("مرورگر اجازهٔ خواندن کلیپ‌بورد را نداد؛ Ctrl+V را بزنید."); }
+  }
   function changeZoom(value: number) { setZoom(Math.max(25, Math.min(400, Math.round(value)))); }
   function closeEditor() {
     if (closing.current) return;
@@ -172,13 +199,14 @@ export function ImageCropper({ multiple, disabled, onChange, resetKey = "" }: {
     : boxes.map((box, index) => drawing && drag.current && "index" in drag.current && drag.current.index === index ? drawing : box);
 
   return (
-    <div className="photo-cropper">
+    <div className="photo-cropper" ref={root}>
       {settingsError ? <p className="admin-error" role="alert">{settingsError}</p> : null}
       <label className="admin-button admin-file-picker">
         انتخاب تصویر
         <input type="file" accept="image/png,image/jpeg,image/webp" disabled={disabled} onChange={(e) => { const next = e.target.files?.[0]; if (next) setFile(next); e.target.value = ""; }} />
       </label>
-      {file ? <span className="admin-note">{file.name}</span> : null}
+      {typeof navigator.clipboard?.read === "function" ? <button type="button" className="admin-button" disabled={disabled} onClick={() => void pasteFromClipboard()}><ClipboardPaste size={16} aria-hidden="true" />چسباندن تصویر</button> : null}
+      {file ? <span className="admin-note">{file.name}</span> : <span className="admin-note">یا تصویر کپی‌شده را با Ctrl+V بچسبانید.</span>}
       {photo ? <>
         <button type="button" className="photo-open-editor" disabled={disabled} onClick={() => setEditing(true)}>
           <img src={photo.src} alt={multiple ? "تصویر پرسش‌ها" : "تصویر جدول پاسخ"} />
@@ -261,7 +289,7 @@ export function ImageCropper({ multiple, disabled, onChange, resetKey = "" }: {
           </footer>
         </dialog>
       </> : null}
-      {preview ? <details className="photo-preview" open>
+      {preview && showPreview ? <details className="photo-preview" open>
         <summary>{multiple ? "پیش‌نمایش ستون نهایی" : "پیش‌نمایش جدول برش‌خورده"}</summary>
         <a className="admin-button" href={preview} download={multiple ? "clues.png" : "grid.png"}>دریافت تصویر</a>
         <div><img src={preview} alt={multiple ? "کادرهای پرسش‌ها به ترتیب از بالا به پایین" : "جدول برش‌خورده برای استخراج"} /></div>
