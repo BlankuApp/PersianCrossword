@@ -2817,6 +2817,8 @@ select {
 .admin-tabs [role="tab"] { position: relative; display: flex; flex: 1 1 0; min-width: 0; align-items: center; justify-content: center; gap: 8px; padding: 12px 10px; border: 0; border-radius: 10px; background: transparent; color: #5b6b61; font: inherit; cursor: pointer; transition: color 250ms cubic-bezier(0.22, 1, 0.36, 1); }
 .admin-tabs [aria-selected="true"] { color: #1e5c38; font-weight: 700; }
 .admin-tab-count { border-radius: 12px; padding: 1px 7px; background: #e4eee7; color: #285438; font-size: 0.8rem; }
+/* The admin panel gets more room than the home page: the AI build tab puts a picture and its extracted data side by side. */
+.home-shell.admin-shell { max-width: 1200px; }
 .admin-shell [role="tabpanel"][hidden] { display: none; }
 .admin-shell [role="tabpanel"]:not([hidden]), .photo-preview, .photo-grid-editor, .admin-import-plan { animation: admin-panel-in 400ms cubic-bezier(0.22, 1, 0.36, 1); }
 @keyframes admin-panel-in { from { opacity: 0; transform: translateY(8px); } }
