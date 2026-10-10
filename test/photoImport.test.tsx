@@ -468,6 +468,28 @@ describe("photo import", () => {
     expect(extract.mock.calls[1]![0]).toMatchObject({ variant: "special", puzzleNumber: "۸۰۵۰" });
   });
 
+  it("takes a pasted image into the cropper of the open tab only", async () => {
+    const view = render(<PhotoImportSection takenIds={new Set()} />);
+    const paste = (type: string) => {
+      const event = new Event("paste", { bubbles: true, cancelable: true });
+      Object.defineProperty(event, "clipboardData", { value: { files: [new File(["photo"], "image.png", { type })] } });
+      fireEvent(document.body, event);
+      return event;
+    };
+    expect(paste("text/plain").defaultPrevented).toBe(false);
+    expect(loadedImages).toHaveLength(0);
+    expect(paste("image/png").defaultPrevented).toBe(true);
+    act(() => loadedImages.at(-1)!.onload!(new Event("load")));
+    const [clueCropper, gridCropper] = view.container.querySelectorAll<HTMLElement>(".photo-cropper");
+    expect(within(clueCropper!).getByText("image.png")).toBeInTheDocument();
+    expect(within(gridCropper!).queryByText("image.png")).not.toBeInTheDocument();
+    await openTab(GRID);
+    paste("image/png");
+    act(() => loadedImages.at(-1)!.onload!(new Event("load")));
+    expect(within(gridCropper!).getByRole("button", { name: /ویرایش برش‌ها در صفحهٔ بزرگ/ })).toBeInTheDocument();
+    expect(loadedImages).toHaveLength(2);
+  });
+
   it("keeps the crop and other result for an OpenRouter retry after a failed request", async () => {
     extract.mockRejectedValueOnce(new Error("Connection lost"))
       .mockResolvedValueOnce(clues);
