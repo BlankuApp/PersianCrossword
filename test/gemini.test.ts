@@ -10,6 +10,7 @@ import {
   QuotaError,
   buildAskPrompt,
   buildExplainPrompt,
+  freeAiUsedToday,
   streamFreeAi,
   toAiError,
 } from "../app/gemini";
@@ -80,5 +81,20 @@ describe("buildAskPrompt", () => {
     const tray = Array.from({ length: 18 }, () => "ب");
     expect(buildAskPrompt(clue, Array.from({ length: 15 }, () => "ب"), tray).length).toBeLessThanOrEqual(MAX_PROMPT_LENGTH);
     expect(buildExplainPrompt(clue, "ب".repeat(15)).length).toBeLessThanOrEqual(MAX_PROMPT_LENGTH);
+  });
+});
+
+describe("freeAiUsedToday", () => {
+  // 2026-10-15 22:00 UTC is already 2026-10-16 in Tehran (UTC+3:30).
+  const now = new Date("2026-10-15T22:00:00Z");
+
+  it("counts only today's (Tehran) usage", () => {
+    expect(freeAiUsedToday({ day: "2026-10-16", count: 4 }, now)).toBe(4);
+    expect(freeAiUsedToday({ day: "2026-10-15", count: 4 }, now)).toBe(0);
+    expect(freeAiUsedToday(undefined, now)).toBe(0);
+  });
+
+  it("ignores the abolished Iranian DST (23:30 Tehran in summer is still the same day)", () => {
+    expect(freeAiUsedToday({ day: "2026-06-01", count: 2 }, new Date("2026-06-01T20:00:00Z"))).toBe(2);
   });
 });

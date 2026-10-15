@@ -8,6 +8,8 @@ import {
   buildAskPrompt,
   buildExplainPrompt,
   FREE_AI_LIMITS,
+  freeAiUsageText,
+  loadFreeAiUsed,
   QuotaError,
   streamFreeAi,
   streamGemini,
@@ -81,6 +83,7 @@ export function ClueAiButton({ clue, isSolved, cellValues, answer, trayLetters =
   const [text, setText] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error" | "quota">("idle");
   const [quota, setQuota] = useState<QuotaInfo | null>(null);
+  const [usageText, setUsageText] = useState("");
   const [controller, setController] = useState<AbortController | null>(null);
   const [keyInput, setKeyInput] = useState(loadGeminiKey);
   const { user } = useAuth();
@@ -96,6 +99,7 @@ export function ClueAiButton({ clue, isSolved, cellValues, answer, trayLetters =
   // Empty apiKey → free tier via the askAi proxy.
   async function runRequest(apiKey: string): Promise<void> {
     setText("");
+    setUsageText("");
     const prompt = isSolved ? buildExplainPrompt(clue, answer) : buildAskPrompt(clue, cellValues, trayLetters);
     const ac = new AbortController();
     setController(ac);
@@ -113,6 +117,12 @@ export function ClueAiButton({ clue, isSolved, cellValues, answer, trayLetters =
           });
         }
         await streamFreeAi(prompt, onChunk, ac.signal);
+        const me = auth.currentUser;
+        if (me) {
+          void loadFreeAiUsed(me.uid).then((used) => {
+            if (used !== null && !ac.signal.aborted) setUsageText(freeAiUsageText(used, me.isAnonymous));
+          });
+        }
       }
       setStatus("done");
     } catch (e) {
@@ -196,6 +206,7 @@ export function ClueAiButton({ clue, isSolved, cellValues, answer, trayLetters =
               <div className="clue-ai-text" dir="rtl">
                 {renderMarkdown(text)}
                 {status === "loading" && !text ? <p className="shimmer-text">در حال دریافت پاسخ…</p> : null}
+                {usageText ? <p className="auth-gemini-hint">{usageText}</p> : null}
               </div>
             )}
           </div>
