@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import {
   createUserWithEmailAndPassword,
@@ -17,7 +17,7 @@ import { useAuth, type SyncStatus } from "../AuthContext";
 import { listPuzzles } from "../puzzleLibrary";
 import { loadGeminiKey, loadMirror, saveGeminiKey } from "../progress";
 import { puzzleStatus } from "../puzzleListQuery";
-import { FREE_AI_LIMITS } from "../gemini";
+import { FREE_AI_LIMITS, freeAiUsageText, loadFreeAiUsed } from "../gemini";
 
 type EmailMode = "signin" | "signup" | "reset";
 
@@ -75,6 +75,17 @@ function UserMenu() {
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [geminiKey, setGeminiKey] = useState(loadGeminiKey);
+  const [aiUsed, setAiUsed] = useState<number | null>(null);
+
+  // One read per menu open; the count only changes when the user asks the AI.
+  useEffect(() => {
+    if (!open || !user) return;
+    let live = true;
+    void loadFreeAiUsed(user.uid).then((used) => live && setAiUsed(used));
+    return () => {
+      live = false;
+    };
+  }, [open, user]);
 
   // Scanning every puzzle isn't free — only do it while the menu is open.
   const stats = useMemo(() => (open ? computeDifficultyStats() : []), [open, syncVersion]);
@@ -196,6 +207,7 @@ function UserMenu() {
                 بسازید و این‌جا وارد کنید (اختیاری). این کلید فقط در همین مرورگر ذخیره می‌شود و به هیچ سروری ارسال
                 نمی‌شود.
               </p>
+              {aiUsed !== null ? <p className="auth-gemini-hint">{freeAiUsageText(aiUsed, user.isAnonymous)}</p> : null}
               {user.isAnonymous ? (
                 <p className="auth-gemini-hint">
                   ساخت حساب = {fa(FREE_AI_LIMITS.account)} پرسش در روز{" "}

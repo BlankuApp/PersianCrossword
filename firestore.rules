@@ -26,7 +26,10 @@ service cloud.firestore {
     match /drafts/{id} {
       allow read, write: if isAdmin();
     }
-    // Everything else — including aiUsage, which only the askAi function (admin SDK) touches —
-    // is denied by default.
+    // Free AI usage: written only by the askAi function (admin SDK); players may read their own count.
+    match /aiUsage/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+    }
+    // Everything else is denied by default.
   }
 }

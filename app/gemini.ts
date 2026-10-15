@@ -1,6 +1,7 @@
+import { doc, getDoc } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { TRAY_DECOY_COUNT } from "./crosswordUi";
-import { functions } from "./firebase";
+import { db, functions } from "./firebase";
 
 const MODEL = "gemini-3.5-flash-lite";
 
@@ -93,6 +94,27 @@ export const AI_GENERIC_ERROR = "ارتباط با هوشواره برقرار �
 
 // Keep in sync with LIMITS in functions/src/quota.ts.
 export const FREE_AI_LIMITS = { guest: 10, account: 100 } as const;
+
+// en-CA formats as YYYY-MM-DD; same day key as tehranDay in functions/src/quota.ts.
+const tehranFormat = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tehran" });
+
+export function freeAiUsedToday(usage: { day?: unknown; count?: unknown } | undefined, now: Date): number {
+  return usage?.day === tehranFormat.format(now) && typeof usage.count === "number" ? usage.count : 0;
+}
+
+// Free questions the user asked today (aiUsage/{uid}); null when it can't be read (offline, …).
+export async function loadFreeAiUsed(uid: string): Promise<number | null> {
+  try {
+    return freeAiUsedToday((await getDoc(doc(db, "aiUsage", uid))).data(), new Date());
+  } catch {
+    return null;
+  }
+}
+
+export function freeAiUsageText(used: number, isGuest: boolean): string {
+  const limit = isGuest ? FREE_AI_LIMITS.guest : FREE_AI_LIMITS.account;
+  return `امروز ${fa(Math.min(used, limit))} از ${fa(limit)} پرسش رایگان را استفاده کرده‌اید.`;
+}
 
 export type QuotaInfo =
   | { readonly reason: "shared" }
