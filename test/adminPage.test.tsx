@@ -63,7 +63,7 @@ describe("admin tabs", () => {
   it("shows drafts first, supports RTL keyboard navigation, and preserves the AI form when switching tabs", async () => {
     render(<AdminPage />);
     const tabs = within(screen.getByRole("tablist", { name: "بخش‌های مدیریت" })).getAllByRole("tab");
-    expect(tabs).toHaveLength(3);
+    expect(tabs).toHaveLength(4);
     expect(tabs[0]).toHaveAttribute("aria-selected", "true");
     expect(adminPanel()).toHaveAttribute("id", "admin-panel-drafts");
     fireEvent.keyDown(tabs[0]!, { key: "ArrowLeft" });
