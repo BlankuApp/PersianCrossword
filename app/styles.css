@@ -2813,7 +2813,7 @@ select {
 /* Transitions.dev: sliding tabs, panel reveal, modal scale, and delayed tooltip.
    https://transitions.dev/library.html — Copyright 2026 Jakub Antalik / Transitions.dev. */
 .admin-tabs { position: relative; display: flex; gap: 6px; padding: 5px; margin-bottom: 20px; border: 1px solid #dde3de; border-radius: 14px; background: #f0f4f1; }
-.admin-tab-pill { position: absolute; top: 5px; bottom: 5px; right: 5px; width: calc((100% - 22px) / 3); border-radius: 10px; background: #fff; box-shadow: 0 2px 6px #17201b12; pointer-events: none; transition: transform 250ms cubic-bezier(0.22, 1, 0.36, 1); }
+.admin-tab-pill { position: absolute; top: 5px; bottom: 5px; right: 5px; width: calc((100% - 28px) / 4); border-radius: 10px; background: #fff; box-shadow: 0 2px 6px #17201b12; pointer-events: none; transition: transform 250ms cubic-bezier(0.22, 1, 0.36, 1); }
 .admin-tabs [role="tab"] { position: relative; display: flex; flex: 1 1 0; min-width: 0; align-items: center; justify-content: center; gap: 8px; padding: 12px 10px; border: 0; border-radius: 10px; background: transparent; color: #5b6b61; font: inherit; cursor: pointer; transition: color 250ms cubic-bezier(0.22, 1, 0.36, 1); }
 .admin-tabs [aria-selected="true"] { color: #1e5c38; font-weight: 700; }
 .admin-tab-count { border-radius: 12px; padding: 1px 7px; background: #e4eee7; color: #285438; font-size: 0.8rem; }
@@ -3227,3 +3227,59 @@ select {
 .meta-summary-edit { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; }
 .meta-dialog { max-height: 90vh; overflow-y: auto; text-align: start; }
 .meta-dialog-note { margin: 0 0 8px; color: #5b6b61; font-size: 0.85rem; }
+
+/* Admin stats tab (app/admin/StatsSection.tsx) */
+.stats { --stats-bar: #3f8f62; --stats-bar-hover: #1e5c38; }
+.stats-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.stats-head .admin-note { margin: 0; font-size: 0.88rem; }
+.stats-spin { animation: stats-spin 0.9s linear infinite; }
+@keyframes stats-spin { to { transform: rotate(-360deg); } }
+.stats-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin: 16px 0; }
+.stats-tile { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border: 1px solid #e3e8e4; border-radius: 12px; background: #f8faf8; }
+.stats-tile-label { color: #5a645d; font-size: 0.88rem; }
+.stats-tile-value { color: #17201b; font-size: 1.9rem; line-height: 1.2; }
+.stats-tile-hint { color: #7a877f; font-size: 0.8rem; line-height: 1.6; }
+.stats-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 12px; margin-bottom: 20px; }
+.stats-card { margin: 0; padding: 14px 16px; border: 1px solid #e3e8e4; border-radius: 12px; }
+.stats-card figcaption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin-bottom: 8px; }
+.stats-card figcaption span { color: #5a645d; font-size: 0.88rem; }
+.stats-card svg { display: block; width: 100%; height: auto; overflow: visible; }
+.stats-card svg g:focus { outline: none; }
+.stats-card-note { margin: 6px 0 0; color: #7a877f; font-size: 0.78rem; }
+.stats-grid { stroke: #edf0ed; stroke-width: 1; }
+.stats-axis { stroke: #c9d0ca; stroke-width: 1; }
+.stats-tick { fill: #7a877f; font-size: 11px; font-family: inherit; }
+.stats-bar { fill: var(--stats-bar); transition: fill 120ms; }
+.stats-bar-hover { fill: var(--stats-bar-hover); }
+.stats-hbars { display: grid; gap: 12px; margin: 8px 0 0; padding: 0; list-style: none; }
+.stats-hbars li { display: grid; grid-template-columns: 90px 1fr auto; align-items: center; gap: 10px; font-size: 0.9rem; }
+.stats-hbar-track { height: 10px; border-radius: 5px; background: #eef2ef; overflow: hidden; }
+.stats-hbar { display: block; height: 100%; border-radius: 5px; background: var(--stats-bar); }
+.stats-num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.stats-num small { color: #7a877f; }
+.stats-table-block { margin-top: 20px; }
+.stats-table-block h3 { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; font-size: 1.02rem; }
+.stats-table-block h3 small { color: #7a877f; font-weight: 400; }
+.stats-table-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.stats-table-head h3 { margin: 0; }
+.stats-search { display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid #d3d8d2; border-radius: 10px; color: #7a877f; }
+.stats-search:focus-within { outline: 2px solid #4c9f70; outline-offset: 1px; }
+.stats-search input { width: 200px; min-height: 36px; border: 0; background: transparent; font: inherit; font-size: 0.9rem; outline: none; }
+.stats-table-scroll { overflow-x: auto; border: 1px solid #e3e8e4; border-radius: 12px; }
+.stats-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.stats-table th, .stats-table td { padding: 9px 12px; text-align: right; white-space: nowrap; }
+.stats-table th { position: sticky; top: 0; background: #f4f7f5; color: #4a574f; font-weight: 600; }
+.stats-table th button { padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+.stats-table th button:focus-visible { outline: 2px solid #4c9f70; outline-offset: 2px; border-radius: 4px; }
+.stats-table tbody tr { border-top: 1px solid #eef1ee; }
+.stats-table tbody tr:hover { background: #f8faf8; }
+.stats-table a { color: #1e5c38; text-decoration: none; }
+.stats-table a:hover { text-decoration: underline; }
+.stats-meter { display: inline-block; width: 70px; height: 6px; border-radius: 3px; background: #eef2ef; vertical-align: middle; overflow: hidden; }
+.stats-meter span { display: block; height: 100%; background: var(--stats-bar); }
+.stats-user { display: flex; flex-direction: column; }
+.stats-email { color: #7a877f; font-size: 0.8rem; }
+.stats-chip { padding: 2px 8px; border-radius: 10px; background: #e4eee7; color: #285438; font-size: 0.8rem; }
+.stats-chip-guest { background: #f0f1ef; color: #5a645d; }
+.stats-more { margin-top: 10px; }
+@media (prefers-reduced-motion: reduce) { .stats-spin { animation: none; } }

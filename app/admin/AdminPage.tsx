@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
-import { ArrowRight, FileJson, FilePlus2, Files, Pencil, Sparkles, Tag, Trash2, Upload } from "lucide-react";
+import { ArrowRight, ChartColumn, FileJson, FilePlus2, Files, Pencil, Sparkles, Tag, Trash2, Upload } from "lucide-react";
 import { useAuth } from "../AuthContext";
 import { PuzzleMetaDialog } from "../components/PuzzleMetaDialog";
 import { DifficultyBadge, ProgressBar } from "../pages/HomePage";
@@ -12,6 +12,7 @@ import { planImport, type ImportFile, type ImportPlan } from "./importPlan";
 import { useDrafts } from "./useDrafts";
 import { PhotoImportSection } from "./PhotoImportSection";
 import { PublishConfirmDialog } from "./PublishConfirmDialog";
+import { StatsSection } from "./StatsSection";
 import { toPersianDigits } from "../persianNumbers";
 import { readAdminSettings, saveAdminSettings } from "./adminSettings";
 
@@ -20,6 +21,7 @@ const adminTabs = [
   { id: "drafts", label: "پیش‌نویس‌ها", Icon: Files },
   { id: "ai", label: "ساخت با هوش‌واره", Icon: Sparkles },
   { id: "json", label: "افزودن با JSON", Icon: FileJson },
+  { id: "stats", label: "آمار", Icon: ChartColumn },
 ] as const;
 
 function errorText(e: unknown): string {
@@ -56,6 +58,9 @@ function AdminContent() {
     return adminTabs.find((item) => item.id === saved)?.id ?? "drafts";
   });
   useEffect(() => { saveAdminSettings({ tab }); }, [tab]);
+  // Stats cost a read per member: load on first visit, then keep until "refresh".
+  const [statsOpened, setStatsOpened] = useState(false);
+  if (tab === "stats" && !statsOpened) setStatsOpened(true);
   const tabIndex = adminTabs.findIndex((item) => item.id === tab);
   const { drafts, loaded, error } = useDrafts();
   const { puzzles } = usePuzzleLibrary();
@@ -97,6 +102,9 @@ function AdminContent() {
       </div>
       <div role="tabpanel" id="admin-panel-json" aria-labelledby="admin-tab-json" hidden={tab !== "json"} tabIndex={0}>
         <ImportSection takenIds={takenIds} />
+      </div>
+      <div role="tabpanel" id="admin-panel-stats" aria-labelledby="admin-tab-stats" hidden={tab !== "stats"} tabIndex={0}>
+        {statsOpened ? <StatsSection /> : null}
       </div>
     </>
   );
