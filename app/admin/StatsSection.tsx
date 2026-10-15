@@ -10,7 +10,8 @@ const fa = (n: number) => n.toLocaleString("fa-IR");
 const pct = (part: number, whole: number) => (whole ? Math.round((part / whole) * 100) : 0);
 const dateTime = new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium", timeStyle: "short" });
 const shortDate = new Intl.DateTimeFormat("fa-IR", { month: "short", day: "numeric" });
-const relative = new Intl.RelativeTimeFormat("fa", { numeric: "auto" });
+// Missing on the oldest supported WebViews (Chrome < 71); those show plain dates.
+const relative = typeof Intl.RelativeTimeFormat === "function" ? new Intl.RelativeTimeFormat("fa", { numeric: "auto" }) : null;
 const loadStats = httpsCallable<void, AdminStats>(functions, "adminStats");
 const ANALYTICS_URL = "https://console.firebase.google.com/project/persiancrossword/analytics";
 
@@ -20,6 +21,7 @@ const PROVIDERS: Record<string, string> = {
 const providerName = (id: string) => PROVIDERS[id] ?? id;
 
 function ago(ms: number, now: number): string {
+  if (!relative) return dateTime.format(ms);
   const minutes = Math.round((ms - now) / 60_000);
   if (Math.abs(minutes) < 60) return relative.format(minutes, "minute");
   const hours = Math.round(minutes / 60);
