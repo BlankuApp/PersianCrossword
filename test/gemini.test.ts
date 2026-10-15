@@ -93,4 +93,8 @@ describe("freeAiUsedToday", () => {
     expect(freeAiUsedToday({ day: "2026-10-15", count: 4 }, now)).toBe(0);
     expect(freeAiUsedToday(undefined, now)).toBe(0);
   });
+
+  it("ignores the abolished Iranian DST (23:30 Tehran in summer is still the same day)", () => {
+    expect(freeAiUsedToday({ day: "2026-06-01", count: 2 }, new Date("2026-06-01T20:00:00Z"))).toBe(2);
+  });
 });

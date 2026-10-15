@@ -95,11 +95,14 @@ export const AI_GENERIC_ERROR = "ارتباط با هوشواره برقرار �
 // Keep in sync with LIMITS in functions/src/quota.ts.
 export const FREE_AI_LIMITS = { guest: 10, account: 100 } as const;
 
-// en-CA formats as YYYY-MM-DD; same day key as tehranDay in functions/src/quota.ts.
-const tehranFormat = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tehran" });
+// Same YYYY-MM-DD key as tehranDay in functions/src/quota.ts. A fixed UTC+3:30 rather than Intl's
+// "Asia/Tehran": old Android WebViews still apply Iran's DST (abolished 2022) and would be an hour ahead.
+// ponytail: fixed offset, revisit if Iran brings DST back.
+const TEHRAN_OFFSET_MS = 210 * 60_000;
 
 export function freeAiUsedToday(usage: { day?: unknown; count?: unknown } | undefined, now: Date): number {
-  return usage?.day === tehranFormat.format(now) && typeof usage.count === "number" ? usage.count : 0;
+  const today = new Date(now.getTime() + TEHRAN_OFFSET_MS).toISOString().slice(0, 10);
+  return usage?.day === today && typeof usage.count === "number" ? usage.count : 0;
 }
 
 // Free questions the user asked today (aiUsage/{uid}); null when it can't be read (offline, …).
