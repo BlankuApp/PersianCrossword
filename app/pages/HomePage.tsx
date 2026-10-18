@@ -21,7 +21,8 @@ import { loadMirror, type ProgressInfo } from "../progress";
 import { navigate, setHomeQuery } from "../router";
 import { useAuth } from "../AuthContext";
 import { AuthButton } from "../components/AuthButton";
-import { WHATS_NEW, loadWhatsNewSeen, markWhatsNewSeen } from "../whatsNew";
+import { loadWhatsNewSeen, markWhatsNewSeen, visibleWhatsNew } from "../whatsNew";
+import { AppPromoCard, AppPromoFooter } from "../components/AppPromo";
 import {
   DEFAULT_LIST_QUERY,
   compareIds,
@@ -57,7 +58,8 @@ function WhatsNewButton() {
   const [seen, setSeen] = useState(loadWhatsNewSeen);
   // Marker from before this opening, so new entries stay highlighted while the dialog is open.
   const [seenBeforeOpen, setSeenBeforeOpen] = useState(seen);
-  const unseen = WHATS_NEW.filter((e) => e.date > seen).length;
+  const entries = visibleWhatsNew();
+  const unseen = entries.filter((e) => e.date > seen).length;
   const unseenLabel = unseen > 9 ? "۹+" : unseen.toLocaleString("fa-IR");
 
   function openDialog(): void {
@@ -103,7 +105,7 @@ function WhatsNewButton() {
             <h2 id="whats-new-title">چه خبر؟</h2>
 
             <div className="whats-new-list" tabIndex={0}>
-              {WHATS_NEW.map((entry) => {
+              {entries.map((entry) => {
                 const isNew = entry.date > seenBeforeOpen;
                 return (
                   <div
@@ -115,6 +117,11 @@ function WhatsNewButton() {
                       {isNew && <span className="whats-new-tag">تازه</span>}
                     </p>
                     <p className="whats-new-entry-body">{entry.body}</p>
+                    {entry.link && (
+                      <a className="whats-new-link" href={entry.link.href} target="_blank" rel="noopener">
+                        {entry.link.label}
+                      </a>
+                    )}
                   </div>
                 );
               })}
@@ -326,6 +333,8 @@ export function HomePage() {
         </div>
       </header>
 
+      <AppPromoCard />
+
       {continueList.length > 0 && (
         <section className="continue-strip" aria-labelledby="continue-title">
           <h2 id="continue-title">ادامهٔ حل</h2>
@@ -503,6 +512,8 @@ export function HomePage() {
           )}
         </>
       )}
+
+      <AppPromoFooter />
 
       <footer className="home-footer">
         <a href="https://blankuapp.github.io/PersianCrossword/privacy.html" target="_blank" rel="noopener">سیاست حریم خصوصی</a>

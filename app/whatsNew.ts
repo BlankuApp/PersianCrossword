@@ -1,7 +1,12 @@
+import { PLAY_STORE_URL, isWebApp } from "./appPromo";
+
 export interface WhatsNewEntry {
   readonly date: string; // ISO date
   readonly title: string;
   readonly body: string;
+  readonly link?: { readonly href: string; readonly label: string };
+  /** Hidden in the Android app (e.g. the Play Store announcement). */
+  readonly webOnly?: boolean;
 }
 
 // Dash, not the "persian-crossword:" prefix — cloudProgress syncs every such key as a puzzle.
@@ -14,15 +19,27 @@ export function loadWhatsNewSeen(): string {
   return window.localStorage.getItem(SEEN_KEY) ?? "";
 }
 
+/** The entries for this platform, newest first. */
+export function visibleWhatsNew(): readonly WhatsNewEntry[] {
+  return isWebApp() ? WHATS_NEW : WHATS_NEW.filter((e) => !e.webOnly);
+}
+
 /** Marks every current entry as seen and returns the new marker. */
 export function markWhatsNewSeen(): string {
-  const newest = WHATS_NEW[0]?.date ?? "";
+  const newest = visibleWhatsNew()[0]?.date ?? "";
   if (typeof window !== "undefined") window.localStorage.setItem(SEEN_KEY, newest);
   return newest;
 }
 
 // Newest first.
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
+  {
+    date: "2026-10-18",
+    title: "نسخهٔ اندروید منتشر شد",
+    body: "اپ اندروید ما در گوگل‌پلی منتشر شد. نصبش کنید، وارد حسابتان شوید و از همان جایی که بودید ادامه دهید.",
+    link: { href: PLAY_STORE_URL, label: "نصب از گوگل‌پلی" },
+    webOnly: true,
+  },
   {
     date: "2026-09-24",
     title: "فهرست تازهٔ جدول‌ها",
