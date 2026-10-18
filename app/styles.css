@@ -1947,6 +1947,158 @@ select {
   vertical-align: middle;
 }
 
+.whats-new-link {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 8px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: #1e5c38;
+  color: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.whats-new-link:hover {
+  background: #174a2d;
+}
+
+.whats-new-link:focus-visible {
+  outline: 2px solid #4c9f70;
+  outline-offset: 2px;
+}
+
+/* ── Android app promo (web only) ── */
+.app-promo {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 12px 14px;
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  border: 1px solid #8cbca0;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.app-promo-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: #1e5c38;
+  color: #ffffff;
+}
+
+.app-promo-text {
+  min-width: 0;
+  padding-inline-end: 24px; /* clear of the close button */
+}
+
+.app-promo-text h2 {
+  margin: 0;
+  color: #17201b;
+  font-size: 1rem;
+}
+
+.app-promo-text p {
+  margin: 4px 0 0;
+  color: #5a645d;
+  font-size: 0.88rem;
+}
+
+.app-promo-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-promo-close {
+  position: absolute;
+  top: 8px;
+  inset-inline-end: 8px;
+  padding: 2px 6px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #8a948d;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.app-promo-close:hover {
+  background: #f1f4f2;
+  color: #17201b;
+}
+
+.app-promo-close:focus-visible,
+.play-badge:focus-visible {
+  outline: 2px solid #4c9f70;
+  outline-offset: 2px;
+}
+
+.play-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid #444444;
+  border-radius: 8px;
+  background: #111111;
+  color: #ffffff;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.play-badge small {
+  display: block;
+  font-size: 0.68rem;
+  opacity: 0.8;
+}
+
+.play-badge svg {
+  flex: none;
+}
+
+.share-app {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.share-app-btn {
+  gap: 6px;
+  padding-block: 8px;
+}
+
+.share-app-feedback {
+  color: #1e5c38;
+  font-size: 0.85rem;
+}
+
+.share-app-feedback:empty {
+  display: none;
+}
+
+.app-promo-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 2rem;
+}
+
+.app-promo-footer + .home-footer {
+  margin-top: 0.5rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .whats-new-badge {
     animation: none;
