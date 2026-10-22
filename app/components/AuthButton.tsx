@@ -64,7 +64,7 @@ function computeDifficultyStats(): readonly DifficultyStats[] {
 
 function syncStatusText({ kind, unsent }: SyncStatus): string {
   const queued = unsent > 0 ? `${fa(unsent)} جدول هنوز در فضای ابری ذخیره نشده است.` : "";
-  if (kind === "offline") return `اتصال به اینترنت برقرار نیست. ${queued || "پیشرفت شما روی همین دستگاه ذخیره است."}`;
+  if (kind === "offline") return `اتصال به اینترنت برقرار نیست؛ اگر در ایران هستید، ممکن است به فیلترشکن نیاز داشته باشید. ${queued || "پیشرفت شما روی همین دستگاه ذخیره است."}`;
   if (kind === "error") return `ذخیره در فضای ابری انجام نشد. ${queued}`;
   if (kind === "pending") return queued;
   return "همهٔ پیشرفت‌ها در فضای ابری ذخیره شده است.";
@@ -250,7 +250,7 @@ const AUTH_ERRORS: Readonly<Record<string, string>> = {
   "auth/email-already-in-use": "این ایمیل قبلاً ثبت شده است.",
   "auth/invalid-credential": "ایمیل یا رمز عبور نادرست است.",
   "auth/invalid-email": "نشانی ایمیل معتبر نیست.",
-  "auth/network-request-failed": "ارتباط با اینترنت برقرار نشد.",
+  "auth/network-request-failed": "ارتباط با اینترنت برقرار نشد. اگر در ایران هستید، ممکن است برای اتصال به فیلترشکن نیاز داشته باشید.",
   "auth/popup-blocked": "مرورگر پنجرهٔ ورود را مسدود کرد.",
   "auth/popup-closed-by-user": "پنجرهٔ ورود پیش از پایان بسته شد.",
   "auth/too-many-requests": "تلاش‌های زیادی انجام شده است؛ کمی بعد دوباره امتحان کنید.",
