@@ -267,6 +267,7 @@ function EmptyLibrary({ sync }: { sync: PuzzleSyncState }) {
   return (
     <div className="empty-state">
       <p>{sync === "offline" ? "برای دریافت جدول‌ها به اینترنت وصل شوید." : "دریافت جدول‌ها انجام نشد."}</p>
+      <p>اگر در ایران هستید، ممکن است برای اتصال به فیلترشکن نیاز داشته باشید.</p>
       <button type="button" className="empty-retry" onClick={retryPuzzleSync}>
         تلاش دوباره
       </button>
