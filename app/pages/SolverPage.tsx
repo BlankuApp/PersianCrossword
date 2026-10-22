@@ -336,7 +336,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor,
         particleCount: 180,
         spread: 90,
         origin: { y: 0.6 },
-        colors: ["#4f46e5", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"],
+        colors: ["#b3243a", "#e3a5af", "#f2c46b", "#256b42", "#d2576a"],
       });
     }
     prevSolvedRef.current = isPuzzleSolved;

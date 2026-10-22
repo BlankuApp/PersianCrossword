@@ -22,6 +22,7 @@ paper, and soft pink highlights. Red is the "fruit"; everything else stays quiet
 ## Color tokens
 
 Light theme only (no dark theme yet; a dark "Yalda Night" theme is a possible later addition).
+The tokens are defined at the top of `app/styles.css` (`:root`).
 
 ### Brand
 
@@ -57,7 +58,7 @@ Light theme only (no dark theme yet; a dark "Yalda Night" theme is a possible la
 | `--cell` | `#FFFFFF` | Open square |
 | `--cell-block` | `#3A1E23` | Black square |
 | `--cell-word` | `#F7DDE1` | Squares of the active word |
-| `--cell-down-word` | `#F1E9EA` | Squares of the crossing word (other direction) |
+| `--cell-down-word` | `#EDE2E4` | Squares of the crossing word (other direction) |
 | `--cell-selected` | `#B3243A` | Selected square (letter in `--on-brand`) |
 | `--cell-correct` | `#256B42` | Letter color after a correct check |
 | `--cell-incorrect` | `#C2410C` | Letter color after a wrong check |
@@ -98,7 +99,7 @@ The old app was green (`#1E5C38`). Replace colors like this:
 | `#5A645D`, `#5B6B61` (muted) | `--muted` `#7A6467` |
 | `#DDE3DE`, `#D3D8D2`, `#BAC3BC` (borders) | `--line`, `--line-strong`, `--control-border` |
 | `#D7EADF` (active word) | `--cell-word` `#F7DDE1` |
-| `#E9EDF1` (down word) | `--cell-down-word` `#F1E9EA` |
+| `#E9EDF1` (down word) | `--cell-down-word` `#EDE2E4` |
 | `#F0C96A` (selected, yellow) | `--cell-selected` `#B3243A` + white letter |
 | `#145C35` (correct) | `--cell-correct` `#256B42` |
 | `#8B1A1A` (wrong / danger) | `--cell-incorrect` `#C2410C`, `--danger` `#A3360B` |
@@ -139,5 +140,8 @@ do not compete with the brand red.
 
 - App icon: `assets/icon-only.png` (red `#B3243A` background, white fruit, red seeds).
 - Android launcher icons, favicon and `.github/social-preview.png` use the same art.
+- Android splash screens (`android/app/src/main/res/drawable*/splash.png`): red fruit on
+  `--page` (light) and white fruit on `--ink` `#2A1619` (night).
+- The web app and the Android app share `app/styles.css`, so a color change there updates both.
 - Do not recolor the icon. Do not put the icon on a red background inside the app; on
   `--page` or `--surface` use the icon as is (with its rounded red square).
