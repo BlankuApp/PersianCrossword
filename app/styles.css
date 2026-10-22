@@ -1512,8 +1512,23 @@ select {
   margin-bottom: 24px;
 }
 
+.home-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.home-logo {
+  display: block;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+}
+
 .home-header h1 {
-  margin: 0 0 6px;
+  margin: 0;
   font-size: var(--font-h1-home);
   line-height: 1.2;
 }
@@ -2000,58 +2015,66 @@ select {
 }
 
 /* ── Android app promo (web only) ── */
+/* One row on wide screens: icon · text · actions; the actions wrap below on phones. */
 .app-promo {
   position: relative;
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px 14px;
+  gap: 10px 12px;
   margin-bottom: 20px;
-  padding: 14px 16px;
-  border: 1px solid var(--brand-border);
+  padding: 10px 12px;
+  padding-inline-end: 40px; /* room for the close button */
+  border: 1px solid var(--line);
   border-radius: 12px;
-  background: #ffffff;
+  background: #fdf5f6;
 }
 
 .app-promo-icon {
   display: grid;
   place-items: center;
-  width: 46px;
-  height: 46px;
-  border-radius: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   background: var(--brand);
-  color: #ffffff;
+  color: var(--on-brand);
 }
 
 .app-promo-text {
   min-width: 0;
-  padding-inline-end: 24px; /* clear of the close button */
 }
 
 .app-promo-text h2 {
   margin: 0;
   color: var(--ink);
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 
 .app-promo-text p {
-  margin: 4px 0 0;
+  margin: 2px 0 0;
   color: var(--muted);
-  font-size: 0.88rem;
+  font-size: 0.84rem;
 }
 
 .app-promo-actions {
-  grid-column: 1 / -1;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+}
+
+.app-promo .play-badge {
+  padding: 5px 10px;
+}
+
+.app-promo .share-app-btn {
+  padding-block: 7px;
 }
 
 .app-promo-close {
   position: absolute;
-  top: 8px;
+  top: 50%;
   inset-inline-end: 8px;
+  transform: translateY(-50%);
   padding: 2px 6px;
   border: none;
   border-radius: 6px;
@@ -2062,8 +2085,31 @@ select {
 }
 
 .app-promo-close:hover {
-  background: #f4f1f1;
+  background: #f4eced;
   color: var(--ink);
+}
+
+@media (max-width: 760px) {
+  .app-promo {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .app-promo-actions {
+    grid-column: 1 / -1;
+    flex-wrap: wrap;
+  }
+
+  .app-promo-close {
+    top: 8px;
+    transform: none;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Phones: the title and the two buttons say enough. */
+  .app-promo-text p {
+    display: none;
+  }
 }
 
 .app-promo-close:focus-visible,
@@ -2810,6 +2856,16 @@ select {
   .home-header h1 {
     margin: 0;
     font-size: 1.35rem;
+  }
+
+  .home-brand {
+    gap: 8px;
+  }
+
+  .home-logo {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
   }
 
   /* The open search fills whatever is left of its row instead of a fixed width
