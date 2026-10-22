@@ -72,8 +72,8 @@ color shows on that square again when the selection moves away. In CSS, the
 
 | Token | Hex | Use |
 | --- | --- | --- |
-| `--success` | `#256B42` | "Solved" badge text, success messages |
-| `--success-soft` | `#E6F2EA` | Success badge / message background |
+| `--success` | `#256B42` | Correct letters, success messages (admin checks) |
+| `--success-soft` | `#E6F2EA` | Success message background |
 | `--warning` | `#9A5208` | In-progress badge, warnings |
 | `--warning-soft` | `#FDF1E3` | Warning background |
 | `--danger` | `#A3360B` | Error text, destructive menu items ("delete", "unpublish") |
@@ -132,8 +132,13 @@ do not compete with the brand red.
   hover `--brand-soft`.
 - **Switch (on):** track `--brand`, label `--brand`.
 - **Active clue box:** `--surface`, `--line-strong` border; the clue number in `--brand`.
-- **Badges:** solved = `--success` on `--success-soft`; in progress = `--warning` on
-  `--warning-soft`; new = `--brand` on `--brand-soft`.
+- **Badges:** solved ("تکمیل شد") = `--on-brand` on solid `--brand`, like a seed;
+  in progress = `--warning` on `--warning-soft`; new = `--brand` on `--brand-soft`.
+- **Puzzle list:** a solved row has a light pink background `#FDF5F6` (hover `--brand-soft`).
+  Difficulty "ویژه" (special) = `--brand` on `--brand-soft` with `--brand-border`;
+  "عادی" (normal) = `--down` on `#F6F0F1` with `--line-strong`.
+- **No green in the player UI** except correct letters. Green and blue stay only in admin
+  tools and in the clue-icon colors. "What's new" (چه خبر؟) highlights use `--brand` too.
 - **Focus:** always visible: 2px `--focus-ring` outline with 2px offset.
 
 ## Icon and brand assets

@@ -1918,15 +1918,15 @@ select {
 }
 
 .whats-new-btn.has-unseen {
-  border-color: #c4541f;
-  background: #fff1e8;
-  color: #b34b21;
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand);
   font-weight: 600;
-  box-shadow: 0 0 0 3px rgba(196, 84, 31, 0.14);
+  box-shadow: 0 0 0 3px rgba(179, 36, 58, 0.14);
 }
 
 .whats-new-btn.has-unseen:hover {
-  background: #ffe6d6;
+  background: #f7dde1;
 }
 
 .whats-new-badge {
@@ -1938,7 +1938,7 @@ select {
   padding: 0 5px;
   border: 2px solid #ffffff;
   border-radius: 999px;
-  background: #c4541f;
+  background: var(--brand);
   color: #ffffff;
   font-size: 0.72rem;
   font-weight: 700;
@@ -1950,18 +1950,18 @@ select {
 
 @keyframes whats-new-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(196, 84, 31, 0.45);
+    box-shadow: 0 0 0 0 rgba(179, 36, 58, 0.45);
   }
   70%,
   100% {
-    box-shadow: 0 0 0 8px rgba(196, 84, 31, 0);
+    box-shadow: 0 0 0 8px rgba(179, 36, 58, 0);
   }
 }
 
 .whats-new-entry.whats-new-entry-new {
-  border-color: #f0c4a6;
-  border-inline-start: 4px solid #c4541f;
-  background: #fff7f1;
+  border-color: var(--brand-border);
+  border-inline-start: 4px solid var(--brand);
+  background: #fdf5f6;
 }
 
 .whats-new-tag {
@@ -1969,7 +1969,7 @@ select {
   margin-inline-start: 8px;
   padding: 0 8px;
   border-radius: 999px;
-  background: #c4541f;
+  background: var(--brand);
   color: #ffffff;
   font-size: 0.72rem;
   font-weight: 700;
@@ -2368,11 +2368,11 @@ select {
 }
 
 .puzzle-row-done {
-  background: #f0faf4;
+  background: #fdf5f6;
 }
 
 .puzzle-row-done:hover {
-  background: #e6f5ec;
+  background: var(--brand-soft);
 }
 
 .puzzle-row-error {
@@ -2430,15 +2430,15 @@ select {
 }
 
 .difficulty-badge-normal {
-  border-color: #b8d9c5;
-  background: #edf8f1;
-  color: #2c7049;
+  border-color: var(--line-strong);
+  background: #f6f0f1;
+  color: var(--down);
 }
 
 .difficulty-badge-special {
-  border-color: #f0c4a6;
-  background: #fff1e8;
-  color: #b34b21;
+  border-color: var(--brand-border);
+  background: var(--brand-soft);
+  color: var(--brand);
 }
 
 .td-newspaper,
@@ -2479,8 +2479,8 @@ select {
 }
 
 .badge-done {
-  background: var(--success-soft);
-  color: var(--success);
+  background: var(--brand);
+  color: var(--on-brand);
 }
 
 .badge-error {
