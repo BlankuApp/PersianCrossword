@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.2087"
+        android:scaleY="0.2087"
+        android:translateX="27.29"
+        android:translateY="27.50">
+        <path android:fillColor="#FFFFFF" android:pathData="M104,62 L96,18 L115,38 L128,12 L141,38 L160,18 L152,62 Z" />
+        <path android:fillColor="#FFFFFF" android:fillType="evenOdd" android:pathData="M128,52 A96,96 0 1 1 127.99,52 Z M78,92 H98 A6,6 0 0 1 104,98 V118 A6,6 0 0 1 98,124 H78 A6,6 0 0 1 72,118 V98 A6,6 0 0 1 78,92 Z M118,92 H138 A6,6 0 0 1 144,98 V118 A6,6 0 0 1 138,124 H118 A6,6 0 0 1 112,118 V98 A6,6 0 0 1 118,92 Z M78,132 H98 A6,6 0 0 1 104,138 V158 A6,6 0 0 1 98,164 H78 A6,6 0 0 1 72,158 V138 A6,6 0 0 1 78,132 Z M118,132 H138 A6,6 0 0 1 144,138 V158 A6,6 0 0 1 138,164 H118 A6,6 0 0 1 112,158 V138 A6,6 0 0 1 118,132 Z M158,132 H178 A6,6 0 0 1 184,138 V158 A6,6 0 0 1 178,164 H158 A6,6 0 0 1 152,158 V138 A6,6 0 0 1 158,132 Z M78,172 H98 A6,6 0 0 1 104,178 V198 A6,6 0 0 1 98,204 H78 A6,6 0 0 1 72,198 V178 A6,6 0 0 1 78,172 Z M118,172 H138 A6,6 0 0 1 144,178 V198 A6,6 0 0 1 138,204 H118 A6,6 0 0 1 112,198 V178 A6,6 0 0 1 118,172 Z M158,172 H178 A6,6 0 0 1 184,178 V198 A6,6 0 0 1 178,204 H158 A6,6 0 0 1 152,198 V178 A6,6 0 0 1 158,172 Z" />
+    </group>
+</vector>

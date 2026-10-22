@@ -325,7 +325,7 @@ export function HomePage() {
     <main className="app-shell home-shell" dir="rtl">
       <header className="home-header">
         <div>
-          <h1>جدول کلمات فارسی</h1>
+          <h1>جدول انار</h1>
         </div>
         <div className="home-header-actions">
           <WhatsNewButton />
