@@ -23,6 +23,7 @@ import { useAuth } from "../AuthContext";
 import { AuthButton } from "../components/AuthButton";
 import { loadWhatsNewSeen, markWhatsNewSeen, visibleWhatsNew } from "../whatsNew";
 import { AppPromoCard, AppPromoFooter } from "../components/AppPromo";
+import logoUrl from "../../assets/favicon.svg";
 import {
   DEFAULT_LIST_QUERY,
   compareIds,
@@ -324,7 +325,8 @@ export function HomePage() {
   return (
     <main className="app-shell home-shell" dir="rtl">
       <header className="home-header">
-        <div>
+        <div className="home-brand">
+          <img className="home-logo" src={logoUrl} alt="" width={48} height={48} />
           <h1>جدول انار</h1>
         </div>
         <div className="home-header-actions">

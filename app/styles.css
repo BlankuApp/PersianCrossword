@@ -1512,8 +1512,23 @@ select {
   margin-bottom: 24px;
 }
 
+.home-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.home-logo {
+  display: block;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+}
+
 .home-header h1 {
-  margin: 0 0 6px;
+  margin: 0;
   font-size: var(--font-h1-home);
   line-height: 1.2;
 }
@@ -1918,15 +1933,15 @@ select {
 }
 
 .whats-new-btn.has-unseen {
-  border-color: #c4541f;
-  background: #fff1e8;
-  color: #b34b21;
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand);
   font-weight: 600;
-  box-shadow: 0 0 0 3px rgba(196, 84, 31, 0.14);
+  box-shadow: 0 0 0 3px rgba(179, 36, 58, 0.14);
 }
 
 .whats-new-btn.has-unseen:hover {
-  background: #ffe6d6;
+  background: #f7dde1;
 }
 
 .whats-new-badge {
@@ -1938,7 +1953,7 @@ select {
   padding: 0 5px;
   border: 2px solid #ffffff;
   border-radius: 999px;
-  background: #c4541f;
+  background: var(--brand);
   color: #ffffff;
   font-size: 0.72rem;
   font-weight: 700;
@@ -1950,18 +1965,18 @@ select {
 
 @keyframes whats-new-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(196, 84, 31, 0.45);
+    box-shadow: 0 0 0 0 rgba(179, 36, 58, 0.45);
   }
   70%,
   100% {
-    box-shadow: 0 0 0 8px rgba(196, 84, 31, 0);
+    box-shadow: 0 0 0 8px rgba(179, 36, 58, 0);
   }
 }
 
 .whats-new-entry.whats-new-entry-new {
-  border-color: #f0c4a6;
-  border-inline-start: 4px solid #c4541f;
-  background: #fff7f1;
+  border-color: var(--brand-border);
+  border-inline-start: 4px solid var(--brand);
+  background: #fdf5f6;
 }
 
 .whats-new-tag {
@@ -1969,7 +1984,7 @@ select {
   margin-inline-start: 8px;
   padding: 0 8px;
   border-radius: 999px;
-  background: #c4541f;
+  background: var(--brand);
   color: #ffffff;
   font-size: 0.72rem;
   font-weight: 700;
@@ -2000,58 +2015,66 @@ select {
 }
 
 /* ── Android app promo (web only) ── */
+/* One row on wide screens: icon · text · actions; the actions wrap below on phones. */
 .app-promo {
   position: relative;
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px 14px;
+  gap: 10px 12px;
   margin-bottom: 20px;
-  padding: 14px 16px;
-  border: 1px solid var(--brand-border);
+  padding: 10px 12px;
+  padding-inline-end: 40px; /* room for the close button */
+  border: 1px solid var(--line);
   border-radius: 12px;
-  background: #ffffff;
+  background: #fdf5f6;
 }
 
 .app-promo-icon {
   display: grid;
   place-items: center;
-  width: 46px;
-  height: 46px;
-  border-radius: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   background: var(--brand);
-  color: #ffffff;
+  color: var(--on-brand);
 }
 
 .app-promo-text {
   min-width: 0;
-  padding-inline-end: 24px; /* clear of the close button */
 }
 
 .app-promo-text h2 {
   margin: 0;
   color: var(--ink);
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 
 .app-promo-text p {
-  margin: 4px 0 0;
+  margin: 2px 0 0;
   color: var(--muted);
-  font-size: 0.88rem;
+  font-size: 0.84rem;
 }
 
 .app-promo-actions {
-  grid-column: 1 / -1;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+}
+
+.app-promo .play-badge {
+  padding: 5px 10px;
+}
+
+.app-promo .share-app-btn {
+  padding-block: 7px;
 }
 
 .app-promo-close {
   position: absolute;
-  top: 8px;
+  top: 50%;
   inset-inline-end: 8px;
+  transform: translateY(-50%);
   padding: 2px 6px;
   border: none;
   border-radius: 6px;
@@ -2062,8 +2085,31 @@ select {
 }
 
 .app-promo-close:hover {
-  background: #f4f1f1;
+  background: #f4eced;
   color: var(--ink);
+}
+
+@media (max-width: 760px) {
+  .app-promo {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .app-promo-actions {
+    grid-column: 1 / -1;
+    flex-wrap: wrap;
+  }
+
+  .app-promo-close {
+    top: 8px;
+    transform: none;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Phones: the title and the two buttons say enough. */
+  .app-promo-text p {
+    display: none;
+  }
 }
 
 .app-promo-close:focus-visible,
@@ -2368,11 +2414,11 @@ select {
 }
 
 .puzzle-row-done {
-  background: #f0faf4;
+  background: #fdf5f6;
 }
 
 .puzzle-row-done:hover {
-  background: #e6f5ec;
+  background: var(--brand-soft);
 }
 
 .puzzle-row-error {
@@ -2430,15 +2476,15 @@ select {
 }
 
 .difficulty-badge-normal {
-  border-color: #b8d9c5;
-  background: #edf8f1;
-  color: #2c7049;
+  border-color: var(--line-strong);
+  background: #f6f0f1;
+  color: var(--down);
 }
 
 .difficulty-badge-special {
-  border-color: #f0c4a6;
-  background: #fff1e8;
-  color: #b34b21;
+  border-color: var(--brand-border);
+  background: var(--brand-soft);
+  color: var(--brand);
 }
 
 .td-newspaper,
@@ -2479,8 +2525,8 @@ select {
 }
 
 .badge-done {
-  background: var(--success-soft);
-  color: var(--success);
+  background: var(--brand);
+  color: var(--on-brand);
 }
 
 .badge-error {
@@ -2810,6 +2856,16 @@ select {
   .home-header h1 {
     margin: 0;
     font-size: 1.35rem;
+  }
+
+  .home-brand {
+    gap: 8px;
+  }
+
+  .home-logo {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
   }
 
   /* The open search fills whatever is left of its row instead of a fixed width
