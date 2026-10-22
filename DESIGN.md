@@ -47,7 +47,7 @@ Light theme only (no dark theme yet; a dark "Yalda Night" theme is a possible la
 | `--faint` | `#9A8689` | Placeholders, chart ticks (not for important text) |
 | `--line` | `#EBDCDE` | Soft dividers, card borders |
 | `--line-strong` | `#D9C3C7` | Clue boxes, tiles, table borders |
-| `--control-border` | `#C9AEB3` | Buttons, inputs, menus |
+| `--control-border` | `#A8868C` | Buttons, inputs, menus |
 
 ### Puzzle grid
 
@@ -59,14 +59,19 @@ Light theme only (no dark theme yet; a dark "Yalda Night" theme is a possible la
 | `--cell-word` | `#F7DDE1` | Squares of the active word |
 | `--cell-down-word` | `#F1E9EA` | Squares of the crossing word (other direction) |
 | `--cell-selected` | `#B3243A` | Selected square (letter in `--on-brand`) |
-| `--cell-correct` | `#2E7D4F` | Letter color after a correct check |
+| `--cell-correct` | `#256B42` | Letter color after a correct check |
 | `--cell-incorrect` | `#C2410C` | Letter color after a wrong check |
+
+The selected square always keeps its white `--on-brand` letter, also after a check.
+Green or orange letters on the red square are not readable (about 1.3:1). The check
+color shows on that square again when the selection moves away. In CSS, the
+`.cell-selected` letter color must win over `.cell-correct` / `.cell-incorrect`.
 
 ### Status
 
 | Token | Hex | Use |
 | --- | --- | --- |
-| `--success` | `#2E7D4F` | "Solved" badge text, success messages |
+| `--success` | `#256B42` | "Solved" badge text, success messages |
 | `--success-soft` | `#E6F2EA` | Success badge / message background |
 | `--warning` | `#9A5208` | In-progress badge, warnings |
 | `--warning-soft` | `#FDF1E3` | Warning background |
@@ -74,8 +79,9 @@ Light theme only (no dark theme yet; a dark "Yalda Night" theme is a possible la
 | `--danger-soft` | `#FDEDE6` | Error panel background |
 
 Contrast (WCAG): `--on-brand` on `--brand` 6.5:1, `--ink` on `--page` 16:1,
-`--muted` on `--page` 5.1:1, `--brand` on `--surface` 6.5:1. Keep `--faint` for
-non-essential text only (about 3.2:1).
+`--muted` on `--page` 5.1:1, `--brand` on `--surface` 6.5:1, `--success` on
+`--success-soft` 5.6:1, `--control-border` on `--surface` 3.25:1 (non-text minimum is 3:1).
+Keep `--faint` for non-essential text only (about 3.2:1).
 
 ## Migration from the old green theme
 
@@ -94,7 +100,7 @@ The old app was green (`#1E5C38`). Replace colors like this:
 | `#D7EADF` (active word) | `--cell-word` `#F7DDE1` |
 | `#E9EDF1` (down word) | `--cell-down-word` `#F1E9EA` |
 | `#F0C96A` (selected, yellow) | `--cell-selected` `#B3243A` + white letter |
-| `#145C35` (correct) | `--cell-correct` `#2E7D4F` |
+| `#145C35` (correct) | `--cell-correct` `#256B42` |
 | `#8B1A1A` (wrong / danger) | `--cell-incorrect` `#C2410C`, `--danger` `#A3360B` |
 
 Category colors for icons (blue, purple, amber) can stay, but keep them soft so they
