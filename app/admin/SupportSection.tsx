@@ -23,6 +23,7 @@ export function SupportSection() {
   const visibleThreads = useMemo(() => (threads ?? [])
     .filter((thread) => (kind === "all" || thread.kind === kind) && (status === "all" || thread.status === status))
     .sort((a, b) => b.lastMessageAt.toMillis() - a.lastMessageAt.toMillis()), [threads, kind, status]);
+  const filterStatuses: SupportStatus[] = kind === "all" ? Object.keys(supportStatusText) as SupportStatus[] : statusByKind[kind];
   const selected = threads?.find((thread) => thread.id === selectedId);
 
   async function updateStatus(thread: SupportThread, next: SupportStatus) {
@@ -36,11 +37,15 @@ export function SupportSection() {
   return <section className="admin-section" aria-label="گزارش‌ها و پیام‌ها">
     <h2>گزارش‌ها و پیام‌ها</h2>
     <div className="support-inbox-filters">
-      <label>نوع گزارش<select aria-label="نوع گزارش" value={kind} onChange={(event) => setKind(event.target.value as typeof kind)}>
+      <label>نوع گزارش<select aria-label="نوع گزارش" value={kind} onChange={(event) => {
+        const next = event.target.value as typeof kind;
+        setKind(next);
+        if (status !== "all" && next !== "all" && !statusByKind[next].includes(status)) setStatus("all");
+      }}>
         <option value="all">همه</option><option value="clue_error">اشکال در سرنخ</option><option value="contact">پیام پشتیبانی</option>
       </select></label>
       <label>وضعیت<select aria-label="وضعیت" value={status} onChange={(event) => setStatus(event.target.value as typeof status)}>
-        <option value="all">همه</option>{Object.entries(supportStatusText).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        <option value="all">همه</option>{filterStatuses.map((value) => <option key={value} value={value}>{supportStatusText[value]}</option>)}
       </select></label>
     </div>
     {error ? <p className="admin-error" role="alert">خواندن پیام‌ها انجام نشد. دوباره تلاش کنید.</p> : null}

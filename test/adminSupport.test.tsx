@@ -57,6 +57,18 @@ describe("admin support inbox", () => {
     expect(screen.getByText(/موردی پیدا نشد/)).toBeInTheDocument();
   });
 
+  it("limits status filters to the selected kind and clears an incompatible status", async () => {
+    await openInbox();
+    const kindFilter = screen.getByLabelText("نوع گزارش");
+    const statusFilter = screen.getByLabelText("وضعیت");
+    await userEvent.selectOptions(statusFilter, "answered");
+    expect(screen.getByText("کمک")).toBeInTheDocument();
+    await userEvent.selectOptions(kindFilter, "clue_error");
+    expect(within(statusFilter).queryByRole("option", { name: "پاسخ داده شده" })).not.toBeInTheDocument();
+    expect(statusFilter).toHaveValue("all");
+    expect(screen.getByText("پرسش اشتباه")).toBeInTheDocument();
+  });
+
   it("shows the snapshot and encoded puzzle link, replies, clears unread, and limits statuses by kind", async () => {
     await openInbox();
     await userEvent.click(await screen.findByRole("button", { name: /پرسش اشتباه/ }));
