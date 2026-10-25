@@ -7,8 +7,8 @@ import { ImageCropper } from "../app/admin/ImageCropper";
 
 const { extract, createDraft } = vi.hoisted(() => ({ extract: vi.fn(), createDraft: vi.fn() }));
 vi.mock("../app/admin/openRouterPhoto", async (original) => ({ ...await original<typeof import("../app/admin/openRouterPhoto")>(), extractOpenRouterPhoto: extract }));
-vi.mock("../app/admin/adminApi", () => ({ createDraft, PuzzleIdTakenError: class extends Error {} }));
-import { PuzzleIdTakenError } from "../app/admin/adminApi";
+vi.mock("../app/admin/adminApi", () => ({ createDraft, PuzzleIdTakenError: class extends Error {}, DraftUploadError: class extends Error { constructor(readonly id: string, cause: unknown) { super(String(cause)); } } }));
+import { DraftUploadError, PuzzleIdTakenError } from "../app/admin/adminApi";
 import { PhotoImportSection } from "../app/admin/PhotoImportSection";
 import { loadOpenRouterKey, saveOpenRouterKey } from "../app/progress";
 import { ADMIN_SETTINGS_KEY, loadPhotoSettings, loadCropSettings, saveAdminSettings } from "../app/admin/adminSettings";
@@ -240,6 +240,37 @@ describe("photo import", () => {
     fireEvent.change(screen.getByLabelText("عنوان"), { target: { value: "جدول تازه" } });
     expect(screen.getByRole("button", { name: "ساخت پیش‌نویس از نتیجه" })).toBeEnabled();
     expect(screen.getByLabelText("شناسهٔ جدول")).toHaveValue(330);
+  });
+
+
+
+  it("retries incomplete uploads with the reserved id even after the draft listener updates", async () => {
+    createDraft.mockRejectedValueOnce(new DraftUploadError("328", new Error("upload failed"))).mockResolvedValueOnce(undefined);
+    const view = await readyAutoForm();
+    const save = screen.getByRole("button", { name: "ساخت پیش‌نویس از نتیجه" });
+    await userEvent.click(save);
+    await screen.findByRole("alert");
+    view.rerender(<PhotoImportSection takenIds={new Set(["327", "328"])} />);
+    expect(screen.getByRole("spinbutton", { name: "شناسهٔ جدول" })).toHaveValue(328);
+    expect(save).toBeEnabled();
+    await userEvent.click(save);
+    const link = await screen.findByRole("link", { name: "باز کردن برای حل و ویرایش" });
+    expect(createDraft.mock.calls.map(([draft]) => draft.id)).toEqual(["328", "328"]);
+    expect(link).toHaveAttribute("href", "#/admin/draft/328");
+  });
+
+  it("advances beyond the last collision after exhausting automatic attempts", async () => {
+    createDraft.mockRejectedValue(new PuzzleIdTakenError("شناسه قبلاً استفاده شده است."));
+    await readyAutoForm();
+    const save = screen.getByRole("button", { name: "ساخت پیش‌نویس از نتیجه" });
+    await userEvent.click(save);
+    await screen.findByRole("alert");
+    expect(createDraft.mock.calls.map(([draft]) => draft.id)).toEqual(["328", "329", "330"]);
+    expect(screen.getByRole("spinbutton", { name: "شناسهٔ جدول" })).toHaveValue(331);
+    createDraft.mockResolvedValue(undefined);
+    await userEvent.click(save);
+    await screen.findByRole("link", { name: "باز کردن برای حل و ویرایش" });
+    expect(createDraft.mock.calls[3]![0].id).toBe("331");
   });
 
   it.each(["manual collision", "offline", "repeated collision"])("reports %s without uncontrolled retries", async (kind) => {

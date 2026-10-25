@@ -7,7 +7,6 @@ import {
   doc,
   onSnapshot,
   runTransaction,
-  setDoc,
   type Transaction,
   type Unsubscribe,
 } from "firebase/firestore";
@@ -50,6 +49,7 @@ interface DraftDoc {
   readonly images: Partial<Record<ImageKind, DraftImage>>;
   readonly createdAt: number;
   readonly updatedAt: number;
+  readonly imagesPending?: boolean;
 }
 
 export interface Draft {
@@ -59,6 +59,7 @@ export interface Draft {
   readonly file: string;
   readonly images: Partial<Record<ImageKind, DraftImage>>;
   readonly updatedAt: number;
+  readonly imagesPending?: boolean;
   readonly solutionImageUrl: string | undefined;
   readonly sourceImageUrl: string | undefined;
 }
@@ -83,6 +84,7 @@ function toDraft(id: string, data: DraftDoc): Draft | undefined {
       file: data.file,
       images: data.images ?? {},
       updatedAt: data.updatedAt ?? 0,
+      imagesPending: data.imagesPending === true,
       solutionImageUrl: data.images?.solution ? storageFileUrl(data.images.solution.path) : undefined,
       sourceImageUrl: data.images?.source ? storageFileUrl(data.images.source.path) : undefined,
     };
@@ -164,7 +166,13 @@ export async function saveDraft(draft: Draft, json: CrosswordJson): Promise<void
   // A draft that fails validation could no longer be opened in the solver.
   const problems = validateStoredPuzzleJson(json).issues.map((i) => i.message);
   if (problems.length) throw new Error(problems.join("\n"));
-  await setDoc(draftRef(draft.id), { json: toJsonText(json), updatedAt: Date.now() }, { merge: true });
+  await runTransaction(db, async (tx) => {
+    const saved = await tx.get(draftRef(draft.id));
+    if (!saved.exists()) throw new Error("این پیش‌نویس دیگر وجود ندارد؛ فهرست را دوباره بررسی کنید.");
+    const current = saved.data() as DraftDoc;
+    if (current.imagesPending) throw new Error("بارگذاری تصاویر این پیش‌نویس کامل نشده است.");
+    tx.set(draftRef(draft.id), { ...current, json: toJsonText(json), updatedAt: Date.now() });
+  });
 }
 
 export async function deleteDraft(id: string): Promise<void> {
@@ -198,6 +206,7 @@ export async function renameDraft(draft: Draft, json: CrosswordJson, newId: stri
     const catalogSnap = await tx.get(catalogRef);
     if (!original.exists()) throw new Error("این پیش‌نویس دیگر وجود ندارد؛ فهرست را دوباره بررسی کنید.");
     const source = original.data() as DraftDoc;
+    if (source.imagesPending) throw new Error("بارگذاری تصاویر این پیش‌نویس کامل نشده است.");
     // A newer draft must be reviewed instead of moving a stale snapshot over another admin's edits.
     if (source.json !== draft.jsonText) throw new Error("محتوای پیش‌نویس تغییر کرده است؛ آن را دوباره بررسی و ذخیره کنید.");
     if (target.exists()) throw new Error(`شناسهٔ «${id}» قبلاً استفاده شده است.`);
@@ -241,6 +250,7 @@ export async function publishDraft(draft: Draft, json: CrosswordJson = draft.jso
       if (current) throw new Error(`جدول دیگری با شناسهٔ «${id}» منتشر شده است.`);
       const original = await tx.get(draftRef(id));
       if (!original.exists()) throw new Error("این پیش‌نویس دیگر وجود ندارد؛ فهرست را دوباره بررسی کنید.");
+      if ((original.data() as DraftDoc).imagesPending) throw new Error("بارگذاری تصاویر این پیش‌نویس کامل نشده است.");
       // A newer draft must be reviewed instead of publishing a stale snapshot over another admin's edits.
       if ((original.data() as DraftDoc).json !== draft.jsonText) throw new Error("محتوای پیش‌نویس تغییر کرده است؛ آن را دوباره بررسی و منتشر کنید.");
       return published;
@@ -284,10 +294,8 @@ export async function unpublishPuzzle(id: string): Promise<void> {
   );
 }
 
-async function uploadImage(id: string, file: ImportFile, name: string): Promise<DraftImage> {
-  const hash = await imageHash(file.bytes);
-  const path = imageStoragePath(id, { name, hash });
-  const target = ref(storage, path);
+async function uploadImage(image: DraftImage, file: ImportFile): Promise<void> {
+  const target = ref(storage, image.path);
   // Content-addressed: an existing file already holds these exact bytes.
   const exists = await getMetadata(target).then(
     () => true,
@@ -295,26 +303,49 @@ async function uploadImage(id: string, file: ImportFile, name: string): Promise<
   );
   if (!exists) {
     await uploadBytes(target, file.bytes, {
-      contentType: imageContentType(name),
+      contentType: imageContentType(image.name),
       cacheControl: "public, max-age=31536000, immutable",
     });
   }
-  return { path, name, hash };
 }
 
 export class PuzzleIdTakenError extends Error {}
 
+export class DraftUploadError extends Error {
+  constructor(readonly id: string, cause: unknown) {
+    super(`بارگذاری تصاویر پیش‌نویس «${id}» کامل نشد؛ دوباره ساخت پیش‌نویس را بزنید. ${cause instanceof Error ? cause.message : String(cause)}`);
+  }
+}
+
 export async function createDraft(planned: PlannedDraft): Promise<void> {
   if (!isValidPuzzleId(planned.id)) throw new Error("شناسهٔ جدول نامعتبر است.");
   const images: Partial<Record<ImageKind, DraftImage>> = {};
-  for (const image of planned.images) images[image.kind] = await uploadImage(planned.id, image.file, image.name);
+  for (const image of planned.images) {
+    const hash = await imageHash(image.file.bytes);
+    images[image.kind] = { path: imageStoragePath(planned.id, { name: image.name, hash }), name: image.name, hash };
+  }
   const now = Date.now();
-  const doc: DraftDoc = { schema: 1, json: planned.jsonText, file: planned.file, images, createdAt: now, updatedAt: now };
-  // The panel's lists can be stale (startup, another tab): re-check the id where it's written.
+  const doc: DraftDoc = { schema: 1, json: planned.jsonText, file: planned.file, images, imagesPending: planned.images.length > 0, createdAt: now, updatedAt: now };
+  const matchingImages = (saved: DraftDoc) => (["source", "solution"] as const).every((kind) =>
+    saved.images[kind]?.path === images[kind]?.path && saved.images[kind]?.name === images[kind]?.name);
+  // Reserve before uploading; keep every image referenced even if an upload fails.
   await runTransaction(db, async (tx) => {
     const [draftSnap, catalogSnap] = [await tx.get(draftRef(planned.id)), await tx.get(catalogRef)];
     const packs = (catalogSnap.data() as CatalogDoc | undefined)?.packs ?? {};
-    if (draftSnap.exists() || packOf(packs, planned.id)) throw new PuzzleIdTakenError(`شناسهٔ «${planned.id}» قبلاً استفاده شده است.`);
-    tx.set(draftRef(planned.id), doc);
+    const current = draftSnap.data() as DraftDoc | undefined;
+    if (packOf(packs, planned.id) || (current && (!current.imagesPending || current.json !== doc.json || !matchingImages(current)))) {
+      throw new PuzzleIdTakenError(`شناسهٔ «${planned.id}» قبلاً استفاده شده است.`);
+    }
+    if (!current) tx.set(draftRef(planned.id), doc);
   });
+  if (!planned.images.length) return;
+  try {
+    for (const image of planned.images) await uploadImage(images[image.kind]!, image.file);
+    await runTransaction(db, async (tx) => {
+      const saved = await tx.get(draftRef(planned.id));
+      const current = saved.data() as DraftDoc | undefined;
+      if (!current || !matchingImages(current)) throw new Error("پیش‌نویس تغییر کرده یا حذف شده است.");
+      tx.set(draftRef(planned.id), { ...current, imagesPending: false });
+    });
+  } catch (error) { throw new DraftUploadError(planned.id, error); }
 }

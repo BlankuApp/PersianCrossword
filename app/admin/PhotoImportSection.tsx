@@ -6,7 +6,7 @@ import { PuzzleMetaEditor } from "../components/PuzzleMetaEditor";
 import { applyMetaForm } from "../components/puzzleMeta";
 import { PersianNumberInput } from "../components/PersianNumberInput";
 import { localizeInputDigits, toPersianDigits } from "../persianNumbers";
-import { createDraft, PuzzleIdTakenError } from "./adminApi";
+import { createDraft, DraftUploadError, PuzzleIdTakenError } from "./adminApi";
 import { AdminHelp } from "./AdminHelp";
 import { ImageCropper } from "./ImageCropper";
 import { isValidPuzzleId, newPuzzleId, planImport, type ImportFile } from "./importPlan";
@@ -56,6 +56,7 @@ export function PhotoImportSection({ takenIds }: { takenIds: ReadonlySet<string>
   const [id, setId] = useState(() => newPuzzleId(takenIds));
   const [manualId, setManualId] = useState(false);
   const [idError, setIdError] = useState("");
+  const [retryId, setRetryId] = useState("");
   const usedIds = useRef(new Set<string>());
   const difficulty = variant === "special" ? "ویژه" : "عادی";
   const [meta, setMeta] = useState(() => ({
@@ -94,14 +95,14 @@ export function PhotoImportSection({ takenIds }: { takenIds: ReadonlySet<string>
     catch (e) { return { json: null, error: errorText(e) }; }
   }, [clueText, gridText, rows, cols, clueReview, gridReview]);
   useEffect(() => {
-    if (!manualId && !savedId) {
+    if (!manualId && !savedId && !retryId) {
       const nextId = newPuzzleId([...takenIds, ...usedIds.current]);
       if (id !== nextId) setId(nextId);
     }
-  }, [manualId, savedId, takenIds, id]);
+  }, [manualId, savedId, takenIds, id, retryId]);
   const numericId = /^[0-9]+$/.test(id.trim()) && Number.isSafeInteger(Number(id)) && Number(id) > 0;
   const validId = numericId && isValidPuzzleId(id.trim());
-  const taken = !savedId && manualId && (takenIds.has(id.trim()) || !!idError);
+  const taken = !savedId && manualId && ((takenIds.has(id.trim()) && id.trim() !== retryId) || !!idError);
   const clueCount = clueReview?.clues ? Object.values(clueReview.clues.horizontal).concat(Object.values(clueReview.clues.vertical)).reduce((n, g) => n + g.length, 0) : 0;
   const effortLabel = REASONING_EFFORTS.find(([value]) => value === reasoningEffort)?.[1] ?? reasoningEffort;
 
@@ -163,18 +164,21 @@ export function PhotoImportSection({ takenIds }: { takenIds: ReadonlySet<string>
           { name: `${slug}.json`, bytes: new TextEncoder().encode(JSON.stringify(json, null, 2)) },
           imageFile(`${slug}.png`, gridImage), imageFile(`${slug}-clues.png`, clueImage),
         ];
-        const plan = planImport(files, takenIds);
+        const unavailable = retryId === slug ? new Set([...takenIds].filter((taken) => taken !== retryId)) : takenIds;
+        const plan = planImport(files, unavailable);
         if (plan.problems.length || !plan.drafts[0]) throw new Error(plan.problems.join("\n"));
         try {
           await createDraft(plan.drafts[0]);
-          usedIds.current.add(slug); setId(slug); setSavedId(slug);
+          usedIds.current.add(slug); setRetryId(""); setId(slug); setSavedId(slug);
           return;
         } catch (e) {
+          if (e instanceof DraftUploadError) { setRetryId(e.id); setId(e.id); throw e; }
           if (!(e instanceof PuzzleIdTakenError)) throw e;
+          setRetryId("");
           if (manualId) { setIdError(errorText(e)); throw e; }
-          if (attempt === 2) throw e;
           usedIds.current.add(slug);
           slug = newPuzzleId([...takenIds, ...usedIds.current]); setId(slug);
+          if (attempt === 2) throw e;
         }
       }
     } catch (e) { if (!(manualId && e instanceof PuzzleIdTakenError)) setMessage(errorText(e)); }
@@ -258,7 +262,7 @@ export function PhotoImportSection({ takenIds }: { takenIds: ReadonlySet<string>
           creating
           value={{ id, ...meta, difficulty, sourceFile: `${id.trim()}-clues.png` }}
           onChange={({ id: nextId, title, newspaper, author }) => {
-            if (nextId !== id) { setId(nextId); setManualId(true); setIdError(""); }
+            if (nextId !== id) { setId(nextId); setManualId(true); setIdError(""); setRetryId(""); }
             setMeta({ title, newspaper, author }); setSavedId("");
           }}
           takenIds={takenIds}
