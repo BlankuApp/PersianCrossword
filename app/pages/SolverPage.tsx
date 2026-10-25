@@ -101,9 +101,10 @@ interface SolverPageProps {
   // Admins only: turns on the editing tools.
   readonly editor?: PuzzleEditor | undefined;
   readonly onBack?: (() => void) | undefined;
+  readonly backLabel?: string | undefined;
 }
 
-export function SolverPage({ id, slotId, json, solutionImageUrl, sourceImageUrl, editor, onBack = goHome }: SolverPageProps) {
+export function SolverPage({ id, slotId, json, solutionImageUrl, sourceImageUrl, editor, onBack = goHome, backLabel = "بازگشت به فهرست جدول‌ها" }: SolverPageProps) {
   const { user, syncVersion, pushChanges } = useAuth();
   const normalizedJson = useMemo(() => normalizeGridDirection(json), [json]);
   const isDebugMode = !!editor && json.version === 3;
@@ -635,8 +636,8 @@ export function SolverPage({ id, slotId, json, solutionImageUrl, sourceImageUrl,
           type="button"
           className="header-back"
           onClick={onBack}
-          title="بازگشت به فهرست جدول‌ها"
-          aria-label="بازگشت به فهرست جدول‌ها"
+          title={backLabel}
+          aria-label={backLabel}
         >
           <ArrowRight size={20} aria-hidden="true" />
         </button>

@@ -1136,11 +1136,6 @@ select {
   border-top: 1px solid var(--line-strong);
 }
 
-/* Below the divider, the icon column needs room from the line, like the text beside it. */
-.active-clue-block + .active-clue-block .active-clue-head-actions {
-  inset-block-start: 6px;
-}
-
 .active-clue-block-active {
   border-inline-start: 3px solid var(--brand);
   padding-inline-start: calc(var(--active-clue-pad-h) - 3px);
@@ -1271,22 +1266,19 @@ select {
 }
 
 .active-clue-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
   gap: 8px;
 }
 
-/* Reserve four icon widths and three gaps so the strip costs width but no height. */
-.active-clue-block {
-  position: relative;
-  padding-inline-end: calc(128px + var(--stack-gap));
+.active-clue-head > p {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .active-clue-head-actions {
-  position: absolute;
-  inset-block-start: 0;
-  inset-inline-end: 0;
+  position: static;
   display: flex;
   flex-direction: row;
   align-items: center;

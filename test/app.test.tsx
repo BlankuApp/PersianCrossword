@@ -81,8 +81,15 @@ describe("Persian crossword UI", () => {
     authState.isAdmin = true;
     window.location.hash = "#/puzzle/sample-10x10-garden?slot=R1-7&from=admin-support";
     render(<App />);
-    await userEvent.click(screen.getByRole("button", { name: "بازگشت به فهرست جدول‌ها" }));
+    const back = screen.getByRole("button", { name: "بازگشت به گزارش‌ها و پیام‌ها" });
+    expect(back).toHaveAttribute("title", "بازگشت به گزارش‌ها و پیام‌ها");
+    await userEvent.click(back);
     expect(window.location.hash).toBe("#/admin?tab=support");
+  });
+
+  it("keeps the ordinary puzzle back button labeled for the home list", () => {
+    render(<SolverPage id="sample-10x10-garden" json={json10} />);
+    expect(screen.getByRole("button", { name: "بازگشت به فهرست جدول‌ها" })).toHaveAttribute("title", "بازگشت به فهرست جدول‌ها");
   });
 
   it.each([false, true])("preserves the report explanation and selected slot through sign-in (anonymous: %s)", async (anonymous) => {

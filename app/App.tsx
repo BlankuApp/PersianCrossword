@@ -77,6 +77,7 @@ function AppRoutes() {
           sourceImageUrl={puzzle.sourceImageUrl}
           editor={editor}
           onBack={route.from === "admin-support" ? () => navigate("#/admin?tab=support") : goHome}
+          backLabel={route.from === "admin-support" ? "بازگشت به گزارش‌ها و پیام‌ها" : undefined}
         />
       );
     }
