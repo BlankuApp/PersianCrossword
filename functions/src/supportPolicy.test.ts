@@ -19,6 +19,20 @@ describe("parseCreateSupportInput", () => {
     expect(() => parseCreateSupportInput({ kind: "contact", subject: "s", text: "m".repeat(2001) }, "real")).toThrow();
   });
 
+  it("accepts long puzzle titles and clues while trimming and clipping the stored snapshot", () => {
+    const result = parseCreateSupportInput(input("clue_error", {
+      clue: { ...clue, puzzleTitle: `  ${"ت".repeat(200)}عنوان بلند  `, text: `  ${"س".repeat(500)}سرنخ بلند  ` },
+    }), "real");
+    expect(result.clue).toEqual({ ...clue, puzzleTitle: "ت".repeat(200), text: "س".repeat(500) });
+    expect(result.text).toBe("پیام");
+  });
+
+  it.each(["puzzleTitle", "text"])("still rejects blank and non-string snapshot %s", (field) => {
+    for (const value of ["", "   ", null, 123, {}, ["سرنخ"]]) {
+      expect(() => parseCreateSupportInput(input("clue_error", { clue: { ...clue, [field]: value } }), "real")).toThrow();
+    }
+  });
+
   it("makes anonymous and missing contact submissions untracked", () => {
     for (const identity of ["anonymous", "missing"] as const) {
       expect(parseCreateSupportInput(input("contact"), identity)).toMatchObject({ kind: "contact", tracked: false });

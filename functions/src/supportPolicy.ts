@@ -42,9 +42,10 @@ export function parseCreateSupportInput(value: unknown, identity: "real" | "anon
       kind, tracked: true,
       subject: requiredText(value.subject, 120), text: requiredText(value.text, 2000),
       clue: {
-        puzzleId: requiredText(raw.puzzleId, 200), puzzleTitle: requiredText(raw.puzzleTitle, 200),
+        // Puzzle content has no matching length cap; keep bounded snapshots without rejecting reports.
+        puzzleId: requiredText(raw.puzzleId, 200), puzzleTitle: requiredText(raw.puzzleTitle, Infinity).slice(0, 200),
         slotId: requiredText(raw.slotId, 200), direction: raw.direction,
-        groupNum: raw.groupNum, text: requiredText(raw.text, 500),
+        groupNum: raw.groupNum, text: requiredText(raw.text, Infinity).slice(0, 500),
       },
     };
   }
