@@ -23,6 +23,32 @@ npx firebase-tools functions:secrets:set GEMINI_KEY # owner's free-tier key (sep
 npx firebase-tools deploy --only functions          # manual deploy; requires Blaze plan
 ```
 
+### Support reporting and App Check
+
+Support callables use App Check and a server-side rate-limit secret. Configure production before deploying:
+
+- Register the Firebase web app with App Check using a reCAPTCHA Enterprise score-based key for the production domains. Set `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY` to that site's key in the web build environment.
+- Register the Android app with Firebase App Check and Play Integrity. For local Android development, set `VITE_APP_CHECK_DEBUG_TOKEN=1` before building/syncing; the native plugin prints its generated debug token, which must be registered under the Android app's App Check debug tokens. For local web development, set `VITE_APP_CHECK_DEBUG_TOKEN` to a chosen web debug token and register that token under the web app. These opt-ins are development/emulator-only; never set them in a production build.
+- Set the Functions secret with `npx firebase-tools functions:secrets:set SUPPORT_RATE_LIMIT_SALT`. Keep the value private and stable; do not commit it.
+- `SUPPORT_ENFORCE_APP_CHECK` is a Functions boolean parameter whose default is `false`. Keep it false during rollout. Deploy callable functions and rules before releasing the matching client, then verify healthy verified-request metrics for both web and Android in Firebase App Check. Set the parameter to `true` for the enforcement deploy only after both platforms are healthy; monitor failed callable requests after enforcement.
+
+For local use, put a development-only `SUPPORT_RATE_LIMIT_SALT` in `functions/.secret.local`, opt into the App Check debug provider, and run:
+
+```bash
+npx firebase-tools emulators:start --only functions,firestore,storage,auth
+VITE_FUNCTIONS_EMULATOR=1 VITE_APP_CHECK_DEBUG_TOKEN=<registered-debug-token> npm run dev
+```
+
+Deploy support rules and functions, then build and sync the Android client when preparing a matching release:
+
+```bash
+npx firebase-tools deploy --only firestore:rules,storage,functions
+npm run build
+npx cap sync android
+```
+
+Keep the client and callable-functions release coordinated: the support client expects the current participant and tracked-thread response payload. The emulator rules suite is `npx firebase-tools emulators:exec --only firestore,storage,auth "npx vitest run test/supportRules.test.ts"`.
+
 ## Architecture
 
 ```
