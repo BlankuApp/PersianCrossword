@@ -302,6 +302,8 @@ async function uploadImage(id: string, file: ImportFile, name: string): Promise<
   return { path, name, hash };
 }
 
+export class PuzzleIdTakenError extends Error {}
+
 export async function createDraft(planned: PlannedDraft): Promise<void> {
   if (!isValidPuzzleId(planned.id)) throw new Error("شناسهٔ جدول نامعتبر است.");
   const images: Partial<Record<ImageKind, DraftImage>> = {};
@@ -312,7 +314,7 @@ export async function createDraft(planned: PlannedDraft): Promise<void> {
   await runTransaction(db, async (tx) => {
     const [draftSnap, catalogSnap] = [await tx.get(draftRef(planned.id)), await tx.get(catalogRef)];
     const packs = (catalogSnap.data() as CatalogDoc | undefined)?.packs ?? {};
-    if (draftSnap.exists() || packOf(packs, planned.id)) throw new Error(`شناسهٔ «${planned.id}» قبلاً استفاده شده است.`);
+    if (draftSnap.exists() || packOf(packs, planned.id)) throw new PuzzleIdTakenError(`شناسهٔ «${planned.id}» قبلاً استفاده شده است.`);
     tx.set(draftRef(planned.id), doc);
   });
 }

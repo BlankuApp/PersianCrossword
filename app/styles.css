@@ -3455,6 +3455,11 @@ select {
   white-space: pre-line;
 }
 
+
+.meta-id-field { display: grid; gap: 4px; align-content: start; min-width: 0; }
+.publish-meta-fields input[aria-invalid="true"] { border-color: var(--danger); background: var(--danger-soft); outline-color: var(--danger); }
+.publish-meta-fields .admin-error { color: var(--danger); }
+
 .meta-editor-advanced { grid-column: 1 / -1; font-size: 0.85rem; }
 .meta-editor-advanced summary { cursor: pointer; color: var(--muted); }
 .meta-editor-advanced-body { display: grid; gap: 10px; margin-top: 8px; }

@@ -4,7 +4,7 @@ import { webcrypto } from "node:crypto";
 import { setDoc } from "firebase/firestore";
 import { entryImageRefs, puzzleHash, type CatalogDoc, type PackDoc } from "../shared/cloudPuzzles";
 import { basicPuzzleV3 } from "./fixtures";
-import { createDraft, publishDraft, renameDraft, saveDraftMeta, savePublishedPuzzle, unpublishPuzzle, type Draft } from "../app/admin/adminApi";
+import { createDraft, PuzzleIdTakenError, publishDraft, renameDraft, saveDraftMeta, savePublishedPuzzle, unpublishPuzzle, type Draft } from "../app/admin/adminApi";
 import { loadMirror, loadProgress, saveProgress } from "../app/progress";
 
 // The core fixture uses LTR board coordinates; Firebase stores repository-format RTL rows.
@@ -191,5 +191,15 @@ describe("publishing", () => {
     await expect(publishDraft(current)).rejects.toThrow(/محتوای پیش‌نویس تغییر کرده/);
     expect(fake.store.get("drafts/old")).toEqual(latest);
     expect(fake.store.has("catalog/index")).toBe(false);
+  });
+});
+
+
+describe("new draft id collisions", () => {
+  it.each(["old", "live"])("rejects existing draft or published id %s without changing stored puzzles", async (id) => {
+    publishedElsewhere();
+    const before = structuredClone(fake.store);
+    await expect(createDraft({ id, file: "admin/" + id + ".json", jsonText: original.json, title: "", images: [] })).rejects.toBeInstanceOf(PuzzleIdTakenError);
+    expect(fake.store).toEqual(before);
   });
 });

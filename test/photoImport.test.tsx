@@ -7,7 +7,8 @@ import { ImageCropper } from "../app/admin/ImageCropper";
 
 const { extract, createDraft } = vi.hoisted(() => ({ extract: vi.fn(), createDraft: vi.fn() }));
 vi.mock("../app/admin/openRouterPhoto", async (original) => ({ ...await original<typeof import("../app/admin/openRouterPhoto")>(), extractOpenRouterPhoto: extract }));
-vi.mock("../app/admin/adminApi", () => ({ createDraft }));
+vi.mock("../app/admin/adminApi", () => ({ createDraft, PuzzleIdTakenError: class extends Error {} }));
+import { PuzzleIdTakenError } from "../app/admin/adminApi";
 import { PhotoImportSection } from "../app/admin/PhotoImportSection";
 import { loadOpenRouterKey, saveOpenRouterKey } from "../app/progress";
 import { ADMIN_SETTINGS_KEY, loadPhotoSettings, loadCropSettings, saveAdminSettings } from "../app/admin/adminSettings";
@@ -66,6 +67,200 @@ async function wholeCrop(input: HTMLInputElement) {
 }
 
 describe("photo import", () => {
+  it("accepts a bare grid array with the same normalization and validation as the wrapped format", () => {
+    expect(extractedGrid([["ك", "", "ي"]], 1, 3)).toEqual([["ک", "", "ی"]]);
+    for (const invalid of [[], [["ا"]], [[null, "ا", "ب"]], [["اب", "", "ب"]]]) {
+      expect(() => extractedGrid(invalid, 1, 3)).toThrow();
+    }
+    expect(photoPuzzle(JSON.stringify(clues), JSON.stringify(grid.grid), 2, 2)).toEqual(photoPuzzle(JSON.stringify(clues), JSON.stringify(grid), 2, 2));
+  });
+
+  it("previews and saves a bare grid array as a normal puzzle", async () => {
+    createDraft.mockResolvedValue(undefined);
+    await readyAutoForm(grid.grid);
+    expect(screen.getByRole("textbox", { name: "خانهٔ ردیف ۲ ستون ۱ از راست" })).toHaveValue("ک");
+    await userEvent.click(screen.getByRole("button", { name: "ساخت پیش‌نویس از نتیجه" }));
+    await screen.findByRole("link", { name: "باز کردن برای حل و ویرایش" });
+    expect(JSON.parse(createDraft.mock.calls[0]![0].jsonText).grid).toEqual([["ا", "ب"], ["ک", "ی"]]);
+  });
+
+  it("groups editable metadata in the first step and keeps the final step for review", () => {
+    render(<PhotoImportSection takenIds={new Set(["327"])} />);
+    const specs = screen.getByRole("heading", { name: "مشخصات جدول" }).closest("section")!;
+    for (const label of ["نوع جدول", "شماره در روزنامه (اختیاری)", "عنوان", "روزنامه", "طراح"]) {
+      expect(within(specs).getAllByLabelText(label)).toHaveLength(1);
+    }
+    expect(within(specs).getByRole("spinbutton", { name: "شناسهٔ جدول" })).toHaveValue(328);
+    expect(within(specs).queryByText("پیشرفته")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("سطح")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("نام تصویر منبع")).not.toBeInTheDocument();
+    expect(screen.queryByText("تاریخ انتشار")).not.toBeInTheDocument();
+    const review = screen.getByRole("heading", { name: "بررسی و ساخت پیش‌نویس" }).closest("section")!;
+    expect(within(review).queryByRole("textbox")).not.toBeInTheDocument();
+    expect(within(review).getByRole("list", { name: "بررسی‌ها" })).toBeInTheDocument();
+  });
+
+  it("updates the suggested title with the newspaper number and preserves a custom title", () => {
+    const view = render(<PhotoImportSection takenIds={new Set()} />);
+    const number = screen.getByLabelText("شماره در روزنامه (اختیاری)");
+    fireEvent.change(number, { target: { value: "8050" } });
+    expect(screen.getByLabelText("عنوان")).toHaveValue("جدول ۸۰۵۰");
+    fireEvent.change(number, { target: { value: "8051" } });
+    expect(screen.getByLabelText("عنوان")).toHaveValue("جدول ۸۰۵۱");
+    fireEvent.change(number, { target: { value: "" } });
+    expect(screen.getByLabelText("عنوان")).toHaveValue("");
+    fireEvent.change(number, { target: { value: "8052" } });
+    fireEvent.change(screen.getByLabelText("عنوان"), { target: { value: "عنوان دلخواه" } });
+    fireEvent.change(number, { target: { value: "8053" } });
+    expect(screen.getByLabelText("عنوان")).toHaveValue("عنوان دلخواه");
+    view.unmount();
+    render(<PhotoImportSection takenIds={new Set()} />);
+    expect(screen.getByLabelText("عنوان")).toHaveValue("عنوان دلخواه");
+    fireEvent.change(screen.getByLabelText("شماره در روزنامه (اختیاری)"), { target: { value: "8054" } });
+    expect(screen.getByLabelText("عنوان")).toHaveValue("عنوان دلخواه");
+  });
+
+
+  it("continues updating a restored generated title even when the saved digits were English", () => {
+    saveAdminSettings({ photo: { puzzleNumber: "8050", meta: { title: "جدول 8050" } } });
+    render(<PhotoImportSection takenIds={new Set()} />);
+    expect(screen.getByLabelText("عنوان")).toHaveValue("جدول ۸۰۵۰");
+    fireEvent.change(screen.getByLabelText("شماره در روزنامه (اختیاری)"), { target: { value: "٨٠٥١" } });
+    expect(screen.getByLabelText("عنوان")).toHaveValue("جدول ۸۰۵۱");
+  });
+
+  it.each(["normal", "special"])("saves the displayed title and derives %s difficulty from the single type selector", async (variant) => {
+    saveAdminSettings({ photo: { variant, puzzleNumber: "8050", meta: { difficulty: "مقدار قدیمی ناسازگار", newspaper: "ایران", author: "طراح" } } });
+    createDraft.mockResolvedValue(undefined);
+    await readyAutoForm();
+    expect(screen.getByLabelText("عنوان")).toHaveValue("جدول ۸۰۵۰");
+    fireEvent.change(screen.getByLabelText("شماره در روزنامه (اختیاری)"), { target: { value: "8051" } });
+    expect(screen.getByLabelText("عنوان")).toHaveValue("جدول ۸۰۵۱");
+    // Changing the source number requires reviewing the matching extracted content again.
+    fireEvent.change(screen.getByLabelText("پرسش‌های استخراج‌شده (قابل ویرایش)"), { target: { value: JSON.stringify(clues) } });
+    fireEvent.change(screen.getByLabelText("جدول استخراج‌شده (قابل ویرایش)"), { target: { value: JSON.stringify(grid) } });
+    await userEvent.click(screen.getByRole("button", { name: "ساخت پیش‌نویس از نتیجه" }));
+    await screen.findByRole("link", { name: "باز کردن برای حل و ویرایش" });
+    const draft = createDraft.mock.calls[0]![0];
+    expect(JSON.parse(draft.jsonText).meta).toMatchObject({ title: "جدول ۸۰۵۱", difficulty: variant === "special" ? "ویژه" : "عادی", newspaper: "ایران", author: "طراح", sourceFile: draft.id + "-clues.png" });
+  });
+
+  it("suggests the next numeric id in the main form and keeps it until a draft is saved", () => {
+    saveAdminSettings({ photo: { id: "old-id" } });
+    const view = render(<PhotoImportSection takenIds={new Set(["327"])} />);
+    const input = screen.getByLabelText("شناسهٔ جدول") as HTMLInputElement;
+    const first = input.value;
+    expect(first).toBe("328");
+    expect(input.closest("details")).toBeNull();
+    expect(screen.getByText("شناسهٔ جدول خودکار ساخته می‌شود.")).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem(ADMIN_SETTINGS_KEY)!).photo).not.toHaveProperty("id");
+    view.rerender(<PhotoImportSection takenIds={new Set(["327"])} />);
+    expect(input).toHaveValue(Number(first));
+    view.unmount();
+    render(<PhotoImportSection takenIds={new Set(["327"])} />);
+    expect(screen.getByLabelText("شناسهٔ جدول")).toHaveValue(Number(first));
+  });
+
+  it("renews an automatic id when a loaded catalog claims it, and flags invalid manual ids", () => {
+    const view = render(<PhotoImportSection takenIds={new Set()} />);
+    const previousId = (screen.getByLabelText("شناسهٔ جدول") as HTMLInputElement).value;
+    const id = previousId.replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)));
+    view.rerender(<PhotoImportSection takenIds={new Set([id])} />);
+    expect(screen.getByLabelText("شناسهٔ جدول")).not.toHaveValue(Number(previousId));
+    view.rerender(<PhotoImportSection takenIds={new Set(["327"])} />);
+    expect(screen.getByLabelText("شناسهٔ جدول")).toHaveValue(328);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    for (const value of ["0", "99999999999999999", ""]) {
+      fireEvent.change(screen.getByLabelText("شناسهٔ جدول"), { target: { value } });
+      expect(screen.getByLabelText("شناسهٔ جدول")).toHaveAttribute("aria-invalid", "true");
+      expect(screen.getByLabelText("شناسهٔ جدول").closest("details")).toBeNull();
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+    }
+  });
+
+  async function readyAutoForm(gridValue: unknown = grid) {
+    const view = render(<PhotoImportSection takenIds={new Set(["327"])} />);
+    fireEvent.change(screen.getByLabelText("تعداد ردیف‌ها"), { target: { value: "2" } });
+    fireEvent.change(screen.getByLabelText("تعداد ستون‌ها"), { target: { value: "2" } });
+    for (const input of view.container.querySelectorAll<HTMLInputElement>("input[type=file]")) { pick(input); await wholeCrop(input); }
+    fireEvent.change(screen.getByLabelText("پرسش‌های استخراج‌شده (قابل ویرایش)"), { target: { value: JSON.stringify(clues) } });
+    fireEvent.change(screen.getByLabelText("جدول استخراج‌شده (قابل ویرایش)"), { target: { value: JSON.stringify(gridValue) } });
+    return view;
+  }
+
+
+
+  it("uses a native number field and blocks duplicates until corrected", async () => {
+    const view = await readyAutoForm();
+    const id = screen.getByRole("spinbutton", { name: "شناسهٔ جدول" });
+    const save = screen.getByRole("button", { name: "ساخت پیش‌نویس از نتیجه" });
+    expect(id).toHaveAttribute("type", "number");
+    expect(id).toHaveAttribute("step", "1");
+    expect(id).toHaveAttribute("min", "1");
+    expect(id).toHaveValue(328);
+    fireEvent.change(id, { target: { value: "0327" } });
+    expect(id).toHaveValue(327);
+    expect(id).toHaveAttribute("aria-invalid", "true");
+    const error = screen.getByRole("alert");
+    expect(error).toHaveTextContent("قبلاً استفاده شده");
+    expect(id).toHaveAttribute("aria-describedby", error.id);
+    expect(save).toBeDisabled();
+    fireEvent.change(id, { target: { value: "328" } });
+    expect(id).toHaveAttribute("aria-invalid", "false");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(save).toBeEnabled();
+    view.rerender(<PhotoImportSection takenIds={new Set(["327", "500"])} />);
+    expect(id).toHaveValue(328);
+    for (const value of ["0", "-1", "1.5", ""]) {
+      fireEvent.change(id, { target: { value } });
+      expect(id).toHaveAttribute("aria-invalid", "true");
+      expect(save).toBeDisabled();
+    }
+    fireEvent.change(id, { target: { value: "1" } });
+    expect(id).toHaveValue(1);
+    expect(save).toBeEnabled();
+  });
+
+  it("retries a concurrent automatic collision and keeps saved filenames consistent", async () => {
+    createDraft.mockRejectedValueOnce(new PuzzleIdTakenError("taken")).mockResolvedValueOnce(undefined);
+    const view = await readyAutoForm();
+    await userEvent.click(screen.getByRole("button", { name: "ساخت پیش‌نویس از نتیجه" }));
+    const link = await screen.findByRole("link", { name: "باز کردن برای حل و ویرایش" });
+    expect(createDraft).toHaveBeenCalledTimes(2);
+    const [first, second] = createDraft.mock.calls.map(([draft]) => draft);
+    expect(first.id).toBe("328");
+    expect(second.id).toBe("329");
+    expect(JSON.parse(second.jsonText).meta).toMatchObject({ id: second.id, sourceFile: second.id + "-clues.png" });
+    expect(second.file).toBe("admin/" + second.id + ".json");
+    expect(second.images.map((image: { name: string }) => image.name)).toEqual([second.id + ".png", second.id + "-clues.png"]);
+    expect(link).toHaveAttribute("href", "#/admin/draft/" + second.id);
+    view.rerender(<PhotoImportSection takenIds={new Set([second.id])} />);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ساخت پیش‌نویس از نتیجه" })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("عنوان"), { target: { value: "جدول تازه" } });
+    expect(screen.getByRole("button", { name: "ساخت پیش‌نویس از نتیجه" })).toBeEnabled();
+    expect(screen.getByLabelText("شناسهٔ جدول")).toHaveValue(330);
+  });
+
+  it.each(["manual collision", "offline", "repeated collision"])("reports %s without uncontrolled retries", async (kind) => {
+    const error = kind === "offline" ? new Error("offline") : new PuzzleIdTakenError("شناسه قبلاً استفاده شده است.");
+    createDraft.mockRejectedValue(error);
+    await readyAutoForm();
+    if (kind === "manual collision") fireEvent.change(screen.getByLabelText("شناسهٔ جدول"), { target: { value: "123" } });
+    await userEvent.click(screen.getByRole("button", { name: "ساخت پیش‌نویس از نتیجه" }));
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(error.message));
+    expect(createDraft).toHaveBeenCalledTimes(kind === "repeated collision" ? 3 : 1);
+    const save = screen.getByRole("button", { name: "ساخت پیش‌نویس از نتیجه" });
+    if (kind === "manual collision") {
+      expect(save).toBeDisabled();
+      expect(screen.getByLabelText("شناسهٔ جدول")).toHaveAttribute("aria-invalid", "true");
+      fireEvent.change(screen.getByLabelText("عنوان"), { target: { value: "عنوان تازه" } });
+      expect(save).toBeDisabled();
+      fireEvent.change(screen.getByLabelText("شناسهٔ جدول"), { target: { value: "124" } });
+      expect(save).toBeEnabled();
+    } else expect(save).toBeEnabled();
+  });
+
   it("requires a key, remembers it locally, uses the chosen model and permits clearing it", async () => {
     localStorage.clear();
     const view = render(<PhotoImportSection takenIds={new Set()} />);
@@ -91,12 +286,12 @@ describe("photo import", () => {
     expect(localStorage.getItem(ADMIN_SETTINGS_KEY)).not.toBeNull();
   });
 
-  it("restores all photo form settings after reopening without storing the key in settings or issuing OCR requests", async () => {
+  it("restores reusable photo form settings after reopening without storing the key in settings or issuing OCR requests", async () => {
     const view = render(<PhotoImportSection takenIds={new Set()} />);
     fireEvent.change(screen.getByLabelText("مدل OpenRouter"), { target: { value: "custom/vision" } });
     await userEvent.selectOptions(screen.getByLabelText("میزان استدلال (Reasoning effort)"), "medium");
-    await userEvent.selectOptions(screen.getByLabelText("نوع شرح"), "special");
-    for (const [label, value] of [["شمارهٔ جدول (اختیاری)", "8050"], ["تعداد ردیف‌ها", "12"], ["تعداد ستون‌ها", "10"], ["شناسهٔ جدول", "8050-special"], ["عنوان", "عنوان 8050"], ["روزنامه", "ایران"], ["سطح", "عادی"], ["طراح", "طراح 2"]]) {
+    await userEvent.selectOptions(screen.getByLabelText("نوع جدول"), "special");
+    for (const [label, value] of [["شماره در روزنامه (اختیاری)", "8050"], ["تعداد ردیف‌ها", "12"], ["تعداد ستون‌ها", "10"], ["شناسهٔ جدول", "8050"], ["عنوان", "عنوان 8050"], ["روزنامه", "ایران"], ["طراح", "طراح 2"]]) {
       fireEvent.change(screen.getByLabelText(label!), { target: { value } });
     }
     const stored = localStorage.getItem(ADMIN_SETTINGS_KEY)!;
@@ -104,24 +299,17 @@ describe("photo import", () => {
     expect(ADMIN_SETTINGS_KEY).not.toMatch(/^persian-crossword:/);
     view.unmount();
     render(<PhotoImportSection takenIds={new Set()} />);
-    for (const [label, value] of [["مدل OpenRouter", "custom/vision"], ["میزان استدلال (Reasoning effort)", "medium"], ["نوع شرح", "special"], ["شمارهٔ جدول (اختیاری)", "۸۰۵۰"], ["تعداد ردیف‌ها", "۱۲"], ["تعداد ستون‌ها", "۱۰"], ["شناسهٔ جدول", "۸۰۵۰-special"], ["عنوان", "عنوان ۸۰۵۰"], ["روزنامه", "ایران"], ["سطح", "عادی"], ["طراح", "طراح ۲"]]) {
+    for (const [label, value] of [["مدل OpenRouter", "custom/vision"], ["میزان استدلال (Reasoning effort)", "medium"], ["نوع جدول", "special"], ["شماره در روزنامه (اختیاری)", "۸۰۵۰"], ["تعداد ردیف‌ها", "۱۲"], ["تعداد ستون‌ها", "۱۰"], ["عنوان", "عنوان ۸۰۵۰"], ["روزنامه", "ایران"], ["طراح", "طراح ۲"]]) {
       expect(screen.getByLabelText(label!)).toHaveValue(value);
     }
     expect(extract).not.toHaveBeenCalled();
   });
 
-  it("keeps an unknown saved difficulty selectable and shows the derived source file and size", () => {
-    saveAdminSettings({ photo: { id: "9", rows: 4, cols: 5, meta: { title: "t", difficulty: "سخت" } } });
-    const { container } = render(<PhotoImportSection takenIds={new Set()} />);
-    expect(screen.getByLabelText("سطح")).toHaveValue("سخت");
-    expect(screen.getByLabelText("نام تصویر منبع")).toHaveValue("9-clues.png");
-    expect(screen.getByLabelText("نام تصویر منبع")).toBeDisabled();
-    expect(container.querySelector(".meta-editor-advanced")).toHaveTextContent("۴ × ۵");
-  });
 
   it("flags a used id in the form but not after the draft was just saved with it", () => {
-    saveAdminSettings({ photo: { id: "used" } });
-    render(<PhotoImportSection takenIds={new Set(["used"])} />);
+    saveAdminSettings({ photo: { id: "123" } });
+    render(<PhotoImportSection takenIds={new Set(["123"])} />);
+    fireEvent.change(screen.getByLabelText("شناسهٔ جدول"), { target: { value: "123" } });
     expect(screen.getByRole("alert")).toHaveTextContent("قبلاً استفاده شده");
   });
 
@@ -305,7 +493,7 @@ describe("photo import", () => {
     await userEvent.click(screen.getByRole("button", { name: "استخراج پرسش‌ها" }));
     await openTab(GRID);
     await userEvent.click(screen.getByRole("button", { name: "استخراج جدول" }));
-    fireEvent.change(screen.getByLabelText("شناسهٔ جدول"), { target: { value: "edited-grid" } });
+    fireEvent.change(screen.getByLabelText("شناسهٔ جدول"), { target: { value: "398" } });
     const cell = screen.getByRole("textbox", { name: "خانهٔ ردیف ۱ ستون ۱ از راست" });
     const save = screen.getByRole("button", { name: "ساخت پیش‌نویس از نتیجه" });
     expect(save).toBeEnabled();
@@ -342,7 +530,7 @@ describe("photo import", () => {
     await userEvent.click(screen.getByRole("button", { name: "استخراج پرسش‌ها" }));
     await openTab(GRID);
     await userEvent.click(screen.getByRole("button", { name: "استخراج جدول" }));
-    fireEvent.change(screen.getByLabelText("شناسهٔ جدول"), { target: { value: "mirrored-grid" } });
+    fireEvent.change(screen.getByLabelText("شناسهٔ جدول"), { target: { value: "435" } });
     const mirror = screen.getByRole("button", { name: "برعکس کردن چپ و راست" });
     const result = screen.getByLabelText("جدول استخراج‌شده (قابل ویرایش)") as HTMLTextAreaElement;
     expect(screen.getByRole("group", { name: "ویرایش خانه‌های جدول" })).toHaveAttribute("dir", "rtl");
@@ -369,7 +557,7 @@ describe("photo import", () => {
     await userEvent.click(screen.getByRole("button", { name: "استخراج پرسش‌ها" }));
     await openTab(GRID);
     await userEvent.click(screen.getByRole("button", { name: "استخراج جدول" }));
-    fireEvent.change(screen.getByLabelText("شناسهٔ جدول"), { target: { value: "reference-223" } });
+    fireEvent.change(screen.getByLabelText("شناسهٔ جدول"), { target: { value: "223" } });
     expect(screen.getByRole("group", { name: "ویرایش خانه‌های جدول" })).toHaveAttribute("dir", "rtl");
     expect(screen.getByRole("textbox", { name: "خانهٔ ردیف ۱ ستون ۱ از راست" })).toHaveValue("ک");
     expect(screen.getByRole("textbox", { name: "خانهٔ ردیف ۱ ستون ۱۵ از راست" })).toHaveValue("س");
@@ -395,8 +583,9 @@ describe("photo import", () => {
     await openTab(GRID);
     await user.click(screen.getByRole("button", { name: "استخراج جدول" }));
     await waitFor(() => expect(screen.getByLabelText("جدول استخراج‌شده (قابل ویرایش)")).toHaveValue(JSON.stringify(grid, null, 2)));
-    await user.type(screen.getByLabelText("شناسهٔ جدول"), "photo-302");
-    expect(screen.getByLabelText("شناسهٔ جدول")).toHaveValue("photo-۳۰۲");
+    await user.clear(screen.getByLabelText("شناسهٔ جدول"));
+    await user.type(screen.getByLabelText("شناسهٔ جدول"), "302");
+    expect(screen.getByLabelText("شناسهٔ جدول")).toHaveValue(302);
     const save = screen.getByRole("button", { name: "ساخت پیش‌نویس از نتیجه" });
     expect(save).toBeEnabled();
     fireEvent.change(screen.getByLabelText("پرسش‌های استخراج‌شده (قابل ویرایش)"), { target: { value: JSON.stringify({ clues: { ...clues.clues, horizontal: { ...clues.clues.horizontal, "1": ["یک", "اضافی"] } } }) } });
@@ -406,11 +595,11 @@ describe("photo import", () => {
     await user.click(save);
     await waitFor(() => expect(createDraft).toHaveBeenCalledOnce());
     const draft = createDraft.mock.calls[0]![0];
-    expect(JSON.parse(draft.jsonText)).toMatchObject({ version: 3, meta: { id: "photo-302", sourceFile: "photo-302-clues.png" }, grid: [["ا", "ب"], ["ک", "ی"]] });
+    expect(JSON.parse(draft.jsonText)).toMatchObject({ version: 3, meta: { id: "302", sourceFile: "302-clues.png" }, grid: [["ا", "ب"], ["ک", "ی"]] });
     expect(JSON.parse(draft.jsonText).clues).toEqual(clues.clues);
     expect(draft.jsonText).not.toContain("test-openrouter-key");
     expect(draft.images.map((i: { kind: string }) => i.kind)).toEqual(["solution", "source"]);
-    expect(screen.getByRole("link", { name: "باز کردن برای حل و ویرایش" })).toHaveAttribute("href", "#/admin/draft/photo-302");
+    expect(screen.getByRole("link", { name: "باز کردن برای حل و ویرایش" })).toHaveAttribute("href", "#/admin/draft/302");
     expect(extract.mock.calls.map(([request]) => request)).toEqual([
       { apiKey: "test-openrouter-key", model: "google/gemini-3.8-flash", reasoningEffort: "high", kind: "clues", rows: 2, cols: 2, image: png, variant: "normal", puzzleNumber: "" },
       { apiKey: "test-openrouter-key", model: "google/gemini-3.8-flash", reasoningEffort: "high", kind: "grid", rows: 2, cols: 2, image: png, variant: "normal", puzzleNumber: "" },
@@ -448,18 +637,19 @@ describe("photo import", () => {
     extract.mockResolvedValue(clues);
     const user = userEvent.setup();
     const view = render(<PhotoImportSection takenIds={new Set()} />);
-    await user.type(screen.getByLabelText("شمارهٔ جدول (اختیاری)"), "۸۰۵۰");
+    await user.type(screen.getByLabelText("شماره در روزنامه (اختیاری)"), "۸۰۵۰");
     for (const input of view.container.querySelectorAll<HTMLInputElement>("input[type=file]")) { pick(input); await wholeCrop(input); }
     await openTab(CLUES);
     await user.click(screen.getByRole("button", { name: "استخراج پرسش‌ها" }));
     await waitFor(() => expect(screen.getByLabelText("پرسش‌های استخراج‌شده (قابل ویرایش)")).toHaveValue(JSON.stringify(clues, null, 2)));
     fireEvent.change(screen.getByLabelText("جدول استخراج‌شده (قابل ویرایش)"), { target: { value: JSON.stringify(grid) } });
-    await user.selectOptions(screen.getByLabelText("نوع شرح"), "special");
+    await user.selectOptions(screen.getByLabelText("نوع جدول"), "special");
     expect(screen.getByLabelText("پرسش‌های استخراج‌شده (قابل ویرایش)")).toHaveValue("");
     expect(screen.getByLabelText("جدول استخراج‌شده (قابل ویرایش)")).toHaveValue("");
     expect(view.container.querySelectorAll(".photo-crop-surface")).toHaveLength(2);
     expect(view.container.querySelectorAll(".photo-crop-list li")).toHaveLength(0);
-    expect(screen.getByLabelText("سطح")).toHaveValue("ویژه");
+    expect(screen.getByLabelText("نوع جدول")).toHaveValue("special");
+    expect(screen.queryByLabelText("سطح")).not.toBeInTheDocument();
     await openTab(CLUES);
     expect(screen.getByRole("button", { name: "استخراج پرسش‌ها" })).toBeDisabled();
     await wholeCrop(view.container.querySelector<HTMLInputElement>("input[type=file]")!);
