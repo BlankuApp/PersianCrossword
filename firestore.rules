@@ -12,6 +12,19 @@ service cloud.firestore {
     function isAdmin() {
       return request.auth != null && request.auth.token.admin == true;
     }
+    function isSupportOwner(ownerUid) {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider != "anonymous"
+        && ownerUid == request.auth.uid;
+    }
+    // Functions own all support writes; clients can only read their conversations.
+    match /supportThreads/{threadId} {
+      allow read: if isAdmin() || isSupportOwner(resource.data.ownerUid);
+      match /messages/{messageId} {
+        allow read: if isAdmin() || isSupportOwner(
+          get(/databases/$(database)/documents/supportThreads/$(threadId)).data.ownerUid);
+      }
+    }
     // Published puzzles (catalog/index + puzzlePacks/{pack}) are public so the app can download
     // them even before sign-in. Admins publish from the app; scripts use the admin SDK.
     match /catalog/{doc} {

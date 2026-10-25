@@ -3,6 +3,13 @@ rules_version = '2';
 // Deploy: npx firebase-tools deploy --only storage
 service firebase.storage {
   match /b/{bucket}/o {
+    // Guest images are admin-only; Functions own all support uploads and changes.
+    match /support/{ownerUid}/{threadId}/{file} {
+      allow read: if request.auth != null && (
+        request.auth.token.get("admin", false) == true
+        || (ownerUid != "guest" && request.auth.uid == ownerUid
+          && request.auth.token.firebase.sign_in_provider != "anonymous"));
+    }
     // Puzzle images: anyone can fetch one by its path, nobody can list them, so a draft's
     // images (uploaded under the same content-addressed names) stay unlisted until published.
     // Admins upload from the app (custom claim, scripts/grantAdmin.ts); scripts use the admin SDK.
