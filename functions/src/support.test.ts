@@ -4,7 +4,8 @@ import { createSupportThread, markSupportRead, networkRateKey, replySupportThrea
 // Only the external persistence boundary is replaced; callable validation and policy stay real.
 const store = vi.hoisted(() => ({
   docs: new Map<string, Record<string, any>>(), images: new Map<string, { bytes: Buffer; options: any }>(),
-  sequence: 0, queue: Promise.resolve(), failSave: false, failCommit: false,
+  sequence: 0, queue: Promise.resolve(), failSave: false, failCommit: false, saveCalls: 0, failThreadCommitOnce: false,
+  onSave: undefined as (() => Promise<void>) | undefined,
 }));
 vi.mock("firebase-admin/firestore", () => {
   const collection = (path: string): any => ({ doc: (id = `id${++store.sequence}`) => ({
@@ -24,6 +25,10 @@ vi.mock("firebase-admin/firestore", () => {
           update: (ref: any, data: any) => writes.set(ref.path, { ...store.docs.get(ref.path), ...data }),
         });
         if (store.failCommit) throw new Error("commit failed");
+        if (store.failThreadCommitOnce && [...writes.keys()].some((path) => path.startsWith("supportThreads/"))) {
+          store.failThreadCommitOnce = false;
+          throw new Error("thread commit failed");
+        }
         for (const [path, data] of writes) store.docs.set(path, data);
         return value;
       });
@@ -34,8 +39,10 @@ vi.mock("firebase-admin/firestore", () => {
 });
 vi.mock("firebase-admin/storage", () => ({ getStorage: () => ({ bucket: () => ({ file: (path: string) => ({
   save: async (bytes: Buffer, options: any) => {
+    store.saveCalls++;
     if (store.failSave) throw new Error("upload failed");
     store.images.set(path, { bytes, options });
+    await store.onSave?.();
   },
   delete: async () => { store.images.delete(path); },
 }) }) }) }));
@@ -62,6 +69,7 @@ async function create(data = contact, uid = "owner") {
 beforeEach(() => {
   store.docs.clear(); store.images.clear(); store.sequence = 0;
   store.queue = Promise.resolve(); store.failSave = false; store.failCommit = false;
+  store.saveCalls = 0; store.failThreadCommitOnce = false; store.onSave = undefined;
   vi.stubEnv("SUPPORT_RATE_LIMIT_SALT", "test-secret");
   vi.useFakeTimers(); vi.setSystemTime(new Date("2026-10-25T12:00:00Z"));
 });
@@ -114,10 +122,39 @@ describe("support callable persistence", () => {
   it("leaves no thread on upload failure and removes an upload when its transaction fails", async () => {
     store.failSave = true;
     await expect(createSupportThread.run(request(imageContact, "owner"))).rejects.toThrow();
-    expect(store.docs.size).toBe(0);
-    store.failSave = false; store.failCommit = true;
+    expect(threadEntries()).toHaveLength(0);
+    expect(store.docs.get("supportUsage/threads_owner")?.count ?? 0).toBe(0);
+    store.failSave = false; store.failThreadCommitOnce = true;
     await expect(createSupportThread.run(request(imageContact, "owner"))).rejects.toThrow();
-    expect(store.docs.size).toBe(0); expect(store.images.size).toBe(0);
+    expect(threadEntries()).toHaveLength(0); expect(store.images.size).toBe(0);
+    expect(store.docs.get("supportUsage/threads_owner")?.count ?? 0).toBe(0);
+    await create(imageContact);
+    expect(store.docs.get("supportUsage/threads_owner")?.count).toBe(1);
+  });
+
+  it("rejects over-limit guest images before Storage save and admits only three concurrent uploads", async () => {
+    const attempts = await Promise.allSettled(Array.from({ length: 5 }, () => createSupportThread.run(request(imageContact))));
+    expect(attempts.filter((result) => result.status === "fulfilled")).toHaveLength(3);
+    expect(attempts.filter((result) => result.status === "rejected")).toEqual([
+      expect.objectContaining({ reason: expect.objectContaining({ code: "resource-exhausted" }) }),
+      expect.objectContaining({ reason: expect.objectContaining({ code: "resource-exhausted" }) }),
+    ]);
+    expect(store.saveCalls).toBe(3);
+    await expect(createSupportThread.run(request(imageContact))).rejects.toMatchObject({ code: "resource-exhausted" });
+    expect(store.saveCalls).toBe(3);
+    expect(threadEntries()).toHaveLength(3);
+  });
+
+  it("does not refund a failed prior-day image reservation from the next day's usage", async () => {
+    store.onSave = async () => {
+      vi.setSystemTime(new Date("2026-10-25T20:30:00Z"));
+      await create();
+      throw new Error("upload completion failed");
+    };
+    await expect(createSupportThread.run(request(imageContact, "owner"))).rejects.toThrow("upload completion failed");
+    expect(store.docs.get("supportUsage/threads_owner")).toEqual({ day: "2026-10-26", count: 1 });
+    expect(threadEntries()).toHaveLength(1);
+    expect(store.images.size).toBe(0);
   });
 
   it("authorizes owner/admin replies, preserves the clue, and increments each unread side atomically", async () => {

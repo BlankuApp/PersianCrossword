@@ -88,15 +88,19 @@ export const createSupportThread = onCall(
     const imagePath = image ? `support/${ownerUid ?? "guest"}/${thread.id}/${message.id}` : undefined;
     const imageFile = imagePath ? getStorage().bucket().file(imagePath) : undefined;
 
-    // Upload before committing the reference; failed transactions remove the private orphan.
-    if (image && imageFile) {
-      await imageFile.save(image.bytes, { resumable: false, metadata: { contentType: image.mimeType } });
+    // Reserve image quota before Storage work; image-free creation remains one transaction.
+    if (imageFile) {
+      await db.runTransaction(async (tx) => {
+        tx.set(usage, await nextUsage(tx, usage, day, ownerUid ? 20 : 3));
+      });
     }
     try {
+      if (image && imageFile) {
+        await imageFile.save(image.bytes, { resumable: false, metadata: { contentType: image.mimeType } });
+      }
       await db.runTransaction(async (tx) => {
-        const next = await nextUsage(tx, usage, day, ownerUid ? 20 : 3);
+        if (!imageFile) tx.set(usage, await nextUsage(tx, usage, day, ownerUid ? 20 : 3));
         const timestamp = FieldValue.serverTimestamp();
-        tx.set(usage, next);
         tx.set(thread, {
           kind: input.kind, subject: input.subject, status: "submitted",
           ...(ownerUid ? { ownerUid } : {}), ...(input.clue ? { clue: input.clue } : {}),
@@ -110,8 +114,15 @@ export const createSupportThread = onCall(
       });
     } catch (error) {
       if (imageFile) {
-        try { await imageFile.delete({ ignoreNotFound: true }); }
-        catch { warn("Failed to remove uncommitted support image", { imagePath }); }
+        try {
+          const uncommitted = await db.runTransaction(async (tx) => {
+            if ((await tx.get(thread)).exists) return false;
+            const reserved = (await tx.get(usage)).data();
+            if (reserved?.day === day && reserved.count > 0) tx.update(usage, { count: reserved.count - 1 });
+            return true;
+          });
+          if (uncommitted) await imageFile.delete({ ignoreNotFound: true });
+        } catch { warn("Failed to roll back support image submission", { imagePath }); }
       }
       throw error;
     }
