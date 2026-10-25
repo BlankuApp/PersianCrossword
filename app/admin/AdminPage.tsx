@@ -56,6 +56,7 @@ export default function AdminPage() {
 
 function AdminContent() {
   const [tab, setTab] = useState<(typeof adminTabs)[number]["id"]>(() => {
+    if (new URLSearchParams(window.location.hash.split("?")[1]).get("tab") === "support") return "support";
     const saved = readAdminSettings().tab;
     return adminTabs.find((item) => item.id === saved)?.id ?? "drafts";
   });

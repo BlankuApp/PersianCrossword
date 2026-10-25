@@ -51,6 +51,15 @@ describe("status policy", () => {
   });
 });
 
+describe("parseReplySupportInput", () => {
+  it("rejects blank text, accepts 2,000 characters, and rejects 2,001", () => {
+    const input = (text: string) => ({ threadId: "thread", participant: "user", text });
+    expect(() => parseReplySupportInput(input("   "))).toThrow();
+    expect(parseReplySupportInput(input("x".repeat(2000))).text).toHaveLength(2000);
+    expect(() => parseReplySupportInput(input("x".repeat(2001)))).toThrow();
+  });
+});
+
 describe("readSupportImage", () => {
   it("accepts PNG, JPEG, and WebP signatures up to 5 MiB", () => {
     const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);

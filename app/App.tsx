@@ -3,7 +3,7 @@ import type { CrosswordJson } from "../src/index";
 import { gridKey } from "./admin/gridKey";
 import { getPuzzleById, usePuzzleLibrary } from "./puzzleLibrary";
 import { refreshPuzzleCatalog } from "./puzzleSync";
-import { useHashRoute, useHardwareBackButton, navigate } from "./router";
+import { useHashRoute, useHardwareBackButton, navigate, goHome } from "./router";
 import { HomePage } from "./pages/HomePage";
 import { SolverPage, type PuzzleEditor } from "./pages/SolverPage";
 import { AuthProvider, useAuth } from "./AuthContext";
@@ -76,6 +76,7 @@ function AppRoutes() {
           solutionImageUrl={puzzle.solutionImageUrl}
           sourceImageUrl={puzzle.sourceImageUrl}
           editor={editor}
+          onBack={route.from === "admin-support" ? () => navigate("#/admin?tab=support") : goHome}
         />
       );
     }

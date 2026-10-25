@@ -22,7 +22,7 @@ vi.mock("../app/support/supportApi", async (original) => ({
 import AdminPage from "../app/admin/AdminPage";
 
 const date = (day: number) => Timestamp.fromDate(new Date(`2026-10-${day}T10:00:00Z`));
-const clue: Thread = { id: "report/ب", kind: "clue_error", subject: "پرسش اشتباه", status: "submitted", createdAt: date(24), updatedAt: date(24), lastMessageAt: date(24), userUnread: 0, adminUnread: 2,
+const clue: Thread = { id: "report/ب", kind: "clue_error", ownerUid: "player", subject: "پرسش اشتباه", status: "submitted", createdAt: date(24), updatedAt: date(24), lastMessageAt: date(24), userUnread: 0, adminUnread: 2,
   clue: { puzzleId: "جدول/۱", puzzleTitle: "جدول نمونه", slotId: "R1-2", direction: "across", groupNum: 3, text: "سرنخ ثبت‌شده" } };
 const contact: Thread = { id: "contact", kind: "contact", subject: "کمک", status: "answered", createdAt: date(25), updatedAt: date(25), lastMessageAt: date(25), userUnread: 0, adminUnread: 0 };
 const messages: SupportMessage[] = [{ id: "m1", sender: "user", text: "متن پیام", createdAt: date(24) }];
@@ -73,15 +73,39 @@ describe("admin support inbox", () => {
     await openInbox();
     await userEvent.click(await screen.findByRole("button", { name: /پرسش اشتباه/ }));
     expect(await screen.findByText("سرنخ ثبت‌شده")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "باز کردن جدول" })).toHaveAttribute("href", "#/puzzle/%D8%AC%D8%AF%D9%88%D9%84%2F%DB%B1?slot=R1-2");
+    expect(screen.getByRole("link", { name: "باز کردن جدول" })).toHaveAttribute("href", "#/puzzle/%D8%AC%D8%AF%D9%88%D9%84%2F%DB%B1?slot=R1-2&from=admin-support");
     expect(api.read).toHaveBeenCalledWith({ threadId: clue.id, participant: "admin" });
     const status = screen.getByLabelText("وضعیت گزارش");
     expect(within(status).queryByRole("option", { name: "پاسخ داده شده" })).not.toBeInTheDocument();
-    expect(within(status).getByRole("option", { name: "پذیرفته شده" })).toBeInTheDocument();
+    expect(within(status).getByRole("option", { name: "تأییدشده" })).toBeInTheDocument();
     await userEvent.selectOptions(status, "reviewing");
     await waitFor(() => expect(api.status).toHaveBeenCalledWith({ threadId: clue.id, status: "reviewing" }));
     await userEvent.type(screen.getByRole("textbox", { name: "پاسخ شما" }), "پاسخ مدیر");
     await userEvent.click(screen.getByRole("button", { name: "ارسال پاسخ" }));
     await waitFor(() => expect(api.reply).toHaveBeenCalledWith({ threadId: clue.id, participant: "admin", text: "پاسخ مدیر" }));
+  });
+
+  it("opens the support tab from an explicit admin link despite saved tab", async () => {
+    window.location.hash = "#/admin?tab=support";
+    render(<AdminPage />);
+    expect(screen.getByRole("tab", { name: "گزارش‌ها و پیام‌ها" })).toHaveAttribute("aria-selected", "true");
+    expect(api.subscribe).toHaveBeenCalledOnce();
+  });
+
+  it("does not offer an undeliverable reply to an untracked contact sender", async () => {
+    await openInbox();
+    await userEvent.click(screen.getByRole("button", { name: /کمک/ }));
+    expect(screen.queryByRole("textbox", { name: "پاسخ شما" })).not.toBeInTheDocument();
+    expect(screen.getByText(/پیام بی‌نام.*پاسخ/)).toBeInTheDocument();
+  });
+
+  it("does not carry a reply draft into a different selected conversation", async () => {
+    await openInbox();
+    await userEvent.click(screen.getByRole("button", { name: /پرسش اشتباه/ }));
+    fireEvent.change(screen.getByRole("textbox", { name: "پاسخ شما" }), { target: { value: "پاسخ برای سرنخ" } });
+    await userEvent.click(screen.getByRole("button", { name: /کمک/ }));
+    expect(screen.queryByRole("textbox", { name: "پاسخ شما" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /پرسش اشتباه/ }));
+    expect(screen.getByRole("textbox", { name: "پاسخ شما" })).toHaveValue("");
   });
 });

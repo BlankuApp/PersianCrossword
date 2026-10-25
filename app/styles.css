@@ -1277,11 +1277,10 @@ select {
   gap: 8px;
 }
 
-/* The icons stand in a column at the top of the block's left edge (RTL end): the block
-   reserves that strip, so they cost width but no height. */
+/* Reserve four icon widths and three gaps so the strip costs width but no height. */
 .active-clue-block {
   position: relative;
-  padding-inline-end: calc(26px + var(--stack-gap));
+  padding-inline-end: calc(128px + var(--stack-gap));
 }
 
 .active-clue-head-actions {
@@ -1289,7 +1288,7 @@ select {
   inset-block-start: 0;
   inset-inline-end: 0;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   gap: 8px;
 }

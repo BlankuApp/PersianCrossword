@@ -63,4 +63,18 @@ describe("puzzle hash routes", () => {
     expect(() => parseHash("#/puzzle/%?slot=%")).not.toThrow();
     expect(parseHash("#/puzzle/123?slot=%")).toEqual({ name: "puzzle", id: "123", slotId: "%" });
   });
+
+  it("keeps admin support origin only on explicit exact-slot links", () => {
+    const link = puzzleHash("جدول/1", "R1-2", "admin-support");
+    expect(link).toBe("#/puzzle/%D8%AC%D8%AF%D9%88%D9%84%2F1?slot=R1-2&from=admin-support");
+    expect(parseHash(link)).toEqual({ name: "puzzle", id: "جدول/1", slotId: "R1-2", from: "admin-support" });
+    expect(parseHash(puzzleHash("جدول/1", "R1-2"))).toEqual({ name: "puzzle", id: "جدول/1", slotId: "R1-2" });
+  });
+
+  it("returns an admin support puzzle to the inbox on hardware back", () => {
+    window.location.hash = "#/puzzle/p?slot=R1-2&from=admin-support";
+    renderHook(() => useHardwareBackButton(parseHash(window.location.hash)));
+    native.back();
+    expect(window.location.hash).toBe("#/admin?tab=support");
+  });
 });

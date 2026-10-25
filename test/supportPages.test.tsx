@@ -195,11 +195,11 @@ describe("account support", () => {
     expect(api.own).toHaveBeenCalledWith("player", expect.any(Function), expect.any(Function));
     const links = within(screen.getByRole("list", { name: "گزارش‌ها و پیام‌ها" })).getAllByRole("link");
     expect(links[0]).toHaveTextContent("پیشنهاد");
-    expect(links[0]).toHaveTextContent("پاسخ داده شده");
+    expect(links[0]).toHaveTextContent("پاسخ‌داده‌شده");
     expect(links[0]).toHaveTextContent("۲ خوانده‌نشده");
     expect(links[0]?.querySelector("time")).toHaveAttribute("datetime", "2026-10-25T10:00:00.000Z");
     expect(links[1]).toHaveTextContent("خطای پرسش");
-    expect(links[1]).toHaveTextContent("اصلاح شده");
+    expect(links[1]).toHaveTextContent("اصلاح‌شده");
     unmount();
     expect(api.stopOwn).toHaveBeenCalled();
   });
@@ -269,7 +269,7 @@ describe("account support", () => {
 
   it("uses the admin unread counter, participant payloads, and sender labels in the shared admin view", async () => {
     api.messages.mockImplementation((_id, next) => { next([...messages, { id: "guest", sender: "guest", text: "متن مهمان", createdAt: time }]); return api.stopMessages; });
-    const { rerender } = render(<SupportThread thread={contact} role="admin" />);
+    const { rerender } = render(<SupportThread thread={{ ...contact, adminUnread: 1 }} role="admin" />);
     expect(api.read).toHaveBeenCalledWith({ threadId: "contact-1", participant: "admin" });
     const items = within(screen.getByRole("list", { name: "پیام‌های گفت‌وگو" })).getAllByRole("listitem");
     expect(items[0]).toHaveTextContent("کاربر");
@@ -325,6 +325,42 @@ describe("account support", () => {
     api.messages.mockImplementation((_id, _next, error) => { error(new Error("offline")); return api.stopMessages; });
     render(<SupportPage threadId="contact-1" />);
     expect(screen.getByRole("alert")).toHaveTextContent("خواندن گفت‌وگو انجام نشد");
+  });
+
+  it("waits for the latest message before marking unread, whether the thread or messages arrive first", async () => {
+    const older = Timestamp.fromDate(new Date("2026-10-25T09:00:00Z"));
+    let next!: (messages: SupportMessage[]) => void;
+    api.messages.mockImplementation((_id, callback) => { next = callback; return api.stopMessages; });
+    const { rerender } = render(<SupportThread thread={{ ...contact, lastMessageAt: time }} role="user" />);
+    expect(api.read).not.toHaveBeenCalled();
+    await act(async () => next([{ ...messages[0]!, createdAt: older }]));
+    expect(api.read).not.toHaveBeenCalled();
+    await act(async () => next(messages));
+    expect(api.read).toHaveBeenCalledOnce();
+    api.read.mockClear();
+    const later = Timestamp.fromDate(new Date("2026-10-25T11:00:00Z"));
+    rerender(<SupportThread thread={{ ...contact, lastMessageAt: later }} role="user" />);
+    expect(api.read).not.toHaveBeenCalled();
+    await act(async () => next([...messages, { id: "later", sender: "admin", text: "تازه", createdAt: later }]));
+    expect(api.read).toHaveBeenCalledOnce();
+  });
+
+  it("does not mark unread after a message load error or quick leave", async () => {
+    let fail!: (error: Error) => void;
+    api.messages.mockImplementation((_id, _next, error) => { fail = error; return api.stopMessages; });
+    const { unmount } = render(<SupportThread thread={contact} role="user" />);
+    await act(async () => fail(new Error("offline")));
+    expect(api.read).not.toHaveBeenCalled();
+    unmount();
+    expect(api.read).not.toHaveBeenCalled();
+  });
+
+  it("drops a prior thread's read error when switching conversations", async () => {
+    api.read.mockRejectedValueOnce(new Error("offline"));
+    const { rerender } = render(<SupportThread thread={contact} role="user" />);
+    expect(await screen.findByText(/خوانده‌شدن.*انجام نشد/)).toBeInTheDocument();
+    rerender(<SupportThread thread={{ ...report, userUnread: 0 }} role="user" />);
+    expect(screen.queryByText(/خوانده‌شدن.*انجام نشد/)).not.toBeInTheDocument();
   });
 
   it("shows the aggregate unread badge and account support link", async () => {

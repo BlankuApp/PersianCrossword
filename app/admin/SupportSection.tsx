@@ -59,13 +59,13 @@ export function SupportSection() {
       </button>
     </li>)}</ul>
     {selected ? <>
-      {selected.clue ? <a className="admin-button support-clue-link" href={puzzleHash(selected.clue.puzzleId, selected.clue.slotId)}>باز کردن جدول</a> : null}
+      {selected.clue ? <a className="admin-button support-clue-link" href={puzzleHash(selected.clue.puzzleId, selected.clue.slotId, "admin-support")}>باز کردن جدول</a> : null}
       <label className="support-status-control">وضعیت گزارش<select aria-label="وضعیت گزارش" value={selected.status} disabled={saving} onChange={(event) => void updateStatus(selected, event.target.value as SupportStatus)}>
         {statusByKind[selected.kind].map((value) => <option key={value} value={value}>{supportStatusText[value]}</option>)}
       </select></label>
       {saving ? <p role="status">در حال ثبت وضعیت…</p> : null}
       {saveError ? <p className="admin-error" role="alert">ثبت وضعیت انجام نشد. دوباره تلاش کنید.</p> : null}
-      <Conversation thread={selected} role="admin" />
+      <Conversation key={selected.id} thread={selected} role="admin" />
     </> : null}
   </section>;
 }

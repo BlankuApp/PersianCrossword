@@ -77,6 +77,14 @@ describe("Persian crossword UI", () => {
     }
   });
 
+  it("returns an admin support puzzle to the support inbox from its visible back button", async () => {
+    authState.isAdmin = true;
+    window.location.hash = "#/puzzle/sample-10x10-garden?slot=R1-7&from=admin-support";
+    render(<App />);
+    await userEvent.click(screen.getByRole("button", { name: "بازگشت به فهرست جدول‌ها" }));
+    expect(window.location.hash).toBe("#/admin?tab=support");
+  });
+
   it.each([false, true])("preserves the report explanation and selected slot through sign-in (anonymous: %s)", async (anonymous) => {
     const user = userEvent.setup();
     authState.user = anonymous ? { uid: "guest", isAnonymous: true } as User : null;

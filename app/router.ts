@@ -4,7 +4,7 @@ import { Capacitor } from "@capacitor/core";
 
 export type Route =
   | { readonly name: "home" }
-  | { readonly name: "puzzle"; readonly id: string; readonly slotId?: string }
+  | { readonly name: "puzzle"; readonly id: string; readonly slotId?: string; readonly from?: "admin-support" }
   | { readonly name: "contact" }
   | { readonly name: "support" }
   | { readonly name: "supportThread"; readonly id: string }
@@ -17,8 +17,9 @@ export function parseHash(hash: string): Route {
   if (path.startsWith("puzzle/")) {
     let id = path.slice("puzzle/".length).trim();
     try { id = decodeURIComponent(id); } catch { return { name: "home" }; }
-    const slotId = new URLSearchParams(query).get("slot");
-    if (id) return { name: "puzzle", id, ...(slotId ? { slotId } : {}) };
+    const params = new URLSearchParams(query);
+    const slotId = params.get("slot");
+    if (id) return { name: "puzzle", id, ...(slotId ? { slotId } : {}), ...(slotId && params.get("from") === "admin-support" ? { from: "admin-support" as const } : {}) };
   }
   if (path.startsWith("admin/draft/")) {
     const id = decodeURIComponent(path.slice("admin/draft/".length).trim());
@@ -36,8 +37,8 @@ export function parseHash(hash: string): Route {
   return { name: "home" };
 }
 
-export function puzzleHash(id: string, slotId?: string): string {
-  return `#/puzzle/${encodeURIComponent(id)}${slotId ? `?slot=${encodeURIComponent(slotId)}` : ""}`;
+export function puzzleHash(id: string, slotId?: string, from?: "admin-support"): string {
+  return `#/puzzle/${encodeURIComponent(id)}${slotId ? `?slot=${encodeURIComponent(slotId)}${from ? `&from=${from}` : ""}` : ""}`;
 }
 
 export function navigate(to: string): void {
@@ -84,8 +85,11 @@ export function useHardwareBackButton(route: Route): void {
     if (!Capacitor.isNativePlatform()) return;
 
     const listenerPromise = CapacitorApp.addListener("backButton", () => {
-      const { name } = routeRef.current;
-      if (name === "puzzle" || name === "admin" || name === "contact" || name === "support") {
+      const current = routeRef.current;
+      const { name } = current;
+      if (name === "puzzle" && current.from === "admin-support") {
+        navigate("#/admin?tab=support");
+      } else if (name === "puzzle" || name === "admin" || name === "contact" || name === "support") {
         goHome();
       } else if (name === "supportThread") {
         navigate("#/support");

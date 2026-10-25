@@ -35,7 +35,18 @@ jobs:
         run: npm ci
 
       - name: Build app
-        run: npm run build
+        env:
+          VITE_RECAPTCHA_ENTERPRISE_SITE_KEY: ${{ vars.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY }}
+        run: |
+          if ! test -n "$VITE_RECAPTCHA_ENTERPRISE_SITE_KEY"; then
+            echo "::error::Set repository variable VITE_RECAPTCHA_ENTERPRISE_SITE_KEY before deploying Pages."
+            exit 1
+          fi
+          npm run build
+          if ! grep -R -F -- "$VITE_RECAPTCHA_ENTERPRISE_SITE_KEY" app-dist/assets/*.js > /dev/null; then
+            echo "::error::Pages artifact does not contain the App Check site key."
+            exit 1
+          fi
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
