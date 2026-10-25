@@ -9,6 +9,7 @@ android {
 
 apply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"
 dependencies {
+    implementation project(':capacitor-firebase-app-check')
     implementation project(':capacitor-firebase-authentication')
     implementation project(':capacitor-app')
 

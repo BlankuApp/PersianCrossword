@@ -13,8 +13,8 @@ const storedPuzzle = { ...basicPuzzleV3, grid: basicPuzzleV3.grid.map((row) => [
 
 type Data = Record<string, unknown>;
 const fake = vi.hoisted(() => ({ store: new Map<string, Data>(), transactions: 0, failCommit: false }));
-vi.mock("../app/firebase", () => ({ db: {}, firebaseApp: {}, usingEmulators: false, storageFileUrl: (path: string) => path }));
-vi.mock("firebase/storage", () => ({ getStorage: () => ({}), connectStorageEmulator: vi.fn(), getMetadata: vi.fn(), ref: vi.fn((_storage: unknown, path: string) => ({ fullPath: path })), uploadBytes: vi.fn() }));
+vi.mock("../app/firebase", () => ({ db: {}, storage: {}, storageFileUrl: (path: string) => path }));
+vi.mock("firebase/storage", () => ({ getMetadata: vi.fn(), ref: vi.fn((_storage: unknown, path: string) => ({ fullPath: path })), uploadBytes: vi.fn() }));
 vi.mock("firebase/firestore", () => ({
   collection: vi.fn(), deleteDoc: vi.fn(), onSnapshot: vi.fn(),
   doc: (_db: unknown, ...parts: string[]) => ({ path: parts.join("/") }),
