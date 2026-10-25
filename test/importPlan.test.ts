@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isValidPuzzleId, planImport, type ImportFile } from "../app/admin/importPlan";
+import { isValidPuzzleId, newPuzzleId, planImport, type ImportFile } from "../app/admin/importPlan";
 import sample10 from "../samples/sample-10x10-garden.json";
 
 const encode = (text: string) => new TextEncoder().encode(text);
@@ -64,5 +64,18 @@ describe("planImport", () => {
     const plan = planImport([broken], new Set());
     expect(plan.drafts).toEqual([]);
     expect(plan.problems[0]).toMatch(/^7\.json: /);
+  });
+});
+
+
+describe("next numeric puzzle id", () => {
+  it.each([
+    [[], "1"],
+    [["1", "327", "12"], "328"],
+    [["327", "328", "329"], "330"],
+    [["۲۹", "٣٢٧", "old-id", "puzzle-999", "3.5", "-9"], "328"],
+    [["00327", "2"], "328"],
+  ])("increments the highest numeric id in %j", (ids, expected) => {
+    expect(newPuzzleId(ids)).toBe(expected);
   });
 });

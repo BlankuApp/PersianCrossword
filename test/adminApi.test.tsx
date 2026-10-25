@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { webcrypto } from "node:crypto";
-import { setDoc } from "firebase/firestore";
+import { getMetadata, uploadBytes } from "firebase/storage";
+import type { PlannedDraft } from "../app/admin/importPlan";
 import { entryImageRefs, puzzleHash, type CatalogDoc, type PackDoc } from "../shared/cloudPuzzles";
 import { basicPuzzleV3 } from "./fixtures";
-import { createDraft, publishDraft, renameDraft, saveDraftMeta, savePublishedPuzzle, unpublishPuzzle, type Draft } from "../app/admin/adminApi";
+import { createDraft, PuzzleIdTakenError, publishDraft, renameDraft, saveDraftMeta, savePublishedPuzzle, unpublishPuzzle, type Draft } from "../app/admin/adminApi";
 import { loadMirror, loadProgress, saveProgress } from "../app/progress";
 
 // The core fixture uses LTR board coordinates; Firebase stores repository-format RTL rows.
@@ -13,9 +14,9 @@ const storedPuzzle = { ...basicPuzzleV3, grid: basicPuzzleV3.grid.map((row) => [
 type Data = Record<string, unknown>;
 const fake = vi.hoisted(() => ({ store: new Map<string, Data>(), transactions: 0, failCommit: false }));
 vi.mock("../app/firebase", () => ({ db: {}, firebaseApp: {}, usingEmulators: false, storageFileUrl: (path: string) => path }));
-vi.mock("firebase/storage", () => ({ getStorage: () => ({}), connectStorageEmulator: vi.fn(), getMetadata: vi.fn(), ref: vi.fn(), uploadBytes: vi.fn() }));
+vi.mock("firebase/storage", () => ({ getStorage: () => ({}), connectStorageEmulator: vi.fn(), getMetadata: vi.fn(), ref: vi.fn((_storage: unknown, path: string) => ({ fullPath: path })), uploadBytes: vi.fn() }));
 vi.mock("firebase/firestore", () => ({
-  collection: vi.fn(), deleteDoc: vi.fn(), onSnapshot: vi.fn(), setDoc: vi.fn(),
+  collection: vi.fn(), deleteDoc: vi.fn(), onSnapshot: vi.fn(),
   doc: (_db: unknown, ...parts: string[]) => ({ path: parts.join("/") }),
   runTransaction: async (_db: unknown, action: (tx: unknown) => Promise<void>) => {
     fake.transactions++;
@@ -54,7 +55,8 @@ const publishedElsewhere = () => {
 };
 
 beforeEach(() => {
-  vi.mocked(setDoc).mockClear();
+  vi.mocked(getMetadata).mockReset().mockRejectedValue(new Error("not found"));
+  vi.mocked(uploadBytes).mockReset();
   localStorage.clear(); fake.store.clear(); fake.store.set("drafts/old", structuredClone(original)); fake.transactions = 0; fake.failCommit = false;
   vi.stubGlobal("crypto", webcrypto);
 });
@@ -126,10 +128,9 @@ describe("saving draft metadata", () => {
   it("saves in place when the id is unchanged and renames when it changed", async () => {
     const current = draft();
     await saveDraftMeta(current, current.json, "old");
-    expect(setDoc).toHaveBeenCalledOnce();
-    expect(fake.transactions).toBe(0);
-    await saveDraftMeta(current, current.json, "renamed");
-    expect(fake.transactions).toBe(1);
+    expect(JSON.parse(stored("old").json)).toEqual(current.json);
+    await saveDraftMeta({ ...current, jsonText: stored("old").json }, current.json, "renamed");
+    expect(fake.transactions).toBe(2);
     expect(fake.store.has("drafts/renamed")).toBe(true);
     expect(fake.store.has("drafts/old")).toBe(false);
   });
@@ -190,6 +191,97 @@ describe("publishing", () => {
     fake.store.set("drafts/old", latest);
     await expect(publishDraft(current)).rejects.toThrow(/محتوای پیش‌نویس تغییر کرده/);
     expect(fake.store.get("drafts/old")).toEqual(latest);
+    expect(fake.store.has("catalog/index")).toBe(false);
+  });
+});
+
+
+const planWithImages = (id: string): PlannedDraft => ({
+  id, file: "admin/" + id + ".json", title: "test",
+  jsonText: JSON.stringify({ ...storedPuzzle, meta: { id, sourceFile: id + "-clues.png" } }),
+  images: [
+    { kind: "solution", name: id + ".png", file: { name: id + ".png", bytes: new Uint8Array([1]) } },
+    { kind: "source", name: id + "-clues.png", file: { name: id + "-clues.png", bytes: new Uint8Array([2]) } },
+  ],
+});
+
+describe("new draft id collisions", () => {
+  it.each(["old", "live"])("rejects occupied id %s before touching Storage or stored puzzles", async (id) => {
+    publishedElsewhere();
+    const before = structuredClone(fake.store);
+    await expect(createDraft(planWithImages(id))).rejects.toBeInstanceOf(PuzzleIdTakenError);
+    expect(fake.store).toEqual(before);
+    expect(getMetadata).not.toHaveBeenCalled();
+    expect(uploadBytes).not.toHaveBeenCalled();
+  });
+
+  it("reserves the id and image references before uploads so a racing writer uploads nothing", async () => {
+    let raced = false;
+    vi.mocked(uploadBytes).mockImplementation(async (target) => {
+      const saved = stored("fresh");
+      expect(saved.images.solution).toMatchObject({ name: "fresh.png" });
+      expect(saved.images.source).toMatchObject({ name: "fresh-clues.png" });
+      expect(Object.values(saved.images).map((image) => image.path)).toContain(target.fullPath);
+      if (!raced) {
+        raced = true;
+        const other = planWithImages("fresh");
+        await expect(createDraft({ ...other, images: [{ ...other.images[0]!, file: { name: "fresh.png", bytes: new Uint8Array([9]) } }] })).rejects.toBeInstanceOf(PuzzleIdTakenError);
+      }
+      return {} as Awaited<ReturnType<typeof uploadBytes>>;
+    });
+    await createDraft(planWithImages("fresh"));
+    expect(uploadBytes).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(stored("fresh").json).meta.id).toBe("fresh");
+  });
+
+  it("never uploads when the reservation commit fails", async () => {
+    fake.failCommit = true;
+    await expect(createDraft(planWithImages("fresh"))).rejects.toThrow("offline");
+    expect(fake.store.has("drafts/fresh")).toBe(false);
+    expect(getMetadata).not.toHaveBeenCalled();
+    expect(uploadBytes).not.toHaveBeenCalled();
+  });
+
+  it("retains the draft and image references if an upload fails after another succeeds", async () => {
+    vi.mocked(uploadBytes).mockResolvedValueOnce({} as Awaited<ReturnType<typeof uploadBytes>>).mockRejectedValueOnce(new Error("upload failed"));
+    await expect(createDraft(planWithImages("fresh"))).rejects.toThrow("upload failed");
+    const paths = Object.values(stored("fresh").images).map((image) => image.path);
+    for (const [target] of vi.mocked(uploadBytes).mock.calls) expect(paths).toContain(target.fullPath);
+    expect(JSON.parse(stored("fresh").json).meta.id).toBe("fresh");
+    expect(stored("fresh")).toMatchObject({ imagesPending: true });
+  });
+});
+
+
+describe("incomplete draft image uploads", () => {
+  it("resumes the same reserved draft and reuses already uploaded images", async () => {
+    const uploaded = new Set<string>();
+    vi.mocked(getMetadata).mockImplementation(async (target) => {
+      if (!uploaded.has(target.fullPath)) throw new Error("not found");
+      return {} as Awaited<ReturnType<typeof getMetadata>>;
+    });
+    let fail = true;
+    vi.mocked(uploadBytes).mockImplementation(async (target) => {
+      if (uploaded.size && fail) throw new Error("upload failed");
+      uploaded.add(target.fullPath);
+      return {} as Awaited<ReturnType<typeof uploadBytes>>;
+    });
+    await expect(createDraft(planWithImages("fresh"))).rejects.toThrow("upload failed");
+    expect(stored("fresh")).toMatchObject({ imagesPending: true });
+    fail = false;
+    await createDraft(planWithImages("fresh"));
+    expect(uploaded.size).toBe(2);
+    expect(uploadBytes).toHaveBeenCalledTimes(3);
+    expect(stored("fresh")).toMatchObject({ imagesPending: false });
+  });
+
+  it("blocks publishing and renaming an incomplete draft even from a stale UI snapshot", async () => {
+    const current = draft();
+    fake.store.set("drafts/old", { ...original, imagesPending: true });
+    await expect(saveDraftMeta(current, current.json, "old")).rejects.toThrow(/بارگذاری تصاویر/);
+    await expect(publishDraft(current)).rejects.toThrow(/بارگذاری تصاویر/);
+    await expect(renameDraft(current, current.json, "new")).rejects.toThrow(/بارگذاری تصاویر/);
+    expect(fake.store.get("drafts/old")).toEqual({ ...original, imagesPending: true });
     expect(fake.store.has("catalog/index")).toBe(false);
   });
 });

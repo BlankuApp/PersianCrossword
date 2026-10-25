@@ -6,14 +6,14 @@ import AdminPage from "../app/admin/AdminPage";
 import type { Draft } from "../app/admin/adminApi";
 import { basicPuzzleV3 } from "./fixtures";
 
-const { draftState, publishDraft, saveDraftMeta } = vi.hoisted(() => ({ draftState: { drafts: [] as Draft[] }, publishDraft: vi.fn(), saveDraftMeta: vi.fn() }));
+const { draftState, publishDraft, saveDraftMeta, createDraftMock } = vi.hoisted(() => ({ draftState: { drafts: [] as Draft[] }, publishDraft: vi.fn(), saveDraftMeta: vi.fn(), createDraftMock: vi.fn() }));
 
 vi.mock("../app/AuthContext", () => ({ useAuth: () => ({ user: { uid: "admin" }, loading: false, isAdmin: true, syncVersion: 0 }) }));
 vi.mock("../app/admin/useDrafts", () => ({ useDrafts: () => ({ drafts: draftState.drafts, loaded: true, error: null }) }));
 vi.mock("../app/puzzleLibrary", () => ({ usePuzzleLibrary: () => ({ puzzles: [] }) }));
 vi.mock("../app/puzzleSync", () => ({ refreshPuzzleCatalog: vi.fn() }));
 vi.mock("../app/pages/HomePage", () => ({ DifficultyBadge: () => null, ProgressBar: () => null }));
-vi.mock("../app/admin/adminApi", () => ({ createDraft: vi.fn(), deleteDraft: vi.fn(), publishDraft, publishProblems: () => [], saveDraftMeta }));
+vi.mock("../app/admin/adminApi", () => ({ createDraft: createDraftMock, deleteDraft: vi.fn(), publishDraft, publishProblems: () => [], saveDraftMeta }));
 
 beforeEach(() => { localStorage.clear(); draftState.drafts = []; vi.resetAllMocks(); });
 
@@ -48,13 +48,16 @@ describe("admin tabs", () => {
     expect(screen.getByText("ابعاد جدول را از ۱ تا ۶۰ وارد کنید.")).toBeInTheDocument();
     fireEvent.keyDown(rows, { key: "ArrowDown" });
     expect(rows).toHaveValue("۱");
-    await userEvent.type(screen.getByLabelText("شمارهٔ جدول (اختیاری)"), "8050");
-    await userEvent.type(screen.getByLabelText("عنوان"), "جدول 8050");
-    await userEvent.type(screen.getByLabelText("شناسهٔ جدول"), "8050-normal");
-    expect(screen.getByLabelText("شمارهٔ جدول (اختیاری)")).toHaveValue("۸۰۵۰");
+    await userEvent.type(screen.getByLabelText("شماره در روزنامه (اختیاری)"), "8050");
     expect(screen.getByLabelText("عنوان")).toHaveValue("جدول ۸۰۵۰");
-    expect(screen.getByLabelText("شناسهٔ جدول")).toHaveValue("۸۰۵۰-normal");
-    const number = screen.getByLabelText("شمارهٔ جدول (اختیاری)") as HTMLInputElement;
+    await userEvent.clear(screen.getByLabelText("عنوان"));
+    await userEvent.type(screen.getByLabelText("عنوان"), "جدول 8050");
+    await userEvent.clear(screen.getByLabelText("شناسهٔ جدول"));
+    await userEvent.type(screen.getByLabelText("شناسهٔ جدول"), "8050");
+    expect(screen.getByLabelText("شماره در روزنامه (اختیاری)")).toHaveValue("۸۰۵۰");
+    expect(screen.getByLabelText("عنوان")).toHaveValue("جدول ۸۰۵۰");
+    expect(screen.getByLabelText("شناسهٔ جدول")).toHaveValue(8050);
+    const number = screen.getByLabelText("شماره در روزنامه (اختیاری)") as HTMLInputElement;
     number.focus(); number.setSelectionRange(2, 2);
     await userEvent.keyboard("1");
     expect(number).toHaveValue("۸۰۱۵۰"); expect(number.selectionStart).toBe(3);
@@ -111,6 +114,35 @@ describe("draft metadata and publishing", () => {
     render(<AdminPage />);
     return screen.getByText("جدول قدیم").closest("li")!;
   }
+
+
+  it("marks an incomplete upload as unpublishable and permits re-importing its files", async () => {
+    const json = { ...draft.json, grid: draft.json.grid.map((row) => [...row].reverse()), meta: { ...draft.json.meta, sourceFile: "8050-clues.png" } };
+    draftState.drafts = [{ ...draft, json, imagesPending: true, images: {
+      solution: { name: "8050.png", path: "puzzles/8050/solution.png", hash: "solution" },
+      source: { name: "8050-clues.png", path: "puzzles/8050/source.png", hash: "source" },
+    } }];
+    render(<AdminPage />);
+    const row = screen.getByText("جدول قدیم").closest("li")!;
+    expect(within(row).getByRole("button", { name: "انتشار" })).toBeDisabled();
+    expect(row).toHaveTextContent("بارگذاری تصاویر کامل نشده");
+    expect(within(row).getByRole("button", { name: "مشخصات" })).toBeDisabled();
+    expect(within(row).queryByRole("link", { name: "حل و ویرایش" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("tab", { name: "افزودن با JSON" }));
+    const files = [
+      ["8050.json", new TextEncoder().encode(JSON.stringify(json))],
+      ["8050.png", new Uint8Array([1])], ["8050-clues.png", new Uint8Array([2])],
+    ] as const;
+    fireEvent.change(screen.getByLabelText("انتخاب فایل‌ها"), { target: { files: files.map(([name, bytes]) => {
+      const file = new File([bytes], name);
+      Object.defineProperty(file, "arrayBuffer", { value: async () => bytes.buffer });
+      return file;
+    }) } });
+    const create = await screen.findByRole("button", { name: /ساخت ۱ پیش‌نویس/ });
+    expect(create).toBeEnabled();
+    await userEvent.click(create);
+    await waitFor(() => expect(createDraftMock).toHaveBeenCalledWith(expect.objectContaining({ id: "8050", images: expect.any(Array) })));
+  });
 
   it("edits metadata in a dialog, blocks used ids and saves with the new id", async () => {
     const row = setup();

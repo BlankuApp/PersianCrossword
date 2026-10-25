@@ -92,3 +92,14 @@ describe("MetaSummary", () => {
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });
+
+
+describe("creation id controls", () => {
+  it.each([{ disabled: true }, { idLocked: true }])("preserves native disabled and read-only states: %j", (props) => {
+    render(<PuzzleMetaEditor value={{ ...start, id: "328" }} onChange={() => {}} sourceFile="auto" size={undefined} creating {...props} />);
+    const id = screen.getByRole("spinbutton", { name: "شناسهٔ جدول" });
+    expect(id).toHaveAttribute("type", "number");
+    if ("disabled" in props) expect(id).toBeDisabled();
+    else expect(id).toHaveAttribute("readonly");
+  });
+});

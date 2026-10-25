@@ -3,6 +3,7 @@
 // source image. Pure, so it's testable without Firebase.
 import type { ImageKind } from "../../shared/cloudPuzzles";
 import type { CrosswordJson } from "../../src/index";
+import { toAsciiDigits } from "../persianNumbers";
 import { validateStoredPuzzleJson } from "./puzzleValidation";
 
 export interface ImportFile {
@@ -26,6 +27,15 @@ export interface ImportPlan {
 }
 
 const IMAGE_EXTENSIONS = /\.(png|jpe?g|webp)$/i;
+
+export function newPuzzleId(ids: Iterable<string>): string {
+  let highest = 0;
+  for (const id of ids) {
+    const digits = toAsciiDigits(id);
+    if (/^[0-9]+$/.test(digits) && Number.isSafeInteger(Number(digits))) highest = Math.max(highest, Number(digits));
+  }
+  return String(highest + 1);
+}
 
 export function isValidPuzzleId(id: string): boolean {
   return !!id && id === id.trim() && !Object.prototype.hasOwnProperty.call(Object.prototype, id) && !/[<>:"|?*/.\\\u0000-\u001f]/.test(id) && new TextEncoder().encode(id).length <= 120;

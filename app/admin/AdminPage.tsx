@@ -65,6 +65,7 @@ function AdminContent() {
   const { drafts, loaded, error } = useDrafts();
   const { puzzles } = usePuzzleLibrary();
   const takenIds = useMemo(() => new Set([...puzzles.map((p) => p.id), ...drafts.map((d) => d.id)]), [puzzles, drafts]);
+  const importTakenIds = useMemo(() => new Set([...puzzles.map((p) => p.id), ...drafts.filter((d) => !d.imagesPending).map((d) => d.id)]), [puzzles, drafts]);
 
   return (
     <>
@@ -101,7 +102,7 @@ function AdminContent() {
         <PhotoImportSection takenIds={takenIds} />
       </div>
       <div role="tabpanel" id="admin-panel-json" aria-labelledby="admin-tab-json" hidden={tab !== "json"} tabIndex={0}>
-        <ImportSection takenIds={takenIds} />
+        <ImportSection takenIds={importTakenIds} />
       </div>
       <div role="tabpanel" id="admin-panel-stats" aria-labelledby="admin-tab-stats" hidden={tab !== "stats"} tabIndex={0}>
         {statsOpened ? <StatsSection /> : null}
@@ -111,7 +112,7 @@ function AdminContent() {
 }
 
 function DraftRow({ draft, takenIds }: { draft: Draft; takenIds: ReadonlySet<string> }) {
-  const problems = useMemo(() => publishProblems(draft.json), [draft.json]);
+  const problems = useMemo(() => draft.imagesPending ? ["بارگذاری تصاویر کامل نشده؛ همان فایل‌ها را دوباره وارد کنید."] : publishProblems(draft.json), [draft.json, draft.imagesPending]);
   // The admin's own letters on this device (drafts save progress like any puzzle).
   const { syncVersion } = useAuth();
   const percent = useMemo(
@@ -160,11 +161,11 @@ function DraftRow({ draft, takenIds }: { draft: Draft; takenIds: ReadonlySet<str
         {message && dialog !== "publish" ? <span className="admin-error" role="alert">{toPersianDigits(message)}</span> : null}
       </div>
       <div className="admin-draft-actions">
-        <a className="admin-button" href={`#/admin/draft/${encodeURIComponent(draft.id)}`}>
+        {!draft.imagesPending ? <a className="admin-button" href={`#/admin/draft/${encodeURIComponent(draft.id)}`}>
           <Pencil size={16} aria-hidden="true" />
           حل و ویرایش
-        </a>
-        <button type="button" className="admin-button" onClick={() => setDialog("meta")} disabled={busy}>
+        </a> : null}
+        <button type="button" className="admin-button" onClick={() => setDialog("meta")} disabled={busy || draft.imagesPending}>
           <Tag size={16} aria-hidden="true" />
           مشخصات
         </button>

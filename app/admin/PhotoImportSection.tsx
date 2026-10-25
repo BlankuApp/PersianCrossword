@@ -3,18 +3,19 @@ import { Check, Circle, Download, X, ZoomIn, ZoomOut } from "lucide-react";
 import type { PhotoKind, PuzzleVariant } from "../../functions/src/photoFormat";
 import { loadOpenRouterKey, saveOpenRouterKey } from "../progress";
 import { PuzzleMetaEditor } from "../components/PuzzleMetaEditor";
-import { applyMetaForm, type MetaTextFields } from "../components/puzzleMeta";
+import { applyMetaForm } from "../components/puzzleMeta";
 import { PersianNumberInput } from "../components/PersianNumberInput";
 import { localizeInputDigits, toPersianDigits } from "../persianNumbers";
-import { createDraft } from "./adminApi";
+import { createDraft, DraftUploadError, PuzzleIdTakenError } from "./adminApi";
 import { AdminHelp } from "./AdminHelp";
 import { ImageCropper } from "./ImageCropper";
-import { isValidPuzzleId, planImport, type ImportFile } from "./importPlan";
+import { isValidPuzzleId, newPuzzleId, planImport, type ImportFile } from "./importPlan";
 import { extractedGrid, photoPuzzle, reviewClues } from "./photoImport";
 import { REASONING_EFFORTS, extractOpenRouterPhoto, type ReasoningEffort } from "./openRouterPhoto";
 import { loadPhotoSettings, saveAdminSettings } from "./adminSettings";
 
 const errorText = (e: unknown) => e instanceof Error ? e.message : String(e);
+const suggestedTitle = (number: string) => number ? `جدول ${number}` : "";
 const DIRECTIONS = [["horizontal", "افقی"], ["vertical", "عمودی"]] as const;
 type Direction = (typeof DIRECTIONS)[number][0];
 type View = "preview" | "json";
@@ -52,8 +53,16 @@ export function PhotoImportSection({ takenIds }: { takenIds: ReadonlySet<string>
   const [cols, setCols] = useState(initial.cols);
   const [variant, setVariant] = useState<PuzzleVariant>(initial.variant);
   const [puzzleNumber, setPuzzleNumber] = useState(initial.puzzleNumber);
-  const [id, setId] = useState(initial.id);
-  const [meta, setMeta] = useState<MetaTextFields>(initial.meta);
+  const [id, setId] = useState(() => newPuzzleId(takenIds));
+  const [manualId, setManualId] = useState(false);
+  const [idError, setIdError] = useState("");
+  const [retryId, setRetryId] = useState("");
+  const usedIds = useRef(new Set<string>());
+  const difficulty = variant === "special" ? "ویژه" : "عادی";
+  const [meta, setMeta] = useState(() => ({
+    title: initial.meta.title.trim() ? initial.meta.title : suggestedTitle(initial.puzzleNumber),
+    newspaper: initial.meta.newspaper, author: initial.meta.author,
+  }));
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [savedId, setSavedId] = useState("");
@@ -65,9 +74,9 @@ export function PhotoImportSection({ takenIds }: { takenIds: ReadonlySet<string>
   const gridEditor = useRef<HTMLDivElement>(null);
   const sections = useRef<(HTMLElement | null)[]>([]);
   useEffect(() => {
-    const saved = saveAdminSettings({ photo: { model, reasoningEffort, rows, cols, variant, puzzleNumber, id, meta } });
+    const saved = saveAdminSettings({ photo: { model, reasoningEffort, rows, cols, variant, puzzleNumber, meta: { ...meta, difficulty } } });
     setSettingsError(saved ? "" : "مرورگر اجازهٔ ذخیرهٔ تنظیمات را نداد؛ تنظیمات تا بستن صفحه قابل استفاده‌اند.");
-  }, [model, reasoningEffort, rows, cols, variant, puzzleNumber, id, meta]);
+  }, [model, reasoningEffort, rows, cols, variant, puzzleNumber, meta, difficulty]);
   useEffect(() => { setCellError(""); }, [gridText]);
   const changeClues = useCallback((image: string | null) => { setClueImage(image); setClueText(""); setSavedId(""); }, []);
   const changeGrid = useCallback((image: string | null) => { setGridImage(image); setGridText(""); setSavedId(""); }, []);
@@ -85,14 +94,21 @@ export function PhotoImportSection({ takenIds }: { takenIds: ReadonlySet<string>
     try { return { json: photoPuzzle(clueText, gridText, rows, cols), error: "" }; }
     catch (e) { return { json: null, error: errorText(e) }; }
   }, [clueText, gridText, rows, cols, clueReview, gridReview]);
-  const validId = isValidPuzzleId(id.trim());
-  const taken = takenIds.has(id.trim());
+  useEffect(() => {
+    if (!manualId && !savedId && !retryId) {
+      const nextId = newPuzzleId([...takenIds, ...usedIds.current]);
+      if (id !== nextId) setId(nextId);
+    }
+  }, [manualId, savedId, takenIds, id, retryId]);
+  const numericId = /^[0-9]+$/.test(id.trim()) && Number.isSafeInteger(Number(id)) && Number(id) > 0;
+  const validId = numericId && isValidPuzzleId(id.trim());
+  const taken = !savedId && manualId && ((takenIds.has(id.trim()) && id.trim() !== retryId) || !!idError);
   const clueCount = clueReview?.clues ? Object.values(clueReview.clues.horizontal).concat(Object.values(clueReview.clues.vertical)).reduce((n, g) => n + g.length, 0) : 0;
   const effortLabel = REASONING_EFFORTS.find(([value]) => value === reasoningEffort)?.[1] ?? reasoningEffort;
 
   // The first thing still missing, in the order the steps are done; shown beside the save button.
   const blocker = !validSize ? "ابعاد جدول را در مرحلهٔ ۱ درست کنید."
-    : !validNumber ? "شمارهٔ جدول را در مرحلهٔ ۱ درست کنید."
+    : !validNumber ? "شماره در روزنامه را در مرحلهٔ ۱ درست کنید."
     : !clueImage ? "تصویر پرسش‌ها را انتخاب و برش بزنید."
     : !clueText ? "پرسش‌ها را استخراج کنید."
     : !clueReview?.clues ? "پرسش‌های استخراج‌شده را اصلاح کنید."
@@ -105,7 +121,7 @@ export function PhotoImportSection({ takenIds }: { takenIds: ReadonlySet<string>
     : taken ? "این شناسه قبلاً استفاده شده؛ شناسهٔ دیگری بنویسید."
     : "";
   const steps: readonly [string, StepState][] = [
-    ["مشخصات جدول", validSize && validNumber ? "done" : "problem"],
+    ["مشخصات جدول", validSize && validNumber && validId && !taken && !idError ? "done" : "problem"],
     ["پرسش‌ها", clueReview?.clues ? "done" : clueText ? "problem" : "todo"],
     ["جدول پاسخ", gridReview.grid ? "done" : gridText ? "problem" : "todo"],
     ["بررسی و ساخت", savedId ? "done" : review.error || (review.json && (!validId || taken)) ? "problem" : "todo"],
@@ -139,19 +155,33 @@ export function PhotoImportSection({ takenIds }: { takenIds: ReadonlySet<string>
     if (!review.json || !clueImage || !gridImage || !validId || !validNumber || taken) return;
     setBusy(true); setMessage("");
     try {
-      const slug = id.trim();
-      const json = applyMetaForm({ ...review.json, meta: { id: slug, language: "fa", direction: "rtl" } },
-        { id: slug, ...meta, title: meta.title.trim() || (puzzleNumber ? `جدول ${puzzleNumber}` : ""), sourceFile: `${slug}-clues.png` }, true);
-      const imageFile = (name: string, image: string): ImportFile => ({ name, bytes: Uint8Array.from(atob(image.split(",")[1]!), (c) => c.charCodeAt(0)) });
-      const files: ImportFile[] = [
-        { name: `${slug}.json`, bytes: new TextEncoder().encode(JSON.stringify(json, null, 2)) },
-        imageFile(`${slug}.png`, gridImage), imageFile(`${slug}-clues.png`, clueImage),
-      ];
-      const plan = planImport(files, takenIds);
-      if (plan.problems.length || !plan.drafts[0]) throw new Error(plan.problems.join("\n"));
-      await createDraft(plan.drafts[0]);
-      setSavedId(slug);
-    } catch (e) { setMessage(errorText(e)); }
+      let slug = id.trim();
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const json = applyMetaForm({ ...review.json, meta: { id: slug, language: "fa", direction: "rtl" } },
+          { id: slug, ...meta, difficulty, title: meta.title.trim() || suggestedTitle(puzzleNumber), sourceFile: `${slug}-clues.png` }, true);
+        const imageFile = (name: string, image: string): ImportFile => ({ name, bytes: Uint8Array.from(atob(image.split(",")[1]!), (c) => c.charCodeAt(0)) });
+        const files: ImportFile[] = [
+          { name: `${slug}.json`, bytes: new TextEncoder().encode(JSON.stringify(json, null, 2)) },
+          imageFile(`${slug}.png`, gridImage), imageFile(`${slug}-clues.png`, clueImage),
+        ];
+        const unavailable = retryId === slug ? new Set([...takenIds].filter((taken) => taken !== retryId)) : takenIds;
+        const plan = planImport(files, unavailable);
+        if (plan.problems.length || !plan.drafts[0]) throw new Error(plan.problems.join("\n"));
+        try {
+          await createDraft(plan.drafts[0]);
+          usedIds.current.add(slug); setRetryId(""); setId(slug); setSavedId(slug);
+          return;
+        } catch (e) {
+          if (e instanceof DraftUploadError) { setRetryId(e.id); setId(e.id); throw e; }
+          if (!(e instanceof PuzzleIdTakenError)) throw e;
+          setRetryId("");
+          if (manualId) { setIdError(errorText(e)); throw e; }
+          usedIds.current.add(slug);
+          slug = newPuzzleId([...takenIds, ...usedIds.current]); setId(slug);
+          if (attempt === 2) throw e;
+        }
+      }
+    } catch (e) { if (!(manualId && e instanceof PuzzleIdTakenError)) setMessage(errorText(e)); }
     finally { setBusy(false); }
   }
 
@@ -210,12 +240,15 @@ export function PhotoImportSection({ takenIds }: { takenIds: ReadonlySet<string>
       <section className="ai-card" ref={(el) => { sections.current[0] = el; }} aria-labelledby={`${fieldId}-step1`}>
         <StepHead number={1} id={`${fieldId}-step1`} title="مشخصات جدول" state={steps[0]![1]} status={steps[0]![1] === "done" ? "کامل" : "نیاز به اصلاح"} />
         <div className="ai-fields">
-          <div className="photo-field"><span className="photo-field-heading"><label htmlFor={`${fieldId}-variant`}>نوع شرح</label> <AdminHelp label="نوع شرح">عادی و ویژه را جداگانه وارد کنید؛ تنها بخش‌های همان نوع را انتخاب کنید. تغییر نوع، کادرها و نتیجه‌ها را پاک می‌کند ولی تصاویر باقی می‌مانند.</AdminHelp></span><select id={`${fieldId}-variant`} aria-label="نوع شرح" value={variant} disabled={busy} onChange={(e) => {
+          <div className="photo-field"><span className="photo-field-heading"><label htmlFor={`${fieldId}-variant`}>نوع جدول</label> <AdminHelp label="نوع جدول">عادی و ویژه را جداگانه وارد کنید؛ تنها بخش‌های همان نوع را انتخاب کنید. تغییر نوع، کادرها و نتیجه‌ها را پاک می‌کند ولی تصاویر باقی می‌مانند.</AdminHelp></span><select id={`${fieldId}-variant`} aria-label="نوع جدول" value={variant} disabled={busy} onChange={(e) => {
             const next = e.target.value as PuzzleVariant;
             setVariant(next); setClueText(""); setGridText(""); setSavedId(""); setMessage("");
-            setMeta((old) => ({ ...old, difficulty: next === "special" ? "ویژه" : "عادی" }));
           }}><option value="normal">عادی</option><option value="special">ویژه</option></select></div>
-          <div className="photo-field"><span className="photo-field-heading"><label htmlFor={`${fieldId}-number`}>شمارهٔ جدول (اختیاری)</label> <AdminHelp label="شمارهٔ جدول">شمارهٔ روی پاسخ را با پرسش‌ها تطبیق دهید؛ پاسخ ممکن است پایین صفحهٔ روز بعد باشد. شمارهٔ بالای صفحه لزوماً شمارهٔ پاسخ‌های پایین آن نیست.</AdminHelp></span><input id={`${fieldId}-number`} aria-label="شمارهٔ جدول (اختیاری)" inputMode="numeric" maxLength={8} value={puzzleNumber} disabled={busy} placeholder="مثلاً ۸۰۵۰" onChange={(e) => { setPuzzleNumber(localizeInputDigits(e.currentTarget).trim()); setClueText(""); setGridText(""); setSavedId(""); }} /></div>
+          <div className="photo-field"><span className="photo-field-heading"><label htmlFor={`${fieldId}-number`}>شماره در روزنامه (اختیاری)</label> <AdminHelp label="شماره در روزنامه">شمارهٔ روی پاسخ را با پرسش‌ها تطبیق دهید؛ پاسخ ممکن است پایین صفحهٔ روز بعد باشد. شمارهٔ بالای صفحه لزوماً شمارهٔ پاسخ‌های پایین آن نیست.</AdminHelp></span><input id={`${fieldId}-number`} aria-label="شماره در روزنامه (اختیاری)" inputMode="numeric" maxLength={8} value={puzzleNumber} disabled={busy} placeholder="مثلاً ۸۰۵۰" onChange={(e) => {
+            const next = localizeInputDigits(e.currentTarget).trim();
+            setMeta((old) => ({ ...old, title: !old.title.trim() || toPersianDigits(old.title.trim()) === suggestedTitle(puzzleNumber) ? suggestedTitle(next) : old.title }));
+            setPuzzleNumber(next); setClueText(""); setGridText(""); setSavedId("");
+          }} /></div>
           <div className="photo-field"><span className="photo-field-heading"><span id={`${fieldId}-size`}>ابعاد (ردیف × ستون)</span> <AdminHelp label="ابعاد و شمار پرسش‌ها">در جدول ۱۵×۱۵، دقیقاً ۱۵ گروه افقی و ۱۵ گروه عمودی لازم است؛ هر گروه می‌تواند چند پرسش داشته باشد. بعد از استخراج، تعداد پرسش‌های هر گروه با جای واژه‌ها در شبکه هم بررسی می‌شود.</AdminHelp></span>
             <div className="ai-size" role="group" aria-labelledby={`${fieldId}-size`}>
               <PersianNumberInput id={`${fieldId}-rows`} aria-label="تعداد ردیف‌ها" min={1} max={60} value={rows} disabled={busy} onValueChange={(value) => { setRows(value); setSavedId(""); }} />
@@ -224,8 +257,24 @@ export function PhotoImportSection({ takenIds }: { takenIds: ReadonlySet<string>
             </div>
           </div>
         </div>
+        <p className="ai-hint">{manualId ? "شناسهٔ جدول دستی تعیین شده است." : "شناسهٔ جدول خودکار ساخته می‌شود."}</p>
+        <PuzzleMetaEditor
+          creating
+          value={{ id, ...meta, difficulty, sourceFile: `${id.trim()}-clues.png` }}
+          onChange={({ id: nextId, title, newspaper, author }) => {
+            if (nextId !== id) { setId(nextId); setManualId(true); setIdError(""); setRetryId(""); }
+            setMeta({ title, newspaper, author }); setSavedId("");
+          }}
+          takenIds={takenIds}
+          sourceFile="auto"
+          size={validSize ? { rows, cols } : undefined}
+          disabled={busy}
+          hideIdProblem={!!savedId}
+          idServerError={idError || (id.trim() && !numericId ? "شناسهٔ جدول باید عدد صحیح مثبت باشد." : "")}
+          idPlaceholder="مثلاً 328"
+        />
         {!validSize ? <p className="admin-error">ابعاد جدول را از ۱ تا ۶۰ وارد کنید.</p> : null}
-        {!validNumber ? <p className="admin-error">شمارهٔ جدول باید فقط رقم باشد.</p> : null}
+        {!validNumber ? <p className="admin-error">شماره در روزنامه باید فقط رقم باشد.</p> : null}
       </section>
 
       <section className="ai-card ai-work" ref={(el) => { sections.current[1] = el; sections.current[2] = el; }} aria-label="پرسش‌ها و جدول پاسخ">
@@ -298,7 +347,7 @@ export function PhotoImportSection({ takenIds }: { takenIds: ReadonlySet<string>
                 </div> : <EmptyResult text={gridText} kind="جدول" showJson={() => setGridView("json")} /> : null}
                 <label className="photo-result" hidden={gridView !== "json"}>
                   <span className="ai-sr">جدول استخراج‌شده (قابل ویرایش)</span>
-                  <textarea dir="ltr" value={gridText} disabled={busy} onChange={(e) => { setGridText(e.target.value); setSavedId(""); }} placeholder={'{"grid":[["ا","","ب"]]}'} />
+                  <textarea dir="ltr" value={gridText} disabled={busy} onChange={(e) => { setGridText(e.target.value); setSavedId(""); }} placeholder={'[["ا","","ب"]]'} />
                 </label>
               </div>
             </div>
@@ -321,20 +370,11 @@ export function PhotoImportSection({ takenIds }: { takenIds: ReadonlySet<string>
           <CheckItem state={clueReview?.clues ? "done" : clueText ? "problem" : "todo"}>پرسش‌ها: گروه‌های افقی <bdi>{toPersianDigits(clueReview?.counts.horizontal ?? 0)}/{toPersianDigits(rows)}</bdi>، عمودی <bdi>{toPersianDigits(clueReview?.counts.vertical ?? 0)}/{toPersianDigits(cols)}</bdi></CheckItem>
           <CheckItem state={gridReview.grid ? "done" : gridText ? "problem" : "todo"}>جدول: ابعاد {toPersianDigits(rows)}×{toPersianDigits(cols)} و یک حرف در هر خانه</CheckItem>
           <CheckItem state={review.json ? "done" : review.error ? "problem" : "todo"}>تعداد پرسش‌های هر ردیف و ستون با جای واژه‌ها در جدول می‌خواند</CheckItem>
-          <CheckItem state={validId && !taken ? "done" : id.trim() ? "problem" : "todo"}>شناسهٔ جدول معتبر و تازه است</CheckItem>
+          <CheckItem state={savedId || (validId && !taken) ? "done" : id.trim() ? "problem" : "todo"}>شناسهٔ جدول معتبر و تازه است</CheckItem>
         </ul>
         {review.error ? <p className="admin-error" role="alert">بررسی نهایی پرسش‌ها و جای واژه‌ها در جدول انجام نشد؛ نتیجه را اصلاح یا دوباره استخراج کنید:{"\n"}{toPersianDigits(review.error)}</p> : null}
         {review.json ? <p className="ai-hint">پیش از ساخت، حروف و متن را با تصاویر مقایسه کنید.</p> : null}
-        <PuzzleMetaEditor
-          value={{ id, ...meta, sourceFile: `${id.trim()}-clues.png` }}
-          onChange={({ id: nextId, title, newspaper, difficulty, author }) => { setId(nextId); setMeta({ title, newspaper, difficulty, author }); setSavedId(""); }}
-          takenIds={takenIds}
-          sourceFile="auto"
-          size={validSize ? { rows, cols } : undefined}
-          disabled={busy}
-          hideIdProblem={!!savedId}
-          idPlaceholder={variant === "special" ? "مثلاً ۸۰۵۰-special" : "مثلاً ۸۰۵۰-normal"}
-        />
+
       </section>
 
       <div className="ai-savebar">

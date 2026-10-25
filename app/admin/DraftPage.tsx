@@ -21,7 +21,7 @@ export default function DraftPage({ id }: { id: string }) {
   const takenIds = useMemo(() => new Set([...puzzles.map((p) => p.id), ...drafts.map((d) => d.id)]), [puzzles, drafts]);
 
   const editor = useMemo((): PuzzleEditor | undefined => {
-    if (!draft) return undefined;
+    if (!draft || draft.imagesPending) return undefined;
     return {
       kind: "draft",
       takenIds,
@@ -47,7 +47,7 @@ export default function DraftPage({ id }: { id: string }) {
           </button>
           <h1>پیش‌نویس {id}</h1>
         </header>
-        <p className="admin-note">{isAdmin && !loaded ? "در حال بارگذاری…" : "این پیش‌نویس پیدا نشد."}</p>
+        <p className="admin-note">{isAdmin && !loaded ? "در حال بارگذاری…" : draft?.imagesPending ? "بارگذاری تصاویر کامل نشده؛ از پنل مدیریت دوباره وارد کنید." : "این پیش‌نویس پیدا نشد."}</p>
       </main>
     );
   }

@@ -86,7 +86,7 @@ export function reviewClues(text: string, rows: number, cols: number) {
 }
 
 export function extractedGrid(value: unknown, rows: number, cols: number): string[][] {
-  const grid = record(value) ? value.grid : undefined;
+  const grid = Array.isArray(value) ? value : record(value) ? value.grid : undefined;
   if (!Array.isArray(grid) || grid.length !== rows || grid.some((r) => !Array.isArray(r) || r.length !== cols)) throw new Error(`اندازهٔ جدول باید ${rows} ردیف و ${cols} ستون باشد.`);
   return grid.map((row: unknown[], r) => row.map((cell, c) => {
     if (typeof cell !== "string") throw new Error(`خانهٔ ${r + 1}، ${c + 1} باید متن باشد؛ خانهٔ خالی را "" بنویسید.`);
