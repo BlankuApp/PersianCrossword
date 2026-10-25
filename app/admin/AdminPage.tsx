@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
-import { ArrowRight, ChartColumn, FileJson, FilePlus2, Files, Pencil, Sparkles, Tag, Trash2, Upload } from "lucide-react";
+import { ArrowRight, ChartColumn, FileJson, FilePlus2, Files, MessageSquareText, Pencil, Sparkles, Tag, Trash2, Upload } from "lucide-react";
 import { useAuth } from "../AuthContext";
 import { PuzzleMetaDialog } from "../components/PuzzleMetaDialog";
 import { DifficultyBadge, ProgressBar } from "../pages/HomePage";
@@ -15,6 +15,7 @@ import { PublishConfirmDialog } from "./PublishConfirmDialog";
 import { StatsSection } from "./StatsSection";
 import { toPersianDigits } from "../persianNumbers";
 import { readAdminSettings, saveAdminSettings } from "./adminSettings";
+import { SupportSection } from "./SupportSection";
 
 const fa = (n: number) => n.toLocaleString("fa-IR");
 const adminTabs = [
@@ -22,6 +23,7 @@ const adminTabs = [
   { id: "ai", label: "ساخت با هوش‌واره", Icon: Sparkles },
   { id: "json", label: "افزودن با JSON", Icon: FileJson },
   { id: "stats", label: "آمار", Icon: ChartColumn },
+  { id: "support", label: "گزارش‌ها و پیام‌ها", Icon: MessageSquareText },
 ] as const;
 
 function errorText(e: unknown): string {
@@ -70,7 +72,7 @@ function AdminContent() {
   return (
     <>
       <div className="admin-tabs" role="tablist" aria-label="بخش‌های مدیریت">
-        <span className="admin-tab-pill" aria-hidden="true" style={{ transform: `translateX(calc(-${tabIndex * 100}% - ${tabIndex * 6}px))` }} />
+        <span className="admin-tab-pill" aria-hidden="true" style={{ width: `calc((100% - 10px - ${(adminTabs.length - 1) * 6}px) / ${adminTabs.length})`, transform: `translateX(calc(-${tabIndex * 100}% - ${tabIndex * 6}px))` }} />
         {adminTabs.map(({ id, label, Icon }, index) => <button key={id} type="button" role="tab" id={`admin-tab-${id}`} aria-controls={`admin-panel-${id}`} aria-selected={tab === id} tabIndex={tab === id ? 0 : -1} onClick={() => setTab(id)} onKeyDown={(e) => {
           // The tabs follow RTL visual order; right goes to the preceding tab.
           const next = e.key === "ArrowLeft" ? (index + 1) % adminTabs.length
@@ -106,6 +108,9 @@ function AdminContent() {
       </div>
       <div role="tabpanel" id="admin-panel-stats" aria-labelledby="admin-tab-stats" hidden={tab !== "stats"} tabIndex={0}>
         {statsOpened ? <StatsSection /> : null}
+      </div>
+      <div role="tabpanel" id="admin-panel-support" aria-labelledby="admin-tab-support" hidden={tab !== "support"} tabIndex={0}>
+        {tab === "support" ? <SupportSection /> : null}
       </div>
     </>
   );
