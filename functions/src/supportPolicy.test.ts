@@ -7,6 +7,8 @@ const input = (kind: string, extra = {}) => ({ kind, subject: " موضوع ", te
 describe("parseCreateSupportInput", () => {
   it("allows clue reports only for real identities and trims bounded fields", () => {
     expect(parseCreateSupportInput(input("clue_error", { clue }), "real")).toMatchObject({ kind: "clue_error", subject: "موضوع", text: "پیام", clue });
+    expect(parseCreateSupportInput(input("clue_error", { clue: { ...clue, groupNum: 1 } }), "real").clue?.groupNum).toBe(1);
+    expect(() => parseCreateSupportInput(input("clue_error", { clue: { ...clue, groupNum: 0 } }), "real")).toThrow();
     expect(() => parseCreateSupportInput(input("clue_error", { clue }), "anonymous")).toThrow();
     expect(() => parseCreateSupportInput(input("clue_error", { clue }), "missing")).toThrow();
   });
@@ -28,6 +30,7 @@ describe("parseCreateSupportInput", () => {
 describe("status policy", () => {
   it("accepts only the exact kind-specific status strings", () => {
     for (const status of ["submitted", "reviewing", "accepted", "fixed", "rejected"]) expect(isStatusForKind("clue_error", status)).toBe(true);
+    expect(isStatusForKind("clue_error", ["submitted"])).toBe(false);
     for (const status of ["submitted", "reviewing", "answered", "closed"]) expect(isStatusForKind("contact", status)).toBe(true);
     for (const status of ["answered", "closed", "Submitted", null]) expect(isStatusForKind("clue_error", status)).toBe(false);
     for (const status of ["accepted", "fixed", "rejected", "Submitted", null]) expect(isStatusForKind("contact", status)).toBe(false);

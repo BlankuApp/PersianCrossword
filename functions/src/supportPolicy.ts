@@ -37,7 +37,7 @@ export function parseCreateSupportInput(value: unknown, identity: "real" | "anon
   if (kind === "clue_error") {
     if (identity !== "real" || !isRecord(value.clue)) throw new Error("Clue reports require a real account and clue snapshot");
     const raw = value.clue;
-    if (typeof raw.groupNum !== "number" || !Number.isInteger(raw.groupNum) || raw.groupNum < 0 || raw.groupNum > 10000 || (raw.direction !== "across" && raw.direction !== "down")) throw new Error("Invalid clue snapshot");
+    if (typeof raw.groupNum !== "number" || !Number.isInteger(raw.groupNum) || raw.groupNum < 1 || raw.groupNum > 10000 || (raw.direction !== "across" && raw.direction !== "down")) throw new Error("Invalid clue snapshot");
     return {
       kind, tracked: true,
       subject: requiredText(value.subject, 120), text: requiredText(value.text, 2000),
@@ -62,8 +62,9 @@ export function parseReplySupportInput(value: unknown): ReplySupportInput {
 }
 
 export function isStatusForKind(kind: SupportKind, status: unknown): boolean {
-  if (kind === "clue_error") return ["submitted", "reviewing", "accepted", "fixed", "rejected"].includes(String(status));
-  if (kind === "contact") return ["submitted", "reviewing", "answered", "closed"].includes(String(status));
+  if (typeof status !== "string") return false;
+  if (kind === "clue_error") return ["submitted", "reviewing", "accepted", "fixed", "rejected"].includes(status);
+  if (kind === "contact") return ["submitted", "reviewing", "answered", "closed"].includes(status);
   return false;
 }
 
