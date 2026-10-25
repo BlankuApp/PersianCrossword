@@ -51,6 +51,17 @@ describe("Persian crossword UI", () => {
     vi.mocked(createClueReport).mockReset().mockResolvedValue({ tracked: true, threadId: "report-1" });
   });
 
+  it.each([
+    ["#/contact", "تماس با ما"],
+    ["#/support", "گزارش‌ها و پیام‌های من"],
+    ["#/support/thread/contact-1", "گزارش‌ها و پیام‌های من"],
+  ])("renders the public or account-gated support route %s", (hash, heading) => {
+    window.location.hash = hash;
+    render(<App />);
+    expect(screen.getByRole("heading", { name: heading })).toBeInTheDocument();
+    if (hash !== "#/contact") expect(screen.getByText(/برای پیگیری.*وارد حساب/)).toBeInTheDocument();
+  });
+
   it("keeps a report icon in each existing clue action strip without adding clue rows", () => {
     render(<SolverPage id="sample-10x10-garden" json={json10} />);
     const panel = screen.getByLabelText("پرسش فعال");

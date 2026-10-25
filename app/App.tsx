@@ -7,6 +7,8 @@ import { useHashRoute, useHardwareBackButton, navigate } from "./router";
 import { HomePage } from "./pages/HomePage";
 import { SolverPage, type PuzzleEditor } from "./pages/SolverPage";
 import { AuthProvider, useAuth } from "./AuthContext";
+import { ContactPage } from "./support/ContactPage";
+import { SupportPage } from "./support/SupportPage";
 
 // Admin screens (and their Firebase Storage code) load only when an admin opens them.
 const AdminPage = lazy(() => import("./admin/AdminPage"));
@@ -47,6 +49,10 @@ function AppRoutes() {
       navigate("#/");
     }
   }, [route, ready]);
+
+  if (route.name === "contact") return <ContactPage />;
+  if (route.name === "support") return <SupportPage />;
+  if (route.name === "supportThread") return <SupportPage threadId={route.id} />;
 
   if (route.name === "admin" || route.name === "draft") {
     return (

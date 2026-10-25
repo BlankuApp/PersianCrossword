@@ -1,6 +1,45 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from "vitest";
-import { parseHash, puzzleHash } from "../app/router";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderHook } from "@testing-library/react";
+const native = vi.hoisted(() => ({ back: (() => {}) as () => void, exit: vi.fn(), remove: vi.fn() }));
+vi.mock("@capacitor/core", () => ({ Capacitor: { isNativePlatform: () => true } }));
+vi.mock("@capacitor/app", () => ({ App: {
+  addListener: async (_event: string, handler: () => void) => { native.back = handler; return { remove: native.remove }; },
+  exitApp: native.exit,
+} }));
+import { parseHash, puzzleHash, useHardwareBackButton, type Route } from "../app/router";
+
+describe("support routes and hardware back", () => {
+  beforeEach(() => { vi.clearAllMocks(); window.location.hash = "#/"; });
+  it("parses contact, support and encoded support thread links safely", () => {
+    expect(parseHash("#/contact")).toEqual({ name: "contact" });
+    expect(parseHash("#/support")).toEqual({ name: "support" });
+    expect(parseHash("#/support/thread/thread%20%2F%D8%A8")).toEqual({ name: "supportThread", id: "thread /ب" });
+    expect(parseHash("#/support/thread/%")).toEqual({ name: "home" });
+    expect(parseHash("#/support/thread/")).toEqual({ name: "home" });
+  });
+  it.each([
+    [{ name: "contact" }, "#/"], [{ name: "support" }, "#/"],
+    [{ name: "supportThread", id: "t" }, "#/support"],
+    [{ name: "puzzle", id: "p", slotId: "across:1" }, "#/"],
+    [{ name: "admin" }, "#/"], [{ name: "draft", id: "d" }, "#/admin"],
+  ] as const)("handles back from %j", (route, expected) => {
+    window.location.hash = "#/current";
+    renderHook(() => useHardwareBackButton(route as Route));
+    native.back();
+    expect(window.location.hash).toBe(expected);
+    expect(native.exit).not.toHaveBeenCalled();
+  });
+  it("uses the current route after navigation and exits only from home", () => {
+    const { rerender } = renderHook(({ route }: { route: Route }) => useHardwareBackButton(route), { initialProps: { route: { name: "home" } as Route } });
+    native.back();
+    expect(native.exit).toHaveBeenCalledOnce();
+    rerender({ route: { name: "supportThread", id: "t" } });
+    native.back();
+    expect(window.location.hash).toBe("#/support");
+    expect(native.exit).toHaveBeenCalledOnce();
+  });
+});
 
 describe("puzzle hash routes", () => {
   it("keeps existing puzzle links valid without a slot", () => {

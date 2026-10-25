@@ -18,6 +18,7 @@ import { listPuzzles } from "../puzzleLibrary";
 import { loadGeminiKey, loadMirror, saveGeminiKey } from "../progress";
 import { puzzleStatus } from "../puzzleListQuery";
 import { FREE_AI_LIMITS, freeAiUsageText, loadFreeAiUsed } from "../gemini";
+import { isRealUser, subscribeOwnThreads } from "../support/supportApi";
 
 type EmailMode = "signin" | "signup" | "reset";
 
@@ -76,6 +77,16 @@ function UserMenu() {
   const [signingOut, setSigningOut] = useState(false);
   const [geminiKey, setGeminiKey] = useState(loadGeminiKey);
   const [aiUsed, setAiUsed] = useState<number | null>(null);
+  const [supportUnread, setSupportUnread] = useState<{ uid: string; count: number } | null>(null);
+  const supportUid = isRealUser(user) ? user!.uid : null;
+  const unread = supportUnread?.uid === supportUid ? supportUnread.count : 0;
+
+  useEffect(() => {
+    if (!supportUid) return;
+    return subscribeOwnThreads(supportUid,
+      (threads) => setSupportUnread({ uid: supportUid, count: threads.reduce((sum, thread) => sum + thread.userUnread, 0) }),
+      () => setSupportUnread(null));
+  }, [supportUid]);
 
   // One read per menu open; the count only changes when the user asks the AI.
   useEffect(() => {
@@ -129,6 +140,7 @@ function UserMenu() {
       >
         <img className="auth-avatar" src={avatar} alt="" />
         {syncProblem && <span className="auth-sync-dot" aria-hidden="true" />}
+        {unread > 0 ? <span className="auth-support-badge" aria-label={`${fa(unread)} پیام خوانده‌نشده`}>{fa(unread)}</span> : null}
       </button>
 
       {open && (
@@ -215,6 +227,10 @@ function UserMenu() {
                 </p>
               ) : null}
             </div>
+
+            {isRealUser(user) ? <a className="auth-btn auth-btn-block" href="#/support" onClick={() => setOpen(false)}>
+              گزارش‌ها و پیام‌های من{unread > 0 ? ` (${fa(unread)})` : ""}
+            </a> : null}
 
             {isAdmin ? (
               <a className="auth-btn auth-btn-block auth-admin-link" href="#/admin" onClick={() => setOpen(false)}>

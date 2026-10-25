@@ -3062,6 +3062,26 @@ select {
 
 /* Admin panel (app/admin) */
 
+.support-shell { max-width: 800px; }
+.support-form { display: grid; gap: 10px; }
+.support-form input:not([type="file"]), .support-form textarea { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--control-border); border-radius: 8px; background: #fff; color: var(--ink); font: inherit; }
+.support-form textarea { resize: vertical; }
+.support-form input:focus-visible, .support-form textarea:focus-visible, .support-list a:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.support-form > button { justify-self: start; }
+.support-attachment { display: grid; gap: 8px; justify-items: start; }
+.support-attachment img, .support-image { display: block; max-width: 100%; max-height: 420px; object-fit: contain; border-radius: 8px; }
+.support-list, .support-messages { display: grid; gap: 14px; margin: 0 0 20px; padding: 0; list-style: none; }
+.support-list a { display: grid; gap: 6px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink); text-decoration: none; overflow-wrap: anywhere; }
+.support-list a:hover { border-color: var(--brand); }
+.support-list span, .support-message time { color: var(--muted); font-size: 0.85rem; }
+.support-list .support-unread { color: var(--brand); font-weight: 700; }
+.support-message { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: #faf7f7; }
+.support-message-admin { background: var(--brand-soft); }
+.support-message time { display: block; }
+.support-message p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.support-conversation h2 { overflow-wrap: anywhere; }
+.auth-support-badge { position: absolute; top: -5px; right: -7px; min-width: 20px; padding: 0 4px; border-radius: 12px; background: var(--brand); color: #fff; font-size: 0.7rem; line-height: 20px; }
+
 /* Transitions.dev: sliding tabs, panel reveal, modal scale, and delayed tooltip.
    https://transitions.dev/library.html — Copyright 2026 Jakub Antalik / Transitions.dev. */
 .admin-tabs { position: relative; display: flex; gap: 6px; padding: 5px; margin-bottom: 20px; border: 1px solid var(--line); border-radius: 14px; background: #f4f0f1; }

@@ -43,6 +43,10 @@ vi.mock("../app/AuthContext", () => ({
 }));
 
 vi.mock("../app/firebase", () => ({ auth: { name: "test-auth" }, functions: {} }));
+vi.mock("../app/support/supportApi", () => ({
+  isRealUser: (user: MockUser | null) => user !== null && !user.isAnonymous,
+  subscribeOwnThreads: () => () => {},
+}));
 
 vi.mock("@capacitor/core", () => ({
   Capacitor: { isNativePlatform: () => platform.native },

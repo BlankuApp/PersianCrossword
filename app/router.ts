@@ -5,6 +5,9 @@ import { Capacitor } from "@capacitor/core";
 export type Route =
   | { readonly name: "home" }
   | { readonly name: "puzzle"; readonly id: string; readonly slotId?: string }
+  | { readonly name: "contact" }
+  | { readonly name: "support" }
+  | { readonly name: "supportThread"; readonly id: string }
   // Admin panel and one of its drafts (app/admin).
   | { readonly name: "admin" }
   | { readonly name: "draft"; readonly id: string };
@@ -22,6 +25,14 @@ export function parseHash(hash: string): Route {
     if (id) return { name: "draft", id };
   }
   if (path === "admin") return { name: "admin" };
+  if (path === "contact") return { name: "contact" };
+  if (path === "support") return { name: "support" };
+  if (path.startsWith("support/thread/")) {
+    try {
+      const id = decodeURIComponent(path.slice("support/thread/".length).trim());
+      if (id) return { name: "supportThread", id };
+    } catch { return { name: "home" }; }
+  }
   return { name: "home" };
 }
 
@@ -74,8 +85,10 @@ export function useHardwareBackButton(route: Route): void {
 
     const listenerPromise = CapacitorApp.addListener("backButton", () => {
       const { name } = routeRef.current;
-      if (name === "puzzle" || name === "admin") {
+      if (name === "puzzle" || name === "admin" || name === "contact" || name === "support") {
         goHome();
+      } else if (name === "supportThread") {
+        navigate("#/support");
       } else if (name === "draft") {
         navigate("#/admin");
       } else {
