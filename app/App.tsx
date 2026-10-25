@@ -61,10 +61,11 @@ function AppRoutes() {
     if (puzzle) {
       return (
         <SolverPage
-          // A newly downloaded version starts a fresh page (saved letters reload from the device);
-          // while an admin edits, only grid changes do, so clue fixes keep the current page.
-          key={`${puzzle.id}:${editor ? gridKey(puzzle.json) : puzzle.hash}`}
+          // Grid changes start fresh; sign-in and clue-only updates keep open dialogs.
+          // SolverPage reloads persisted letters when updated puzzle JSON arrives.
+          key={`${puzzle.id}:${gridKey(puzzle.json)}`}
           id={puzzle.id}
+          slotId={route.slotId}
           json={puzzle.json}
           solutionImageUrl={puzzle.solutionImageUrl}
           sourceImageUrl={puzzle.sourceImageUrl}

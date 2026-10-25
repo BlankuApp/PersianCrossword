@@ -726,6 +726,20 @@ select {
   justify-content: flex-end;
 }
 
+.solution-modal.clue-report-modal {
+  width: min(90vw, 440px);
+}
+
+.clue-report-snapshot {
+  display: grid;
+  gap: 4px;
+  overflow-wrap: anywhere;
+}
+
+.clue-report-snapshot p {
+  margin: 4px 0;
+}
+
 .solution-close-button {
   display: inline-flex;
   align-items: center;

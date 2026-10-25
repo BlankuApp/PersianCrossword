@@ -4,16 +4,18 @@ import { Capacitor } from "@capacitor/core";
 
 export type Route =
   | { readonly name: "home" }
-  | { readonly name: "puzzle"; readonly id: string }
+  | { readonly name: "puzzle"; readonly id: string; readonly slotId?: string }
   // Admin panel and one of its drafts (app/admin).
   | { readonly name: "admin" }
   | { readonly name: "draft"; readonly id: string };
 
 export function parseHash(hash: string): Route {
-  const path = hash.replace(/^#\/?/, "").split("?")[0]!;
+  const [path = "", query = ""] = hash.replace(/^#\/?/, "").split(/\?(.*)/s);
   if (path.startsWith("puzzle/")) {
-    const id = path.slice("puzzle/".length).trim();
-    if (id) return { name: "puzzle", id };
+    let id = path.slice("puzzle/".length).trim();
+    try { id = decodeURIComponent(id); } catch { return { name: "home" }; }
+    const slotId = new URLSearchParams(query).get("slot");
+    if (id) return { name: "puzzle", id, ...(slotId ? { slotId } : {}) };
   }
   if (path.startsWith("admin/draft/")) {
     const id = decodeURIComponent(path.slice("admin/draft/".length).trim());
@@ -21,6 +23,10 @@ export function parseHash(hash: string): Route {
   }
   if (path === "admin") return { name: "admin" };
   return { name: "home" };
+}
+
+export function puzzleHash(id: string, slotId?: string): string {
+  return `#/puzzle/${encodeURIComponent(id)}${slotId ? `?slot=${encodeURIComponent(slotId)}` : ""}`;
 }
 
 export function navigate(to: string): void {

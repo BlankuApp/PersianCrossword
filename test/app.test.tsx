@@ -4,20 +4,37 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SolverPage } from "../app/pages/SolverPage";
+import { App } from "../app/App";
+import type { ReactNode } from "react";
 import sample10 from "../samples/sample-10x10-garden.json";
 import sample11 from "../samples/sample-11x11-city.json";
 import type { CrosswordJson } from "../src/index";
 import { compilePuzzle } from "../src/index";
 import { normalizeGridDirection } from "../app/progress";
 import referencePuzzle from "../puzzles/201-250/223_8004_normal.json";
+import type { User } from "firebase/auth";
+import { createClueReport } from "../app/support/supportApi";
 
 const json10 = sample10 as CrosswordJson;
 const json11 = sample11 as CrosswordJson;
+const catalogPuzzle = { json: json10, hash: "published-v1" };
 
-const authState = vi.hoisted(() => ({ user: null, syncVersion: 0, pushChanges: () => {} }));
+const authState = vi.hoisted(() => ({ user: null as User | null, isAdmin: false, syncVersion: 0, pushChanges: () => {} }));
+
+vi.mock("../app/support/supportApi", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../app/support/supportApi")>(),
+  createClueReport: vi.fn(),
+}));
 
 vi.mock("../app/AuthContext", () => ({
   useAuth: () => authState,
+  AuthProvider: ({ children }: { children: ReactNode }) => children,
+}));
+
+vi.mock("../app/puzzleLibrary", () => ({
+  usePuzzleLibrary: () => ({ puzzles: [], ready: true, sync: "ok" }),
+  getPuzzleById: (id: string) => id === "sample-10x10-garden" ? { id, ...catalogPuzzle } : undefined,
+  listPuzzles: () => [],
 }));
 
 describe("Persian crossword UI", () => {
@@ -27,7 +44,163 @@ describe("Persian crossword UI", () => {
     window.localStorage.setItem("persian-crossword-seen-tutorial", "true");
     window.location.hash = "";
     authState.user = null;
+    authState.isAdmin = false;
     authState.syncVersion = 0;
+    catalogPuzzle.json = json10;
+    catalogPuzzle.hash = "published-v1";
+    vi.mocked(createClueReport).mockReset().mockResolvedValue({ tracked: true, threadId: "report-1" });
+  });
+
+  it("keeps a report icon in each existing clue action strip without adding clue rows", () => {
+    render(<SolverPage id="sample-10x10-garden" json={json10} />);
+    const panel = screen.getByLabelText("پرسش فعال");
+    const reports = within(panel).getAllByRole("button", { name: "گزارش خطای این پرسش" });
+    expect(reports).toHaveLength(2);
+    expect(panel.children).toHaveLength(2);
+    for (const button of reports) {
+      expect(button).toHaveClass("clue-icon-btn");
+      expect(button).toHaveAttribute("title", "گزارش خطای پرسش");
+      expect(button.parentElement).toHaveClass("active-clue-head-actions");
+      expect(button.querySelector("svg")).toHaveClass("lucide-flag");
+      expect(button.closest(".active-clue-block")?.children).toHaveLength(3);
+    }
+  });
+
+  it.each([false, true])("preserves the report explanation and selected slot through sign-in (anonymous: %s)", async (anonymous) => {
+    const user = userEvent.setup();
+    authState.user = anonymous ? { uid: "guest", isAnonymous: true } as User : null;
+    const { rerender } = render(<SolverPage id="sample-10x10-garden" json={json10} />);
+    await user.click(screen.getByLabelText("ردیف 1 ستون 7"));
+    await user.click(screen.getAllByRole("button", { name: "گزارش خطای این پرسش" })[0]!);
+    const dialog = screen.getByRole("dialog", { name: "گزارش خطای پرسش" });
+    const explanation = within(dialog).getByRole("textbox", { name: "توضیح خطا" });
+    await user.type(explanation, "پرسش با پاسخ هماهنگ نیست");
+    expect(within(dialog).getByRole("button", { name: "ارسال گزارش" })).toBeDisabled();
+    await user.click(within(dialog).getByRole("button", { name: "ورود یا ساخت حساب" }));
+    expect(screen.getByRole("dialog", { name: "ورود" })).toBeInTheDocument();
+    expect(dialog).toBeInTheDocument();
+    expect(createClueReport).not.toHaveBeenCalled();
+
+    authState.user = { uid: "player", isAnonymous: false } as User;
+    authState.syncVersion++;
+    rerender(<SolverPage id="sample-10x10-garden" json={json10} />);
+    expect(screen.getByRole("dialog", { name: "گزارش خطای پرسش" })).toBe(dialog);
+    expect(explanation).toHaveValue("پرسش با پاسخ هماهنگ نیست");
+    expect(screen.getByLabelText("ردیف 1 ستون 7")).toHaveClass("cell-selected");
+    expect(within(dialog).getByRole("button", { name: "ارسال گزارش" })).toBeEnabled();
+  });
+
+  it("submits the selected clue snapshot and retains a Persian receipt until deliberately closed", async () => {
+    authState.user = { uid: "player", isAnonymous: false } as User;
+    const user = userEvent.setup();
+    render(<SolverPage id="sample-10x10-garden" json={json10} />);
+    await user.click(screen.getAllByRole("button", { name: "گزارش خطای این پرسش" })[1]!);
+    const dialog = screen.getByRole("dialog", { name: "گزارش خطای پرسش" });
+    expect(within(dialog).getByText("باغ — ۱۰ در ۱۰")).toBeInTheDocument();
+    expect(within(dialog).getByText("sample-10x10-garden")).toBeInTheDocument();
+    expect(within(dialog).getByText("۱ عمودی")).toBeInTheDocument();
+    expect(within(dialog).getByText("نمونه عمودی 1، 4 حرف")).toBeInTheDocument();
+    expect(within(dialog).getAllByRole("textbox")).toHaveLength(1);
+    const submit = within(dialog).getByRole("button", { name: "ارسال گزارش" });
+    expect(submit).toBeDisabled();
+    await user.type(within(dialog).getByRole("textbox", { name: "توضیح خطا" }), "  متن پرسش اشتباه است  ");
+    await user.click(submit);
+    await waitFor(() => expect(within(dialog).getByRole("status")).toHaveTextContent("گزارش شما ثبت شد"));
+    expect(createClueReport).toHaveBeenCalledWith({
+      subject: "خطای پرسش: باغ — ۱۰ در ۱۰",
+      text: "متن پرسش اشتباه است",
+      clue: { puzzleId: "sample-10x10-garden", puzzleTitle: "باغ — ۱۰ در ۱۰", slotId: "C1-1", direction: "down", groupNum: 1, text: "نمونه عمودی 1، 4 حرف" },
+    });
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "ارسال گزارش" })).not.toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "بستن" }));
+    expect(dialog).not.toBeInTheDocument();
+    await user.click(screen.getAllByRole("button", { name: "گزارش خطای این پرسش" })[0]!);
+    expect(screen.getByRole("textbox", { name: "توضیح خطا" })).toHaveValue("");
+  });
+
+  it("keeps an unsuccessful report editable and allows retry", async () => {
+    authState.user = { uid: "player", isAnonymous: false } as User;
+    vi.mocked(createClueReport).mockRejectedValueOnce(new Error("offline"));
+    const user = userEvent.setup();
+    render(<SolverPage id="sample-10x10-garden" json={json10} />);
+    await user.click(screen.getAllByRole("button", { name: "گزارش خطای این پرسش" })[0]!);
+    await user.type(screen.getByRole("textbox", { name: "توضیح خطا" }), "شرح خطا");
+    await user.click(screen.getByRole("button", { name: "ارسال گزارش" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("ارسال گزارش انجام نشد");
+    expect(screen.getByRole("textbox", { name: "توضیح خطا" })).toHaveValue("شرح خطا");
+    await user.click(screen.getByRole("button", { name: "ارسال گزارش" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("گزارش شما ثبت شد");
+  });
+
+  it("keeps the report mounted when an admin signs in through the puzzle route", async () => {
+    window.location.hash = "#/puzzle/sample-10x10-garden?slot=C2-1";
+    const user = userEvent.setup();
+    const { rerender } = render(<App />);
+    expect(screen.getByLabelText("پرسش فعال").querySelector(".active-clue-block-active")).toHaveTextContent("۲ عمودی");
+    await user.click(screen.getAllByRole("button", { name: "گزارش خطای این پرسش" })[1]!);
+    const dialog = screen.getByRole("dialog", { name: "گزارش خطای پرسش" });
+    await user.type(within(dialog).getByRole("textbox", { name: "توضیح خطا" }), "توضیح محفوظ");
+    authState.user = { uid: "admin", isAnonymous: false } as User;
+    authState.isAdmin = true;
+    authState.syncVersion++;
+    rerender(<App />);
+    expect(screen.getByRole("dialog", { name: "گزارش خطای پرسش" })).toBe(dialog);
+    expect(within(dialog).getByRole("textbox", { name: "توضیح خطا" })).toHaveValue("توضیح محفوظ");
+    expect(screen.getByLabelText("پرسش فعال").querySelector(".active-clue-block-active")).toHaveTextContent("۲ عمودی");
+    expect(screen.getAllByTitle("ویرایش متن پرسش (دیباگ)")).toHaveLength(2);
+
+    catalogPuzzle.json = {
+      ...sample10,
+      clues: { ...sample10.clues, horizontal: { ...sample10.clues.horizontal, "1": ["پرسش اصلاح‌شده", ...sample10.clues.horizontal["1"].slice(1)] } },
+    } as CrosswordJson;
+    catalogPuzzle.hash = "admin-clue-fix";
+    rerender(<App />);
+    expect(screen.getByRole("dialog", { name: "گزارش خطای پرسش" })).toBe(dialog);
+    expect(within(dialog).getByRole("textbox", { name: "توضیح خطا" })).toHaveValue("توضیح محفوظ");
+    await user.click(within(dialog).getByRole("button", { name: "بستن" }));
+    await user.click(screen.getAllByRole("button", { name: "گزارش خطای این پرسش" })[0]!);
+    expect(within(screen.getByRole("dialog", { name: "گزارش خطای پرسش" })).getByText("پرسش اصلاح‌شده")).toBeInTheDocument();
+  });
+
+  it("refreshes a same-grid catalog update without discarding the report, then remounts for a grid change", async () => {
+    window.location.hash = "#/puzzle/sample-10x10-garden";
+    const user = userEvent.setup();
+    const { rerender } = render(<App />);
+    await user.click(screen.getAllByRole("button", { name: "گزارش خطای این پرسش" })[0]!);
+    const dialog = screen.getByRole("dialog", { name: "گزارش خطای پرسش" });
+    await user.type(within(dialog).getByRole("textbox", { name: "توضیح خطا" }), "توضیح محفوظ");
+    window.localStorage.setItem("persian-crossword:sample-10x10-garden", JSON.stringify({ cells: { "0,9": "س" } }));
+    catalogPuzzle.json = { ...sample10, meta: { ...sample10.meta, title: "عنوان به‌روز" } } as CrosswordJson;
+    catalogPuzzle.hash = "published-v2";
+    rerender(<App />);
+    expect(screen.getByRole("heading", { name: "عنوان به‌روز" })).toBeInTheDocument();
+    expect(screen.getByLabelText("ردیف 1 ستون 10")).toHaveTextContent("س");
+    expect(screen.getByRole("dialog", { name: "گزارش خطای پرسش" })).toBe(dialog);
+    expect(within(dialog).getByRole("textbox", { name: "توضیح خطا" })).toHaveValue("توضیح محفوظ");
+
+    catalogPuzzle.json = { ...sample10, grid: sample10.grid.map((row, i) => i === 0 ? ["ا", ...row.slice(1)] : row) } as CrosswordJson;
+    catalogPuzzle.hash = "published-v3";
+    rerender(<App />);
+    expect(screen.queryByRole("dialog", { name: "گزارش خطای پرسش" })).not.toBeInTheDocument();
+  });
+
+  it("selects an exact slot initially, on route changes, and after resetting the puzzle", async () => {
+    const puzzle = compilePuzzle(normalizeGridDirection(json10));
+    const down = puzzle.slots.find((slot) => slot.direction === "down" && slot.groupNum === 2)!;
+    const user = userEvent.setup();
+    const { rerender } = render(<SolverPage id="sample-10x10-garden" json={json10} slotId={down.id} />);
+    const activeBlock = () => screen.getByLabelText("پرسش فعال").querySelector(".active-clue-block-active");
+    expect(activeBlock()).toHaveTextContent("۲ عمودی");
+    await user.click(screen.getByLabelText("ردیف 1 ستون 10"));
+    await user.click(screen.getByRole("button", { name: "گزینه‌های بیشتر" }));
+    await user.click(screen.getByRole("button", { name: "پاک کردن پاسخ‌ها" }));
+    await user.click(within(screen.getByRole("dialog", { name: "تایید عملیات" })).getByRole("button", { name: "تایید" }));
+    expect(activeBlock()).toHaveTextContent("۲ عمودی");
+    rerender(<SolverPage id="sample-10x10-garden" json={json10} slotId="deleted-slot" />);
+    expect(activeBlock()).toHaveTextContent("۱ افقی");
+    rerender(<SolverPage id="sample-10x10-garden" json={json10} slotId={down.id} />);
+    expect(activeBlock()).toHaveTextContent("۲ عمودی");
   });
 
   it("renders the puzzle title and active clue", () => {
