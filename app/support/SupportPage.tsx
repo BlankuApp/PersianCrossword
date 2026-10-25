@@ -28,7 +28,7 @@ function OwnSupport({ uid, threadId }: { uid: string; threadId?: string }) {
   if (threads === null) return <p role="status">در حال بارگذاری…</p>;
   if (threadId) {
     const thread = threads.find((item) => item.id === threadId && item.ownerUid === uid);
-    return thread ? <SupportThread key={thread.id} thread={thread} /> : <p className="admin-error" role="alert">پیام پیدا نشد یا به این حساب تعلق ندارد.</p>;
+    return thread ? <SupportThread key={thread.id} thread={thread} role="user" /> : <p className="admin-error" role="alert">پیام پیدا نشد یا به این حساب تعلق ندارد.</p>;
   }
   // shortcut: the user's complete thread list is sorted locally, add paginated queries when support volume grows.
   const sorted = [...threads].sort((a, b) => b.lastMessageAt.toMillis() - a.lastMessageAt.toMillis());

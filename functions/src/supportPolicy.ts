@@ -1,6 +1,7 @@
 export type SupportKind = "clue_error" | "contact";
 export type ClueReportStatus = "submitted" | "reviewing" | "accepted" | "fixed" | "rejected";
 export type ContactStatus = "submitted" | "reviewing" | "answered" | "closed";
+export type SupportParticipant = "user" | "admin";
 
 export interface ClueSnapshot {
   puzzleId: string;
@@ -23,6 +24,7 @@ export interface CreateSupportInput {
 export interface ReplySupportInput {
   threadId: string;
   text: string;
+  participant: SupportParticipant;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -59,7 +61,12 @@ export function parseCreateSupportInput(value: unknown, identity: "real" | "anon
 
 export function parseReplySupportInput(value: unknown): ReplySupportInput {
   if (!isRecord(value)) throw new Error("Invalid support reply");
-  return { threadId: requiredText(value.threadId, 200), text: requiredText(value.text, 2000) };
+  return { threadId: requiredText(value.threadId, 200), text: requiredText(value.text, 2000), participant: parseSupportParticipant(value) };
+}
+
+export function parseSupportParticipant(value: unknown): SupportParticipant {
+  if (!isRecord(value) || (value.participant !== "user" && value.participant !== "admin")) throw new Error("Invalid support participant.");
+  return value.participant;
 }
 
 export function isStatusForKind(kind: SupportKind, status: unknown): boolean {

@@ -5,7 +5,7 @@ import { defineBoolean, defineSecret } from "firebase-functions/params";
 import { warn } from "firebase-functions/logger";
 import { HttpsError, onCall, type CallableRequest } from "firebase-functions/v2/https";
 import { tehranDay } from "./quota.js";
-import { decideSupportUsage, isStatusForKind, parseCreateSupportInput, parseReplySupportInput, readSupportImage, type SupportKind } from "./supportPolicy.js";
+import { decideSupportUsage, isStatusForKind, parseCreateSupportInput, parseReplySupportInput, parseSupportParticipant, readSupportImage, type SupportKind, type SupportParticipant } from "./supportPolicy.js";
 
 const SUPPORT_ENFORCE_APP_CHECK = defineBoolean("SUPPORT_ENFORCE_APP_CHECK", { default: false });
 const SUPPORT_RATE_LIMIT_SALT = defineSecret("SUPPORT_RATE_LIMIT_SALT");
@@ -51,10 +51,10 @@ async function readThread(tx: Transaction, ref: DocumentReference): Promise<Supp
   return snapshot.data() as SupportThread;
 }
 
-function authorizeThread(request: CallableRequest, thread: SupportThread): boolean {
+function authorizeThread(request: CallableRequest, thread: SupportThread, participant: SupportParticipant): boolean {
   const uid = requireReal(request);
-  const admin = request.auth!.token.admin === true;
-  if (!admin && thread.ownerUid !== uid) throw new HttpsError("permission-denied", "Support thread access denied.");
+  const admin = participant === "admin";
+  if (admin ? request.auth!.token.admin !== true : thread.ownerUid !== uid) throw new HttpsError("permission-denied", "Support thread access denied.");
   return admin;
 }
 
@@ -140,7 +140,7 @@ export const replySupportThread = onCall(callableOptions, async (request) => {
   const day = tehranDay(new Date());
   await db.runTransaction(async (tx) => {
     const current = await readThread(tx, thread);
-    const admin = authorizeThread(request, current);
+    const admin = authorizeThread(request, current, input.participant);
     const next = await nextUsage(tx, usage, day, 50);
     const timestamp = FieldValue.serverTimestamp();
     tx.set(usage, next);
@@ -169,11 +169,12 @@ export const setSupportStatus = onCall(callableOptions, async (request) => {
 
 export const markSupportRead = onCall(callableOptions, async (request) => {
   requireReal(request);
+  const participant = validate(() => parseSupportParticipant(request.data));
   const db = getFirestore();
   const thread = db.collection("supportThreads").doc(threadIdFrom(request.data));
   await db.runTransaction(async (tx) => {
     const current = await readThread(tx, thread);
-    const admin = authorizeThread(request, current);
+    const admin = authorizeThread(request, current, participant);
     tx.update(thread, admin ? { adminUnread: 0 } : { userUnread: 0 });
   });
   return { ok: true };

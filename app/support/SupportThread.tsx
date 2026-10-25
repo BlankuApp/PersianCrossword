@@ -1,26 +1,27 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { loadSupportImage, markSupportRead, replySupportThread, subscribeMessages, type SupportMessage, type SupportStatus, type SupportThread as Thread } from "./supportApi";
+import { loadSupportImage, markSupportRead, replySupportThread, subscribeMessages, type SupportMessage, type SupportParticipant, type SupportStatus, type SupportThread as Thread } from "./supportApi";
 
 export const supportStatusText: Record<SupportStatus, string> = {
   submitted: "ثبت شده", reviewing: "در حال بررسی", accepted: "پذیرفته شده", fixed: "اصلاح شده",
   rejected: "رد شده", answered: "پاسخ داده شده", closed: "بسته شده",
 };
 
-export function SupportThread({ thread }: { thread: Thread }) {
+export function SupportThread({ thread, role }: { thread: Thread; role: SupportParticipant }) {
   const [messages, setMessages] = useState<SupportMessage[] | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [readError, setReadError] = useState(false);
   const [replyError, setReplyError] = useState(false);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const unread = role === "admin" ? thread.adminUnread : thread.userUnread;
 
   useEffect(() => subscribeMessages(thread.id, setMessages, () => setLoadError(true)), [thread.id]);
   useEffect(() => {
     let live = true;
     setReadError(false);
-    void markSupportRead(thread.id).catch(() => { if (live) setReadError(true); });
+    void markSupportRead({ threadId: thread.id, participant: role }).catch(() => { if (live) setReadError(true); });
     return () => { live = false; };
-  }, [thread.id, thread.userUnread]);
+  }, [thread.id, role, unread]);
 
   const valid = text.trim().length > 0 && text.trim().length <= 2000;
   async function reply(event: FormEvent) {
@@ -29,7 +30,7 @@ export function SupportThread({ thread }: { thread: Thread }) {
     setBusy(true);
     setReplyError(false);
     try {
-      await replySupportThread({ threadId: thread.id, text: text.trim() });
+      await replySupportThread({ threadId: thread.id, participant: role, text: text.trim() });
       setText("");
     } catch {
       setReplyError(true);
@@ -46,7 +47,7 @@ export function SupportThread({ thread }: { thread: Thread }) {
       {loadError ? <p className="admin-error" role="alert">خواندن گفت‌وگو انجام نشد. دوباره این صفحه را باز کنید.</p> : messages === null ? <p role="status">در حال بارگذاری…</p> : (
         <ol className="support-messages" aria-label="پیام‌های گفت‌وگو">
           {messages.map((message) => <li key={message.id} className={`support-message support-message-${message.sender}`}>
-            <strong>{message.sender === "admin" ? "پشتیبانی" : "شما"}</strong>
+            <strong>{message.sender === "admin" ? (role === "admin" ? "پشتیبانی (شما)" : "پشتیبانی") : message.sender === "guest" ? "مهمان" : role === "user" ? "شما" : "کاربر"}</strong>
             <time dateTime={message.createdAt.toDate().toISOString()}>{message.createdAt.toDate().toLocaleString("fa-IR")}</time>
             <p dir="auto">{message.text}</p>
             {message.imagePath ? <SupportImage key={message.imagePath} path={message.imagePath} /> : null}

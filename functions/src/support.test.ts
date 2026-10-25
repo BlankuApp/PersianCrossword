@@ -159,26 +159,65 @@ describe("support callable persistence", () => {
 
   it("authorizes owner/admin replies, preserves the clue, and increments each unread side atomically", async () => {
     const id = await create(clue);
-    await replySupportThread.run(request({ threadId: id, text: " Owner reply ", sender: "admin", image: imageContact.image }, "owner"));
-    await replySupportThread.run(request({ threadId: id, text: "Admin reply" }, "admin", "password", true));
+    await replySupportThread.run(request({ threadId: id, participant: "user", text: " Owner reply ", sender: "admin", image: imageContact.image }, "owner"));
+    await replySupportThread.run(request({ threadId: id, participant: "admin", text: "Admin reply" }, "admin", "password", true));
     expect(store.docs.get(`supportThreads/${id}`)).toMatchObject({ userUnread: 1, adminUnread: 2, clue: clue.clue });
     expect(messages(id).slice(1)).toEqual([
       { sender: "user", text: "Owner reply", createdAt: "server-time" },
       { sender: "admin", text: "Admin reply", createdAt: "server-time" },
     ]);
-    const attempts = await Promise.allSettled(Array.from({ length: 5 }, () => replySupportThread.run(request({ threadId: id, text: "Concurrent" }, "owner"))));
+    const attempts = await Promise.allSettled(Array.from({ length: 5 }, () => replySupportThread.run(request({ threadId: id, participant: "user", text: "Concurrent" }, "owner"))));
     expect(attempts.every((result) => result.status === "fulfilled")).toBe(true);
     expect(store.docs.get(`supportThreads/${id}`)?.adminUnread).toBe(7);
   });
 
   it("denies missing, anonymous, and unrelated callers before changing a thread", async () => {
     const id = await create();
-    for (const req of [request({ threadId: id, text: "reply" }), request({ threadId: id, text: "reply" }, "owner", "anonymous"), request({ threadId: id, text: "reply" }, "stranger")]) {
+    for (const req of [request({ threadId: id, participant: "user", text: "reply" }), request({ threadId: id, participant: "user", text: "reply" }, "owner", "anonymous"), request({ threadId: id, participant: "user", text: "reply" }, "stranger")]) {
       await expect(replySupportThread.run(req)).rejects.toBeDefined();
       await expect(markSupportRead.run(req)).rejects.toBeDefined();
     }
     expect(messages(id)).toHaveLength(1);
     expect(store.docs.get(`supportThreads/${id}`)).toMatchObject({ userUnread: 0, adminUnread: 1 });
+  });
+
+  it("lets an admin owner choose user or admin without mixing sender or unread sides", async () => {
+    const result = await createSupportThread.run(request(contact, "admin-owner", "password", true));
+    const id = result.threadId!;
+    await replySupportThread.run(request({ threadId: id, participant: "user", text: "Personal reply" }, "admin-owner", "password", true));
+    expect(messages(id).at(-1)).toMatchObject({ sender: "user", text: "Personal reply" });
+    expect(store.docs.get(`supportThreads/${id}`)).toMatchObject({ userUnread: 0, adminUnread: 2 });
+    await replySupportThread.run(request({ threadId: id, participant: "admin", text: "Inbox reply" }, "admin-owner", "password", true));
+    expect(messages(id).at(-1)).toMatchObject({ sender: "admin", text: "Inbox reply" });
+    await markSupportRead.run(request({ threadId: id, participant: "user" }, "admin-owner", "password", true));
+    expect(store.docs.get(`supportThreads/${id}`)).toMatchObject({ userUnread: 0, adminUnread: 2 });
+    await markSupportRead.run(request({ threadId: id, participant: "admin" }, "admin-owner", "password", true));
+    expect(store.docs.get(`supportThreads/${id}`)).toMatchObject({ userUnread: 0, adminUnread: 0 });
+    expect(store.docs.get("supportUsage/replies_admin-owner")?.count).toBe(2);
+  });
+
+  it("enforces the requested participant independently of an admin claim or ownership", async () => {
+    const id = await create();
+    for (const req of [
+      request({ threadId: id, participant: "admin", text: "forged" }, "owner"),
+      request({ threadId: id, participant: "user", text: "forged" }, "admin", "password", true),
+      request({ threadId: id, participant: "admin", text: "forged" }, "admin", "anonymous", true),
+    ]) {
+      await expect(replySupportThread.run(req)).rejects.toMatchObject({ code: req.auth?.token.firebase?.sign_in_provider === "anonymous" ? "unauthenticated" : "permission-denied" });
+      await expect(markSupportRead.run(req)).rejects.toMatchObject({ code: req.auth?.token.firebase?.sign_in_provider === "anonymous" ? "unauthenticated" : "permission-denied" });
+    }
+    expect(messages(id)).toHaveLength(1);
+    expect(store.docs.get(`supportThreads/${id}`)).toMatchObject({ userUnread: 0, adminUnread: 1 });
+    expect([...store.docs.keys()].filter((path) => path.startsWith("supportUsage/replies_"))).toHaveLength(0);
+  });
+
+  it.each([undefined, null, "owner", "Admin", true, ["user"]])("rejects missing or invalid participant %j before any write", async (participant) => {
+    const id = await create();
+    const req = request({ threadId: id, participant, text: "reply" }, "owner");
+    await expect(replySupportThread.run(req)).rejects.toMatchObject({ code: "invalid-argument" });
+    await expect(markSupportRead.run(req)).rejects.toMatchObject({ code: "invalid-argument" });
+    expect(messages(id)).toHaveLength(1);
+    expect(store.docs.get(`supportThreads/${id}`)?.adminUnread).toBe(1);
   });
 
   it("only lets admins set kind-specific statuses and does not alter the clue snapshot", async () => {
@@ -195,25 +234,25 @@ describe("support callable persistence", () => {
 
   it("clears only the caller's unread side and keeps guest userUnread at zero", async () => {
     const id = await create();
-    await replySupportThread.run(request({ threadId: id, text: "Admin reply" }, "admin", "password", true));
-    await markSupportRead.run(request({ threadId: id }, "owner"));
+    await replySupportThread.run(request({ threadId: id, participant: "admin", text: "Admin reply" }, "admin", "password", true));
+    await markSupportRead.run(request({ threadId: id, participant: "user" }, "owner"));
     expect(store.docs.get(`supportThreads/${id}`)).toMatchObject({ userUnread: 0, adminUnread: 1 });
-    await markSupportRead.run(request({ threadId: id }, "admin", "password", true));
+    await markSupportRead.run(request({ threadId: id, participant: "admin" }, "admin", "password", true));
     expect(store.docs.get(`supportThreads/${id}`)).toMatchObject({ userUnread: 0, adminUnread: 0 });
     await createSupportThread.run(request(contact));
     const guestId = threadEntries().find(([, thread]) => !thread.ownerUid)![0].split("/")[1]!;
-    await replySupportThread.run(request({ threadId: guestId, text: "Internal admin response" }, "admin", "password", true));
+    await replySupportThread.run(request({ threadId: guestId, participant: "admin", text: "Internal admin response" }, "admin", "password", true));
     expect(store.docs.get(`supportThreads/${guestId}`)?.userUnread).toBe(0);
   });
 
   it("rejects malformed ids and missing threads with callable errors", async () => {
     for (const threadId of [undefined, " ", "a/b", "a".repeat(201)]) {
-      await expect(replySupportThread.run(request({ threadId, text: "reply" }, "owner"))).rejects.toMatchObject({ code: "invalid-argument" });
-      await expect(markSupportRead.run(request({ threadId }, "owner"))).rejects.toMatchObject({ code: "invalid-argument" });
+      await expect(replySupportThread.run(request({ threadId, participant: "user", text: "reply" }, "owner"))).rejects.toMatchObject({ code: "invalid-argument" });
+      await expect(markSupportRead.run(request({ threadId, participant: "user" }, "owner"))).rejects.toMatchObject({ code: "invalid-argument" });
       await expect(setSupportStatus.run(request({ threadId, status: "closed" }, "admin", "password", true))).rejects.toMatchObject({ code: "invalid-argument" });
     }
-    await expect(replySupportThread.run(request({ threadId: "missing", text: "reply" }, "owner"))).rejects.toMatchObject({ code: "not-found" });
-    await expect(markSupportRead.run(request({ threadId: "missing" }, "owner"))).rejects.toMatchObject({ code: "not-found" });
+    await expect(replySupportThread.run(request({ threadId: "missing", participant: "user", text: "reply" }, "owner"))).rejects.toMatchObject({ code: "not-found" });
+    await expect(markSupportRead.run(request({ threadId: "missing", participant: "user" }, "owner"))).rejects.toMatchObject({ code: "not-found" });
     await expect(setSupportStatus.run(request({ threadId: "missing", status: "closed" }, "admin", "password", true))).rejects.toMatchObject({ code: "not-found" });
   });
 
@@ -231,12 +270,12 @@ describe("support callable persistence", () => {
   it("limits real owner and admin replies separately to 50 per Tehran day", async () => {
     const id = await create();
     for (const [uid, admin] of [["owner", false], ["admin", true]] as const) {
-      for (let i = 0; i < 50; i++) await replySupportThread.run(request({ threadId: id, text: "reply" }, uid, "password", admin));
-      await expect(replySupportThread.run(request({ threadId: id, text: "over quota" }, uid, "password", admin))).rejects.toMatchObject({ code: "resource-exhausted" });
+      for (let i = 0; i < 50; i++) await replySupportThread.run(request({ threadId: id, participant: admin ? "admin" : "user", text: "reply" }, uid, "password", admin));
+      await expect(replySupportThread.run(request({ threadId: id, participant: admin ? "admin" : "user", text: "over quota" }, uid, "password", admin))).rejects.toMatchObject({ code: "resource-exhausted" });
     }
     expect(messages(id)).toHaveLength(101);
     vi.setSystemTime(new Date("2026-10-25T20:30:00Z"));
-    await replySupportThread.run(request({ threadId: id, text: "new day" }, "owner"));
+    await replySupportThread.run(request({ threadId: id, participant: "user", text: "new day" }, "owner"));
   });
 
   it("limits untracked contact to 3 per network/day regardless of anonymous uid", async () => {

@@ -6,6 +6,7 @@ import { appCheckReady } from "../appCheck";
 import { db, functions, storage } from "../firebase";
 
 export type SupportKind = "clue_error" | "contact";
+export type SupportParticipant = "user" | "admin";
 export type ClueReportStatus = "submitted" | "reviewing" | "accepted" | "fixed" | "rejected";
 export type ContactStatus = "submitted" | "reviewing" | "answered" | "closed";
 export type SupportStatus = ClueReportStatus | ContactStatus;
@@ -73,7 +74,7 @@ export function createContact(input: ContactInput): Promise<CreateSupportResult>
   return call("createSupportThread", { ...input, kind: "contact" });
 }
 
-export function replySupportThread(input: { threadId: string; text: string }): Promise<{ ok: true }> {
+export function replySupportThread(input: { threadId: string; text: string; participant: SupportParticipant }): Promise<{ ok: true }> {
   return call("replySupportThread", input);
 }
 
@@ -81,8 +82,8 @@ export function setSupportStatus(input: { threadId: string; status: SupportStatu
   return call("setSupportStatus", input);
 }
 
-export function markSupportRead(threadId: string): Promise<{ ok: true }> {
-  return call("markSupportRead", { threadId });
+export function markSupportRead(input: { threadId: string; participant: SupportParticipant }): Promise<{ ok: true }> {
+  return call("markSupportRead", input);
 }
 
 export function subscribeOwnThreads(ownerUid: string, onChange: (threads: SupportThread[]) => void, onError: (error: Error) => void): Unsubscribe {

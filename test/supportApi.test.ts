@@ -45,9 +45,11 @@ describe("support client", () => {
   const mutations = [
     ["clue report", () => api.createClueReport({ subject: "Clue", text: "Wrong clue", clue }), "createSupportThread", { kind: "clue_error", subject: "Clue", text: "Wrong clue", clue }],
     ["contact", () => api.createContact({ subject: "Help", text: "Message", image: { mimeType: "image/png", data: "aGVsbG8=" } }), "createSupportThread", { kind: "contact", subject: "Help", text: "Message", image: { mimeType: "image/png", data: "aGVsbG8=" } }],
-    ["reply", () => api.replySupportThread({ threadId: "t1", text: "Reply" }), "replySupportThread", { threadId: "t1", text: "Reply" }],
+    ["user reply", () => api.replySupportThread({ threadId: "t1", participant: "user", text: "Reply" }), "replySupportThread", { threadId: "t1", participant: "user", text: "Reply" }],
+    ["admin reply", () => api.replySupportThread({ threadId: "t1", participant: "admin", text: "Reply" }), "replySupportThread", { threadId: "t1", participant: "admin", text: "Reply" }],
     ["status", () => api.setSupportStatus({ threadId: "t1", status: "fixed" }), "setSupportStatus", { threadId: "t1", status: "fixed" }],
-    ["read marker", () => api.markSupportRead("t1"), "markSupportRead", { threadId: "t1" }],
+    ["user read marker", () => api.markSupportRead({ threadId: "t1", participant: "user" }), "markSupportRead", { threadId: "t1", participant: "user" }],
+    ["admin read marker", () => api.markSupportRead({ threadId: "t1", participant: "admin" }), "markSupportRead", { threadId: "t1", participant: "admin" }],
   ] as const;
 
   it.each(mutations)("waits for App Check before sending a %s", async (_label, mutate, name, payload) => {

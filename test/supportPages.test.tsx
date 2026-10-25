@@ -6,13 +6,13 @@ import type { User } from "firebase/auth";
 import { Timestamp } from "firebase/firestore";
 import type { SupportMessage, SupportThread as Thread } from "../app/support/supportApi";
 
-const state = vi.hoisted(() => ({ user: null as User | null }));
+const state = vi.hoisted(() => ({ user: null as User | null, isAdmin: false }));
 const api = vi.hoisted(() => ({
   create: vi.fn(), own: vi.fn(), messages: vi.fn(), reply: vi.fn(), read: vi.fn(), image: vi.fn(),
   stopOwn: vi.fn(), stopMessages: vi.fn(),
 }));
 vi.mock("../app/AuthContext", () => ({
-  useAuth: () => ({ user: state.user, loading: false, isAdmin: false, syncVersion: 0,
+  useAuth: () => ({ user: state.user, loading: false, isAdmin: state.isAdmin, syncVersion: 0,
     syncStatus: { kind: "synced", unsent: 0 }, signOut: vi.fn(), syncNow: vi.fn() }),
   AuthProvider: ({ children }: { children: import("react").ReactNode }) => children,
 }));
@@ -31,6 +31,7 @@ vi.mock("../app/gemini", () => ({
 
 import { ContactPage } from "../app/support/ContactPage";
 import { SupportPage } from "../app/support/SupportPage";
+import { SupportThread } from "../app/support/SupportThread";
 import { AuthButton } from "../app/components/AuthButton";
 import { HomePage } from "../app/pages/HomePage";
 
@@ -48,6 +49,7 @@ const messages: SupportMessage[] = [
 beforeEach(() => {
   vi.clearAllMocks();
   state.user = null;
+  state.isAdmin = false;
   window.location.hash = "#/";
   window.localStorage.clear();
   api.create.mockResolvedValue({ tracked: false });
@@ -214,7 +216,7 @@ describe("account support", () => {
     const { unmount } = render(<SupportPage threadId="contact-1" />);
     expect(await screen.findByText("متن اولیه")).toBeInTheDocument();
     expect(screen.getByText("پاسخ پشتیبانی")).toBeInTheDocument();
-    expect(api.read).toHaveBeenCalledWith("contact-1");
+    expect(api.read).toHaveBeenCalledWith({ threadId: "contact-1", participant: "user" });
     expect(api.image).toHaveBeenCalledWith("support/player/contact-1/initial");
     expect(await screen.findByRole("img", { name: "تصویر پیوست پیام" })).toHaveAttribute("src", "blob:private-image");
     expect(screen.queryByLabelText(/تصویر پیوست/)).not.toBeInTheDocument();
@@ -222,7 +224,7 @@ describe("account support", () => {
     fireEvent.change(reply, { target: { value: "  سپاس  " } });
     fireEvent.click(screen.getByRole("button", { name: "ارسال پاسخ" }));
     await waitFor(() => expect(reply).toHaveValue(""));
-    expect(api.reply).toHaveBeenCalledWith({ threadId: "contact-1", text: "سپاس" });
+    expect(api.reply).toHaveBeenCalledWith({ threadId: "contact-1", participant: "user", text: "سپاس" });
     unmount();
     expect(api.stopMessages).toHaveBeenCalled();
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:private-image");
@@ -237,7 +239,7 @@ describe("account support", () => {
     fireEvent.change(reply, { target: { value: "ناتمام" } });
     api.read.mockClear();
     await act(async () => nextThreads([{ ...contact, userUnread: 1 }]));
-    expect(api.read).toHaveBeenCalledWith("contact-1");
+    expect(api.read).toHaveBeenCalledWith({ threadId: "contact-1", participant: "user" });
     expect(reply).toHaveValue("ناتمام");
   });
 
@@ -250,6 +252,39 @@ describe("account support", () => {
     unmount();
     await act(async () => complete(new Blob(["private"])));
     expect(URL.createObjectURL).not.toHaveBeenCalled();
+  });
+
+  it("keeps an admin's personal support center in the user participant context", async () => {
+    state.user = account();
+    state.isAdmin = true;
+    render(<SupportPage threadId="contact-1" />);
+    expect(api.read).toHaveBeenCalledWith({ threadId: "contact-1", participant: "user" });
+    const items = within(screen.getByRole("list", { name: "پیام‌های گفت‌وگو" })).getAllByRole("listitem");
+    expect(items[0]).toHaveTextContent("شما");
+    expect(items[1]).toHaveTextContent("پشتیبانی");
+    fireEvent.change(screen.getByLabelText("پاسخ شما"), { target: { value: "پیام شخصی مدیر" } });
+    fireEvent.click(screen.getByRole("button", { name: "ارسال پاسخ" }));
+    await waitFor(() => expect(api.reply).toHaveBeenCalledWith({ threadId: "contact-1", participant: "user", text: "پیام شخصی مدیر" }));
+  });
+
+  it("uses the admin unread counter, participant payloads, and sender labels in the shared admin view", async () => {
+    api.messages.mockImplementation((_id, next) => { next([...messages, { id: "guest", sender: "guest", text: "متن مهمان", createdAt: time }]); return api.stopMessages; });
+    const { rerender } = render(<SupportThread thread={contact} role="admin" />);
+    expect(api.read).toHaveBeenCalledWith({ threadId: "contact-1", participant: "admin" });
+    const items = within(screen.getByRole("list", { name: "پیام‌های گفت‌وگو" })).getAllByRole("listitem");
+    expect(items[0]).toHaveTextContent("کاربر");
+    expect(items[1]).toHaveTextContent("پشتیبانی (شما)");
+    expect(items[2]).toHaveTextContent("مهمان");
+    const reply = screen.getByLabelText("پاسخ شما");
+    fireEvent.change(reply, { target: { value: "پاسخ مدیر" } });
+    api.read.mockClear();
+    rerender(<SupportThread thread={{ ...contact, userUnread: 3 }} role="admin" />);
+    expect(api.read).not.toHaveBeenCalled();
+    rerender(<SupportThread thread={{ ...contact, userUnread: 3, adminUnread: 1 }} role="admin" />);
+    expect(api.read).toHaveBeenCalledWith({ threadId: "contact-1", participant: "admin" });
+    expect(reply).toHaveValue("پاسخ مدیر");
+    fireEvent.click(screen.getByRole("button", { name: "ارسال پاسخ" }));
+    await waitFor(() => expect(api.reply).toHaveBeenCalledWith({ threadId: "contact-1", participant: "admin", text: "پاسخ مدیر" }));
   });
 
   it("preserves a failed reply and reports image/read failures without hiding the conversation", async () => {
