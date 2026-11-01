@@ -1971,6 +1971,10 @@ select {
   height: 44px;
 }
 
+.auth-gemini-actions .auth-btn {
+  margin-top: 0;
+}
+
 .auth-clear-key {
   padding: 7px 12px;
   border: 1px solid #e3c4c9;
