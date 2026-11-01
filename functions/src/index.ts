@@ -9,6 +9,7 @@ import { buildStats, type AdminStats, type ScoreboardEntry, type StatsUserInput 
 import { getAuth } from "firebase-admin/auth";
 
 initializeApp();
+export { createSupportThread, replySupportThread, setSupportStatus, markSupportRead } from "./support.js";
 const GEMINI_KEY = defineSecret("GEMINI_KEY");
 
 export const extractPuzzlePhoto = onCall(

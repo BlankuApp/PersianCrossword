@@ -3,10 +3,12 @@ import type { CrosswordJson } from "../src/index";
 import { gridKey } from "./admin/gridKey";
 import { getPuzzleById, usePuzzleLibrary } from "./puzzleLibrary";
 import { refreshPuzzleCatalog } from "./puzzleSync";
-import { useHashRoute, useHardwareBackButton, navigate } from "./router";
+import { useHashRoute, useHardwareBackButton, navigate, goHome } from "./router";
 import { HomePage } from "./pages/HomePage";
 import { SolverPage, type PuzzleEditor } from "./pages/SolverPage";
 import { AuthProvider, useAuth } from "./AuthContext";
+import { ContactPage } from "./support/ContactPage";
+import { SupportPage } from "./support/SupportPage";
 
 // Admin screens (and their Firebase Storage code) load only when an admin opens them.
 const AdminPage = lazy(() => import("./admin/AdminPage"));
@@ -48,6 +50,10 @@ function AppRoutes() {
     }
   }, [route, ready]);
 
+  if (route.name === "contact") return <ContactPage />;
+  if (route.name === "support") return <SupportPage />;
+  if (route.name === "supportThread") return <SupportPage threadId={route.id} />;
+
   if (route.name === "admin" || route.name === "draft") {
     return (
       <Suspense fallback={null}>
@@ -61,14 +67,17 @@ function AppRoutes() {
     if (puzzle) {
       return (
         <SolverPage
-          // A newly downloaded version starts a fresh page (saved letters reload from the device);
-          // while an admin edits, only grid changes do, so clue fixes keep the current page.
-          key={`${puzzle.id}:${editor ? gridKey(puzzle.json) : puzzle.hash}`}
+          // Grid changes start fresh; sign-in and clue-only updates keep open dialogs.
+          // SolverPage reloads persisted letters when updated puzzle JSON arrives.
+          key={`${puzzle.id}:${gridKey(puzzle.json)}`}
           id={puzzle.id}
+          slotId={route.slotId}
           json={puzzle.json}
           solutionImageUrl={puzzle.solutionImageUrl}
           sourceImageUrl={puzzle.sourceImageUrl}
           editor={editor}
+          onBack={route.from === "admin-support" ? () => navigate("#/admin?tab=support") : goHome}
+          backLabel={route.from === "admin-support" ? "بازگشت به گزارش‌ها و پیام‌ها" : undefined}
         />
       );
     }

@@ -726,6 +726,20 @@ select {
   justify-content: flex-end;
 }
 
+.solution-modal.clue-report-modal {
+  width: min(90vw, 440px);
+}
+
+.clue-report-snapshot {
+  display: grid;
+  gap: 4px;
+  overflow-wrap: anywhere;
+}
+
+.clue-report-snapshot p {
+  margin: 4px 0;
+}
+
 .solution-close-button {
   display: inline-flex;
   align-items: center;
@@ -1122,11 +1136,6 @@ select {
   border-top: 1px solid var(--line-strong);
 }
 
-/* Below the divider, the icon column needs room from the line, like the text beside it. */
-.active-clue-block + .active-clue-block .active-clue-head-actions {
-  inset-block-start: 6px;
-}
-
 .active-clue-block-active {
   border-inline-start: 3px solid var(--brand);
   padding-inline-start: calc(var(--active-clue-pad-h) - 3px);
@@ -1257,25 +1266,21 @@ select {
 }
 
 .active-clue-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
   gap: 8px;
 }
 
-/* The icons stand in a column at the top of the block's left edge (RTL end): the block
-   reserves that strip, so they cost width but no height. */
-.active-clue-block {
-  position: relative;
-  padding-inline-end: calc(26px + var(--stack-gap));
+.active-clue-head > p {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .active-clue-head-actions {
-  position: absolute;
-  inset-block-start: 0;
-  inset-inline-end: 0;
+  position: static;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   gap: 8px;
 }
@@ -3048,10 +3053,40 @@ select {
 
 /* Admin panel (app/admin) */
 
+.support-shell { max-width: 800px; }
+.support-form { display: grid; gap: 10px; }
+.support-form input:not([type="file"]), .support-form textarea { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--control-border); border-radius: 8px; background: #fff; color: var(--ink); font: inherit; }
+.support-form textarea { resize: vertical; }
+.support-form input:focus-visible, .support-form textarea:focus-visible, .support-list a:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.support-form > button { justify-self: start; }
+.support-attachment { display: grid; gap: 8px; justify-items: start; }
+.support-attachment img, .support-image { display: block; max-width: 100%; max-height: 420px; object-fit: contain; border-radius: 8px; }
+.support-list, .support-messages { display: grid; gap: 14px; margin: 0 0 20px; padding: 0; list-style: none; }
+.support-list a { display: grid; gap: 6px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink); text-decoration: none; overflow-wrap: anywhere; }
+.support-list a:hover { border-color: var(--brand); }
+.support-list span, .support-message time { color: var(--muted); font-size: 0.85rem; }
+.support-list .support-unread { color: var(--brand); font-weight: 700; }
+.support-message { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: #faf7f7; }
+.support-message-admin { background: var(--brand-soft); }
+.support-message time { display: block; }
+.support-message p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.support-conversation h2 { overflow-wrap: anywhere; }
+.support-inbox-filters { display: flex; gap: 12px; margin-bottom: 12px; }
+.support-inbox-filters label, .support-status-control { display: grid; gap: 5px; }
+.support-inbox-filters select, .support-status-control select { min-height: 40px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 9px; background: #fff; color: inherit; font: inherit; }
+.support-inbox-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.support-inbox-item { display: grid; width: 100%; gap: 4px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: inherit; text-align: right; font: inherit; cursor: pointer; }
+.support-inbox-item[aria-pressed="true"] { border-color: var(--brand); }
+.support-inbox-item time { color: var(--muted); font-size: 0.85em; }
+.support-inbox-unread { color: var(--brand); font-weight: 700; }
+.support-status-control { margin-top: 16px; }
+.support-clue-link { display: inline-flex; margin-top: 14px; }
+.auth-support-badge { position: absolute; top: -5px; right: -7px; min-width: 20px; padding: 0 4px; border-radius: 12px; background: var(--brand); color: #fff; font-size: 0.7rem; line-height: 20px; }
+
 /* Transitions.dev: sliding tabs, panel reveal, modal scale, and delayed tooltip.
    https://transitions.dev/library.html — Copyright 2026 Jakub Antalik / Transitions.dev. */
 .admin-tabs { position: relative; display: flex; gap: 6px; padding: 5px; margin-bottom: 20px; border: 1px solid var(--line); border-radius: 14px; background: #f4f0f1; }
-.admin-tab-pill { position: absolute; top: 5px; bottom: 5px; right: 5px; width: calc((100% - 28px) / 4); border-radius: 10px; background: #fff; box-shadow: 0 2px 6px #20171812; pointer-events: none; transition: transform 250ms cubic-bezier(0.22, 1, 0.36, 1); }
+.admin-tab-pill { position: absolute; top: 5px; bottom: 5px; right: 5px; border-radius: 10px; background: #fff; box-shadow: 0 2px 6px #20171812; pointer-events: none; transition: transform 250ms cubic-bezier(0.22, 1, 0.36, 1); }
 .admin-tabs [role="tab"] { position: relative; display: flex; flex: 1 1 0; min-width: 0; align-items: center; justify-content: center; gap: 8px; padding: 12px 10px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); font: inherit; cursor: pointer; transition: color 250ms cubic-bezier(0.22, 1, 0.36, 1); }
 .admin-tabs [aria-selected="true"] { color: var(--brand); font-weight: 700; }
 .admin-tab-count { border-radius: 12px; padding: 1px 7px; background: var(--brand-soft); color: var(--brand-strong); font-size: 0.8rem; }

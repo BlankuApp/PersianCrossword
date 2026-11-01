@@ -67,6 +67,8 @@ import { ActiveClue } from "../components/CluePanel";
 import { HelpTutorial } from "../components/HelpTutorial";
 import { MetaSummary } from "../components/MetaSummary";
 import { PuzzleMetaDialog } from "../components/PuzzleMetaDialog";
+import { ClueReportDialog } from "../support/ClueReportDialog";
+import { createClueReport, isRealUser, type ClueSnapshot } from "../support/supportApi";
 
 // Admin editing (app/admin): where the editing tools save, plus the admin's toolbar actions.
 export interface PuzzleEditor {
@@ -92,16 +94,18 @@ const CONFIRM_TEXT: Record<ConfirmAction, { readonly title: string; readonly bod
 
 interface SolverPageProps {
   readonly id: string;
+  readonly slotId?: string | undefined;
   readonly json: CrosswordJson;
   readonly solutionImageUrl?: string | undefined;
   readonly sourceImageUrl?: string | undefined;
   // Admins only: turns on the editing tools.
   readonly editor?: PuzzleEditor | undefined;
   readonly onBack?: (() => void) | undefined;
+  readonly backLabel?: string | undefined;
 }
 
-export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor, onBack = goHome }: SolverPageProps) {
-  const { syncVersion, pushChanges } = useAuth();
+export function SolverPage({ id, slotId, json, solutionImageUrl, sourceImageUrl, editor, onBack = goHome, backLabel = "بازگشت به فهرست جدول‌ها" }: SolverPageProps) {
+  const { user, syncVersion, pushChanges } = useAuth();
   const normalizedJson = useMemo(() => normalizeGridDirection(json), [json]);
   const isDebugMode = !!editor && json.version === 3;
   // Latest saved JSON: a second edit must build on the first even before the new version of
@@ -158,7 +162,8 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor,
   const [savedState, setSavedState] = useState(() => loadProgress(id));
   const [selection, setSelection] = useState<Selection | undefined>(() => {
     try {
-      const firstSlot = compilePuzzle(normalizeGridDirection(json)).slots[0];
+      const slots = compilePuzzle(normalizeGridDirection(json)).slots;
+      const firstSlot = slots.find((slot) => slot.id === slotId) ?? slots[0];
       return firstSlot ? selectSlot(firstSlot) : undefined;
     } catch {
       return undefined;
@@ -173,6 +178,9 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor,
   // The JSON the metadata dialog was opened on (null = closed).
   const [metaJson, setMetaJson] = useState<CrosswordJson | null>(null);
   const [isToolbarMenuOpen, setIsToolbarMenuOpen] = useState(false);
+  const [reportClue, setReportClue] = useState<ClueSnapshot | null>(null);
+  const [reportText, setReportText] = useState("");
+  const [reportStatus, setReportStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
   const boardRef = useRef<HTMLDivElement>(null);
   const solutionBoardRef = useRef<HTMLDivElement>(null);
@@ -232,11 +240,11 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor,
   useEffect(() => {
     const restored = loadProgress(id);
     setSavedState(restored);
-    const firstSlot = puzzle?.slots[0];
+    const firstSlot = puzzle?.slots.find((slot) => slot.id === slotId) ?? puzzle?.slots[0];
     setSelection(firstSlot ? selectSlot(firstSlot) : undefined);
     setShowSolution(false);
     setClueOverrides({});
-  }, [id, puzzle]);
+  }, [id, puzzle, slotId]);
 
   // Cloud sync can update localStorage while this puzzle is open. Refresh only
   // the persisted grid data; keeping this component mounted preserves the
@@ -455,8 +463,25 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor,
 
   function resetProgress(): void {
     if (puzzle) saveEdit(createState(puzzle));
-    const firstSlot = puzzle?.slots[0];
+    const firstSlot = puzzle?.slots.find((slot) => slot.id === slotId) ?? puzzle?.slots[0];
     setSelection(firstSlot ? selectSlot(firstSlot) : undefined);
+  }
+
+  function openClueReport(slot: Slot): void {
+    setReportClue({ puzzleId: id, puzzleTitle: json.meta?.title ?? id, slotId: slot.id, direction: slot.direction, groupNum: slot.groupNum, text: slot.clue });
+    setReportText("");
+    setReportStatus("idle");
+  }
+
+  async function submitClueReport(): Promise<void> {
+    if (!reportClue || !isRealUser(user) || !reportText.trim() || reportText.trim().length > 2000 || reportStatus === "sending" || reportStatus === "sent") return;
+    setReportStatus("sending");
+    try {
+      await createClueReport({ subject: `خطای پرسش: ${reportClue.puzzleTitle}`.slice(0, 120), text: reportText.trim(), clue: reportClue });
+      setReportStatus("sent");
+    } catch {
+      setReportStatus("error");
+    }
   }
 
   // The letters entered on the board become the puzzle's answers (disk format: RTL rows, "" for block).
@@ -596,13 +621,23 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor,
 
   return (
     <main className="app-shell" dir="rtl">
+      {reportClue ? (
+        <ClueReportDialog
+          clue={reportClue}
+          text={reportText}
+          status={reportStatus}
+          onTextChange={setReportText}
+          onSubmit={() => { void submitClueReport(); }}
+          onClose={() => setReportClue(null)}
+        />
+      ) : null}
       <header className="app-header">
         <button
           type="button"
           className="header-back"
           onClick={onBack}
-          title="بازگشت به فهرست جدول‌ها"
-          aria-label="بازگشت به فهرست جدول‌ها"
+          title={backLabel}
+          aria-label={backLabel}
         >
           <ArrowRight size={20} aria-hidden="true" />
         </button>
@@ -865,6 +900,7 @@ export function SolverPage({ id, json, solutionImageUrl, sourceImageUrl, editor,
                 onCellChange={updateCell}
                 isDebugMode={isDebugMode}
                 onSaveClue={handleSaveClue}
+                onReportClue={openClueReport}
                 checkMode={checkMode}
                 getSolutionValue={(c) => solutionState?.getCell(c)}
               />

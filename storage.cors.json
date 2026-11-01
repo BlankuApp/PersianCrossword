@@ -1,0 +1,8 @@
+[
+  {
+    "origin": ["https://blankuapp.github.io"],
+    "method": ["GET"],
+    "responseHeader": ["Authorization", "Content-Type", "x-firebase-appcheck"],
+    "maxAgeSeconds": 3600
+  }
+]

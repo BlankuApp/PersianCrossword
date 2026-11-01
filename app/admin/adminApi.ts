@@ -10,7 +10,7 @@ import {
   type Transaction,
   type Unsubscribe,
 } from "firebase/firestore";
-import { connectStorageEmulator, getMetadata, getStorage, ref, uploadBytes } from "firebase/storage";
+import { getMetadata, ref, uploadBytes } from "firebase/storage";
 import {
   countMissingLetters,
   entryImageRefs,
@@ -30,7 +30,7 @@ import {
 } from "../../shared/cloudPuzzles";
 import type { CrosswordJson } from "../../src/index";
 import { validateStoredPuzzleJson } from "./puzzleValidation";
-import { db, firebaseApp, storageFileUrl, usingEmulators } from "../firebase";
+import { db, storage, storageFileUrl } from "../firebase";
 import { isValidPuzzleId, type ImportFile, type PlannedDraft } from "./importPlan";
 import { toAsciiDigits } from "../persianNumbers";
 import { ID_INVALID } from "../components/puzzleMeta";
@@ -63,9 +63,6 @@ export interface Draft {
   readonly solutionImageUrl: string | undefined;
   readonly sourceImageUrl: string | undefined;
 }
-
-const storage = getStorage(firebaseApp);
-if (usingEmulators) connectStorageEmulator(storage, "127.0.0.1", 9199);
 
 const catalogRef = doc(db, "catalog", "index");
 const packRef = (packId: string) => doc(db, "puzzlePacks", packId);

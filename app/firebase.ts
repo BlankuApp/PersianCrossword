@@ -3,6 +3,7 @@ import { getAnalytics, isSupported, logEvent } from "firebase/analytics";
 import { connectAuthEmulator, getAuth } from "firebase/auth";
 import { connectFirestoreEmulator, initializeFirestore } from "firebase/firestore";
 import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
+import { connectStorageEmulator, getStorage } from "firebase/storage";
 
 // TODO: Replace with your Firebase project config from Firebase Console
 // https://console.firebase.google.com/ → Project Settings → Your apps → SDK setup
@@ -24,10 +25,12 @@ export const auth = getAuth(app);
 // Optional fields (e.g. solvedAt) may be undefined; drop them instead of throwing.
 export const db = initializeFirestore(app, { ignoreUndefinedProperties: true });
 export const functions = getFunctions(app, "us-central1");
+export const storage = getStorage(app);
 if (usingEmulators) {
   connectFunctionsEmulator(functions, "127.0.0.1", 5001);
   connectFirestoreEmulator(db, "127.0.0.1", 8080);
   connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+  connectStorageEmulator(storage, "127.0.0.1", 9199);
 }
 
 // Public download URL for a file in the storage bucket (read access comes from storage.rules).

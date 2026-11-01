@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowLeft, Delete, Pencil, Search, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, Delete, Flag, Pencil, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { normalizePersianText, splitPersianGraphemes, type Coord, type Direction, type Slot } from "../../src/index";
 import { buildLetterTray } from "../crosswordUi";
@@ -14,6 +14,7 @@ interface ActiveClueProps {
   readonly onCellChange?: (coord: Coord, value: string | null, clearCoord?: Coord) => void;
   readonly isDebugMode?: boolean;
   readonly onSaveClue?: (slot: Slot, newClue: string, newAnswer?: readonly string[]) => Promise<void>;
+  readonly onReportClue?: (slot: Slot) => void;
   readonly checkMode?: boolean;
   readonly getSolutionValue?: (coord: Coord) => string | undefined;
 }
@@ -25,6 +26,7 @@ interface ClueBlockProps {
   readonly onCellChange?: ((coord: Coord, value: string | null, clearCoord?: Coord) => void) | undefined;
   readonly isDebugMode?: boolean | undefined;
   readonly onSaveClue?: ((slot: Slot, newClue: string, newAnswer?: readonly string[]) => Promise<void>) | undefined;
+  readonly onReportClue?: ((slot: Slot) => void) | undefined;
   readonly checkMode?: boolean | undefined;
   readonly getSolutionValue?: ((coord: Coord) => string | undefined) | undefined;
 }
@@ -66,6 +68,7 @@ export function ActiveClue({
   onCellChange,
   isDebugMode,
   onSaveClue,
+  onReportClue,
   checkMode,
   getSolutionValue,
 }: ActiveClueProps) {
@@ -88,6 +91,7 @@ export function ActiveClue({
           onCellChange={onCellChange}
           isDebugMode={isDebugMode}
           onSaveClue={onSaveClue}
+          onReportClue={onReportClue}
           checkMode={checkMode}
           getSolutionValue={getSolutionValue}
         />
@@ -101,6 +105,7 @@ export function ActiveClue({
           onCellChange={onCellChange}
           isDebugMode={isDebugMode}
           onSaveClue={onSaveClue}
+          onReportClue={onReportClue}
           checkMode={checkMode}
           getSolutionValue={getSolutionValue}
         />
@@ -117,6 +122,7 @@ function ClueBlock({
   onCellChange,
   isDebugMode,
   onSaveClue,
+  onReportClue,
   checkMode,
   getSolutionValue,
 }: ClueBlockProps) {
@@ -319,6 +325,17 @@ function ClueBlock({
             answer={aiLetters.join("")}
             trayLetters={trayTiles.map((t) => t.letter)}
           />
+          {onReportClue ? (
+            <button
+              type="button"
+              onClick={() => onReportClue(slot)}
+              className="clue-icon-btn"
+              title="گزارش خطای پرسش"
+              aria-label="گزارش خطای این پرسش"
+            >
+              <Flag size={20} aria-hidden="true" />
+            </button>
+          ) : null}
           {isDebugMode ? (
             <button
               type="button"

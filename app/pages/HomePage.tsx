@@ -519,6 +519,7 @@ export function HomePage() {
       <AppPromoFooter />
 
       <footer className="home-footer">
+        <a href="#/contact">تماس با ما</a>
         <a href="https://blankuapp.github.io/PersianCrossword/privacy.html" target="_blank" rel="noopener">سیاست حریم خصوصی</a>
         <a
           className="home-repo-link"
