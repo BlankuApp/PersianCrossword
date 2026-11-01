@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { decideSupportUsage, isStatusForKind, parseCreateSupportInput, parseReplySupportInput, readSupportImage } from "./supportPolicy.js";
 
-const clue = { puzzleId: "p1", puzzleTitle: "جدول", slotId: "s1", direction: "across", groupNum: 1, text: "سرنخ" };
+const clue = { puzzleId: "p1", puzzleTitle: "جدول", slotId: "s1", direction: "across", groupNum: 1, text: "سرنخ", answer: "پاسخ" };
 const input = (kind: string, extra = {}) => ({ kind, subject: " موضوع ", text: " پیام ", ...extra });
 
 describe("parseCreateSupportInput", () => {
   it("allows clue reports only for real identities and trims bounded fields", () => {
     expect(parseCreateSupportInput(input("clue_error", { clue }), "real")).toMatchObject({ kind: "clue_error", subject: "موضوع", text: "پیام", clue });
+    expect(parseCreateSupportInput(input("clue_error", { clue: { ...clue, answer: undefined } }), "real").clue).not.toHaveProperty("answer");
     expect(parseCreateSupportInput(input("clue_error", { clue: { ...clue, groupNum: 1 } }), "real").clue?.groupNum).toBe(1);
     expect(() => parseCreateSupportInput(input("clue_error", { clue: { ...clue, groupNum: 0 } }), "real")).toThrow();
     expect(() => parseCreateSupportInput(input("clue_error", { clue }), "anonymous")).toThrow();
@@ -21,13 +22,13 @@ describe("parseCreateSupportInput", () => {
 
   it("accepts long puzzle titles and clues while trimming and clipping the stored snapshot", () => {
     const result = parseCreateSupportInput(input("clue_error", {
-      clue: { ...clue, puzzleTitle: `  ${"ت".repeat(200)}عنوان بلند  `, text: `  ${"س".repeat(500)}سرنخ بلند  ` },
+      clue: { ...clue, puzzleTitle: `  ${"ت".repeat(200)}عنوان بلند  `, text: `  ${"س".repeat(500)}سرنخ بلند  `, answer: `  ${"پ".repeat(500)}پاسخ بلند  ` },
     }), "real");
-    expect(result.clue).toEqual({ ...clue, puzzleTitle: "ت".repeat(200), text: "س".repeat(500) });
+    expect(result.clue).toEqual({ ...clue, puzzleTitle: "ت".repeat(200), text: "س".repeat(500), answer: "پ".repeat(500) });
     expect(result.text).toBe("پیام");
   });
 
-  it.each(["puzzleTitle", "text"])("still rejects blank and non-string snapshot %s", (field) => {
+  it.each(["puzzleTitle", "text", "answer"])("still rejects blank and non-string snapshot %s", (field) => {
     for (const value of ["", "   ", null, 123, {}, ["سرنخ"]]) {
       expect(() => parseCreateSupportInput(input("clue_error", { clue: { ...clue, [field]: value } }), "real")).toThrow();
     }

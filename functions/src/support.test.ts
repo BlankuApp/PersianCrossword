@@ -54,7 +54,7 @@ const request = (data: unknown, uid?: string, provider = "password", admin = fal
 }) as Request;
 const contact = { kind: "contact", subject: " Help ", text: " My message " };
 const clue = { kind: "clue_error", subject: "Wrong clue", text: "Please check", clue: {
-  puzzleId: "puzzle", puzzleTitle: "Title", slotId: "slot", direction: "across", groupNum: 1, text: "Original clue",
+  puzzleId: "puzzle", puzzleTitle: "Title", slotId: "slot", direction: "across", groupNum: 1, text: "Original clue", answer: "Original answer",
 } };
 const png = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 const imageContact = { ...contact, image: { mimeType: "image/png", data: png.toString("base64") } };

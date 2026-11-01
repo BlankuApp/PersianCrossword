@@ -468,7 +468,7 @@ export function SolverPage({ id, slotId, json, solutionImageUrl, sourceImageUrl,
   }
 
   function openClueReport(slot: Slot): void {
-    setReportClue({ puzzleId: id, puzzleTitle: json.meta?.title ?? id, slotId: slot.id, direction: slot.direction, groupNum: slot.groupNum, text: slot.clue });
+    setReportClue({ puzzleId: id, puzzleTitle: json.meta?.title ?? id, slotId: slot.id, direction: slot.direction, groupNum: slot.groupNum, text: slot.clue, ...(slot.answer ? { answer: slot.answer } : {}) });
     setReportText("");
     setReportStatus("idle");
   }

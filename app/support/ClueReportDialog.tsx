@@ -32,6 +32,7 @@ export function ClueReportDialog({ clue, text, status, onTextChange, onSubmit, o
           <span>{clue.groupNum.toLocaleString("fa-IR")} {clue.direction === "across" ? "افقی" : "عمودی"}</span>
           <span dir="ltr">{clue.slotId}</span>
           <p>{clue.text}</p>
+          {clue.answer ? <p>پاسخ: {clue.answer}</p> : null}
         </div>
         {status === "sent" ? (
           <p role="status">گزارش شما ثبت شد. سپاس از کمک شما برای اصلاح این پرسش.</p>

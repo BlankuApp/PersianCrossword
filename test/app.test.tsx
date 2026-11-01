@@ -126,6 +126,8 @@ describe("Persian crossword UI", () => {
     expect(within(dialog).getByText("sample-10x10-garden")).toBeInTheDocument();
     expect(within(dialog).getByText("۱ عمودی")).toBeInTheDocument();
     expect(within(dialog).getByText("نمونه عمودی 1، 4 حرف")).toBeInTheDocument();
+    const answer = compilePuzzle(normalizeGridDirection(json10)).getSlot("C1-1")!.answer!;
+    expect(within(dialog).getByText(`پاسخ: ${answer}`)).toBeInTheDocument();
     expect(within(dialog).getAllByRole("textbox")).toHaveLength(1);
     const submit = within(dialog).getByRole("button", { name: "ارسال گزارش" });
     expect(submit).toBeDisabled();
@@ -135,7 +137,7 @@ describe("Persian crossword UI", () => {
     expect(createClueReport).toHaveBeenCalledWith({
       subject: "خطای پرسش: باغ — ۱۰ در ۱۰",
       text: "متن پرسش اشتباه است",
-      clue: { puzzleId: "sample-10x10-garden", puzzleTitle: "باغ — ۱۰ در ۱۰", slotId: "C1-1", direction: "down", groupNum: 1, text: "نمونه عمودی 1، 4 حرف" },
+      clue: { puzzleId: "sample-10x10-garden", puzzleTitle: "باغ — ۱۰ در ۱۰", slotId: "C1-1", direction: "down", groupNum: 1, text: "نمونه عمودی 1، 4 حرف", answer },
     });
     expect(dialog).toBeInTheDocument();
     expect(within(dialog).queryByRole("button", { name: "ارسال گزارش" })).not.toBeInTheDocument();

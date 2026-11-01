@@ -10,6 +10,7 @@ export interface ClueSnapshot {
   direction: string;
   groupNum: number;
   text: string;
+  answer?: string;
 }
 
 export interface CreateSupportInput {
@@ -48,6 +49,7 @@ export function parseCreateSupportInput(value: unknown, identity: "real" | "anon
         puzzleId: requiredText(raw.puzzleId, 200), puzzleTitle: requiredText(raw.puzzleTitle, Infinity).slice(0, 200),
         slotId: requiredText(raw.slotId, 200), direction: raw.direction,
         groupNum: raw.groupNum, text: requiredText(raw.text, Infinity).slice(0, 500),
+        ...(raw.answer === undefined ? {} : { answer: requiredText(raw.answer, Infinity).slice(0, 500) }),
       },
     };
   }

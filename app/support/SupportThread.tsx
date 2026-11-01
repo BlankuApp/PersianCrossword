@@ -56,7 +56,7 @@ export function SupportThread({ thread, role }: { thread: Thread; role: SupportP
     <section className="admin-section support-conversation" aria-label="گفت‌وگو">
       <h2>{thread.subject}</h2>
       <p className="admin-note">{supportStatusText[thread.status]}</p>
-      {thread.clue ? <div className="clue-report-snapshot"><strong>{thread.clue.puzzleTitle}</strong><span>{thread.clue.groupNum.toLocaleString("fa-IR")} {thread.clue.direction === "across" ? "افقی" : "عمودی"}</span><p>{thread.clue.text}</p></div> : null}
+      {thread.clue ? <div className="clue-report-snapshot"><strong>{thread.clue.puzzleTitle}</strong><span>{thread.clue.groupNum.toLocaleString("fa-IR")} {thread.clue.direction === "across" ? "افقی" : "عمودی"}</span><p>{thread.clue.text}</p>{thread.clue.answer ? <p>پاسخ: {thread.clue.answer}</p> : null}</div> : null}
       {loadError ? <p className="admin-error" role="alert">خواندن گفت‌وگو انجام نشد. دوباره این صفحه را باز کنید.</p> : loaded?.id !== thread.id ? <p role="status">در حال بارگذاری…</p> : (
         <ol className="support-messages" aria-label="پیام‌های گفت‌وگو">
           {loaded.messages.map((message) => <li key={message.id} className={`support-message support-message-${message.sender}`}>
