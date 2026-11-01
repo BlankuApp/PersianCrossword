@@ -310,6 +310,9 @@ describe("AuthButton", () => {
 
     await user.keyboard("{ArrowRight}");
     expect(screen.getByRole("tab", { name: "فعالیت من" })).toHaveFocus();
+
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("tab", { name: "تنظیمات حساب" })).toHaveFocus();
   });
 
   it("lets an anonymous guest open sign-in when allowGuestUpgrade", async () => {

@@ -147,8 +147,8 @@ function UserMenu() {
   }
 
   function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
-    const nextTab = event.key === "ArrowLeft" ? "settings" : event.key === "ArrowRight" ? "activity" : null;
-    if (!nextTab) return;
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    const nextTab = activeTab === "activity" ? "settings" : "activity";
     event.preventDefault();
     setActiveTab(nextTab);
     (nextTab === "activity" ? activityTabRef : settingsTabRef).current?.focus();
