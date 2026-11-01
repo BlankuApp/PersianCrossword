@@ -27,11 +27,11 @@ export function ClueReportDialog({ clue, text, status, onTextChange, onSubmit, o
           </button>
         </div>
         <div className="clue-report-snapshot">
-          <strong>{clue.puzzleTitle}</strong>
-          <span dir="auto">{clue.puzzleId}</span>
-          <span>{clue.groupNum.toLocaleString("fa-IR")} {clue.direction === "across" ? "افقی" : "عمودی"}</span>
-          <span dir="ltr">{clue.slotId}</span>
-          <p>{clue.text}</p>
+          <div className="clue-report-context">
+            <strong>{clue.puzzleTitle}</strong>
+            <span>{clue.groupNum.toLocaleString("fa-IR")} {clue.direction === "across" ? "افقی" : "عمودی"}</span>
+          </div>
+          <p>پرسش: {clue.text}</p>
           {clue.answer ? <p>پاسخ: {clue.answer}</p> : null}
         </div>
         {status === "sent" ? (
