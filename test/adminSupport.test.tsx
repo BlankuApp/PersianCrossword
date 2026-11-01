@@ -40,6 +40,14 @@ async function openInbox() {
 }
 
 describe("admin support inbox", () => {
+  it("hides the selected conversation when a filter excludes it", async () => {
+    await openInbox();
+    await userEvent.click(screen.getByRole("button", { name: /پرسش اشتباه/ }));
+    expect(screen.getByLabelText("وضعیت گزارش")).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText("نوع گزارش"), "contact");
+    expect(screen.queryByLabelText("وضعیت گزارش")).not.toBeInTheDocument();
+    expect(screen.queryByText("سرنخ ثبت‌شده")).not.toBeInTheDocument();
+  });
   it("subscribes only for admins and lists/filter threads with unread counts", async () => {
     state.isAdmin = false;
     const { rerender } = render(<AdminPage />);
@@ -74,7 +82,7 @@ describe("admin support inbox", () => {
     await userEvent.click(await screen.findByRole("button", { name: /پرسش اشتباه/ }));
     expect(await screen.findByText("سرنخ ثبت‌شده")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "باز کردن جدول" })).toHaveAttribute("href", "#/puzzle/%D8%AC%D8%AF%D9%88%D9%84%2F%DB%B1?slot=R1-2&from=admin-support");
-    expect(api.read).toHaveBeenCalledWith({ threadId: clue.id, participant: "admin" });
+    expect(api.read).toHaveBeenCalledWith({ threadId: clue.id, participant: "admin", observedAt: { seconds: clue.lastMessageAt.seconds, nanoseconds: clue.lastMessageAt.nanoseconds } });
     const status = screen.getByLabelText("وضعیت گزارش");
     expect(within(status).queryByRole("option", { name: "پاسخ داده شده" })).not.toBeInTheDocument();
     expect(within(status).getByRole("option", { name: "تأییدشده" })).toBeInTheDocument();

@@ -32,7 +32,7 @@ export function SupportThread({ thread, role }: { thread: Thread; role: SupportP
     lastRead.current = key;
     let live = true;
     setReadError(null);
-    void markSupportRead({ threadId: thread.id, participant: role }).catch(() => { if (live) setReadError(thread.id); });
+    void markSupportRead({ threadId: thread.id, participant: role, observedAt: { seconds: thread.lastMessageAt.seconds, nanoseconds: thread.lastMessageAt.nanoseconds } }).catch(() => { if (live) setReadError(thread.id); });
     return () => { live = false; };
   }, [thread.id, role, unread, thread.lastMessageAt, loaded, loadError]);
 

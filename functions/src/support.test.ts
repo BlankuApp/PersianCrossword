@@ -12,7 +12,7 @@ vi.mock("firebase-admin/firestore", () => {
     path: `${path}/${id}`, id, collection: (name: string) => collection(`${path}/${id}/${name}`),
   }) });
   return {
-    FieldValue: { serverTimestamp: () => "server-time" },
+    FieldValue: { serverTimestamp: () => ({ seconds: 1, nanoseconds: 0 }) },
     getFirestore: () => ({ collection, runTransaction: (run: any) => {
       const result = store.queue.then(async () => {
         const writes = new Map<string, Record<string, any>>();
@@ -49,7 +49,7 @@ vi.mock("firebase-admin/storage", () => ({ getStorage: () => ({ bucket: () => ({
 
 type Request = Parameters<typeof createSupportThread.run>[0];
 const request = (data: unknown, uid?: string, provider = "password", admin = false): Request => ({
-  data, rawRequest: { ip: "192.0.2.10" },
+  data: data && typeof data === "object" ? { observedAt: { seconds: 1, nanoseconds: 0 }, ...data } : data, rawRequest: { ip: "192.0.2.10" },
   ...(uid ? { auth: { uid, token: { admin, firebase: { sign_in_provider: provider } } } } : {}),
 }) as Request;
 const contact = { kind: "contact", subject: " Help ", text: " My message " };
@@ -81,9 +81,9 @@ describe("support callable persistence", () => {
     expect(result).toEqual({ tracked: true, threadId: expect.any(String) });
     expect(store.docs.get(`supportThreads/${result.threadId}`)).toEqual({
       kind: "clue_error", ownerUid: "owner", status: "submitted", subject: "Wrong clue", clue: clue.clue,
-      createdAt: "server-time", updatedAt: "server-time", lastMessageAt: "server-time", userUnread: 0, adminUnread: 1,
+      createdAt: { seconds: 1, nanoseconds: 0 }, updatedAt: { seconds: 1, nanoseconds: 0 }, lastMessageAt: { seconds: 1, nanoseconds: 0 }, userUnread: 0, adminUnread: 1,
     });
-    expect(messages(result.threadId!)).toEqual([{ sender: "user", text: "Please check", createdAt: "server-time" }]);
+    expect(messages(result.threadId!)).toEqual([{ sender: "user", text: "Please check", createdAt: { seconds: 1, nanoseconds: 0 } }]);
   });
 
   it("rejects missing/anonymous clue identity and malformed data without writes", async () => {
@@ -99,7 +99,7 @@ describe("support callable persistence", () => {
     }
     for (const [path, thread] of threadEntries()) {
       expect(thread).not.toHaveProperty("ownerUid");
-      expect(messages(path.split("/")[1]!)).toEqual([{ sender: "guest", text: "My message", createdAt: "server-time" }]);
+      expect(messages(path.split("/")[1]!)).toEqual([{ sender: "guest", text: "My message", createdAt: { seconds: 1, nanoseconds: 0 } }]);
     }
     expect(JSON.stringify([...store.docs])).not.toContain("192.0.2.10");
   });
@@ -163,8 +163,8 @@ describe("support callable persistence", () => {
     await replySupportThread.run(request({ threadId: id, participant: "admin", text: "Admin reply" }, "admin", "password", true));
     expect(store.docs.get(`supportThreads/${id}`)).toMatchObject({ userUnread: 1, adminUnread: 2, clue: clue.clue });
     expect(messages(id).slice(1)).toEqual([
-      { sender: "user", text: "Owner reply", createdAt: "server-time" },
-      { sender: "admin", text: "Admin reply", createdAt: "server-time" },
+      { sender: "user", text: "Owner reply", createdAt: { seconds: 1, nanoseconds: 0 } },
+      { sender: "admin", text: "Admin reply", createdAt: { seconds: 1, nanoseconds: 0 } },
     ]);
     const attempts = await Promise.allSettled(Array.from({ length: 5 }, () => replySupportThread.run(request({ threadId: id, participant: "user", text: "Concurrent" }, "owner"))));
     expect(attempts.every((result) => result.status === "fulfilled")).toBe(true);
@@ -243,6 +243,23 @@ describe("support callable persistence", () => {
     const guestId = threadEntries().find(([, thread]) => !thread.ownerUid)![0].split("/")[1]!;
     await replySupportThread.run(request({ threadId: guestId, participant: "admin", text: "Internal admin response" }, "admin", "password", true));
     expect(store.docs.get(`supportThreads/${guestId}`)?.userUnread).toBe(0);
+  });
+
+  it("preserves unread replies newer than the observed message", async () => {
+    const id = await create();
+    const thread = store.docs.get(`supportThreads/${id}`)!;
+    thread.lastMessageAt = { seconds: 20, nanoseconds: 1 };
+    thread.userUnread = 2;
+    await markSupportRead.run(request({ threadId: id, participant: "user", observedAt: { seconds: 20, nanoseconds: 0 } }, "owner"));
+    expect(store.docs.get(`supportThreads/${id}`)?.userUnread).toBe(2);
+    await markSupportRead.run(request({ threadId: id, participant: "user", observedAt: { seconds: 20, nanoseconds: 1 } }, "owner"));
+    expect(store.docs.get(`supportThreads/${id}`)?.userUnread).toBe(0);
+    await markSupportRead.run(request({ threadId: id, participant: "admin", observedAt: undefined }, "admin", "password", true));
+    expect(store.docs.get(`supportThreads/${id}`)?.adminUnread).toBe(1);
+    await markSupportRead.run(request({ threadId: id, participant: "admin", observedAt: { seconds: 19, nanoseconds: 999_999_999 } }, "admin", "password", true));
+    expect(store.docs.get(`supportThreads/${id}`)?.adminUnread).toBe(1);
+    await markSupportRead.run(request({ threadId: id, participant: "admin", observedAt: { seconds: 20, nanoseconds: 1 } }, "admin", "password", true));
+    expect(store.docs.get(`supportThreads/${id}`)?.adminUnread).toBe(0);
   });
 
   it("rejects malformed ids and missing threads with callable errors", async () => {

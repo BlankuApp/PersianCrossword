@@ -216,7 +216,7 @@ describe("account support", () => {
     const { unmount } = render(<SupportPage threadId="contact-1" />);
     expect(await screen.findByText("متن اولیه")).toBeInTheDocument();
     expect(screen.getByText("پاسخ پشتیبانی")).toBeInTheDocument();
-    expect(api.read).toHaveBeenCalledWith({ threadId: "contact-1", participant: "user" });
+    expect(api.read).toHaveBeenCalledWith({ threadId: "contact-1", participant: "user", observedAt: { seconds: time.seconds, nanoseconds: time.nanoseconds } });
     expect(api.image).toHaveBeenCalledWith("support/player/contact-1/initial");
     expect(await screen.findByRole("img", { name: "تصویر پیوست پیام" })).toHaveAttribute("src", "blob:private-image");
     expect(screen.queryByLabelText(/تصویر پیوست/)).not.toBeInTheDocument();
@@ -239,7 +239,7 @@ describe("account support", () => {
     fireEvent.change(reply, { target: { value: "ناتمام" } });
     api.read.mockClear();
     await act(async () => nextThreads([{ ...contact, userUnread: 1 }]));
-    expect(api.read).toHaveBeenCalledWith({ threadId: "contact-1", participant: "user" });
+    expect(api.read).toHaveBeenCalledWith({ threadId: "contact-1", participant: "user", observedAt: { seconds: time.seconds, nanoseconds: time.nanoseconds } });
     expect(reply).toHaveValue("ناتمام");
   });
 
@@ -258,7 +258,7 @@ describe("account support", () => {
     state.user = account();
     state.isAdmin = true;
     render(<SupportPage threadId="contact-1" />);
-    expect(api.read).toHaveBeenCalledWith({ threadId: "contact-1", participant: "user" });
+    expect(api.read).toHaveBeenCalledWith({ threadId: "contact-1", participant: "user", observedAt: { seconds: time.seconds, nanoseconds: time.nanoseconds } });
     const items = within(screen.getByRole("list", { name: "پیام‌های گفت‌وگو" })).getAllByRole("listitem");
     expect(items[0]).toHaveTextContent("شما");
     expect(items[1]).toHaveTextContent("پشتیبانی");
@@ -270,7 +270,7 @@ describe("account support", () => {
   it("uses the admin unread counter, participant payloads, and sender labels in the shared admin view", async () => {
     api.messages.mockImplementation((_id, next) => { next([...messages, { id: "guest", sender: "guest", text: "متن مهمان", createdAt: time }]); return api.stopMessages; });
     const { rerender } = render(<SupportThread thread={{ ...contact, adminUnread: 1 }} role="admin" />);
-    expect(api.read).toHaveBeenCalledWith({ threadId: "contact-1", participant: "admin" });
+    expect(api.read).toHaveBeenCalledWith({ threadId: "contact-1", participant: "admin", observedAt: { seconds: time.seconds, nanoseconds: time.nanoseconds } });
     const items = within(screen.getByRole("list", { name: "پیام‌های گفت‌وگو" })).getAllByRole("listitem");
     expect(items[0]).toHaveTextContent("کاربر");
     expect(items[1]).toHaveTextContent("پشتیبانی (شما)");
@@ -281,7 +281,7 @@ describe("account support", () => {
     rerender(<SupportThread thread={{ ...contact, userUnread: 3 }} role="admin" />);
     expect(api.read).not.toHaveBeenCalled();
     rerender(<SupportThread thread={{ ...contact, userUnread: 3, adminUnread: 1 }} role="admin" />);
-    expect(api.read).toHaveBeenCalledWith({ threadId: "contact-1", participant: "admin" });
+    expect(api.read).toHaveBeenCalledWith({ threadId: "contact-1", participant: "admin", observedAt: { seconds: time.seconds, nanoseconds: time.nanoseconds } });
     expect(reply).toHaveValue("پاسخ مدیر");
     fireEvent.click(screen.getByRole("button", { name: "ارسال پاسخ" }));
     await waitFor(() => expect(api.reply).toHaveBeenCalledWith({ threadId: "contact-1", participant: "admin", text: "پاسخ مدیر" }));

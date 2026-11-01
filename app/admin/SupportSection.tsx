@@ -24,7 +24,7 @@ export function SupportSection() {
     .filter((thread) => (kind === "all" || thread.kind === kind) && (status === "all" || thread.status === status))
     .sort((a, b) => b.lastMessageAt.toMillis() - a.lastMessageAt.toMillis()), [threads, kind, status]);
   const filterStatuses: SupportStatus[] = kind === "all" ? Object.keys(supportStatusText) as SupportStatus[] : statusByKind[kind];
-  const selected = threads?.find((thread) => thread.id === selectedId);
+  const selected = visibleThreads.find((thread) => thread.id === selectedId);
 
   async function updateStatus(thread: SupportThread, next: SupportStatus) {
     if (!statusByKind[thread.kind].includes(next) || saving) return;

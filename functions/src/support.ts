@@ -16,6 +16,7 @@ interface SupportThread {
   ownerUid?: string;
   userUnread: number;
   adminUnread: number;
+  lastMessageAt: { seconds: number; nanoseconds: number };
 }
 
 export function networkRateKey(address: string, day: string, secret: string): string {
@@ -175,7 +176,12 @@ export const markSupportRead = onCall(callableOptions, async (request) => {
   await db.runTransaction(async (tx) => {
     const current = await readThread(tx, thread);
     const admin = authorizeThread(request, current, participant);
-    tx.update(thread, admin ? { adminUnread: 0 } : { userUnread: 0 });
+    const observed = request.data?.observedAt;
+    if (observed && Number.isSafeInteger(observed.seconds) && Number.isInteger(observed.nanoseconds)
+      && observed.nanoseconds >= 0 && observed.nanoseconds < 1_000_000_000
+      && current.lastMessageAt?.seconds === observed.seconds && current.lastMessageAt?.nanoseconds === observed.nanoseconds) {
+      tx.update(thread, admin ? { adminUnread: 0 } : { userUnread: 0 });
+    }
   });
   return { ok: true };
 });

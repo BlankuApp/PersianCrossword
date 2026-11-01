@@ -48,8 +48,8 @@ describe("support client", () => {
     ["user reply", () => api.replySupportThread({ threadId: "t1", participant: "user", text: "Reply" }), "replySupportThread", { threadId: "t1", participant: "user", text: "Reply" }],
     ["admin reply", () => api.replySupportThread({ threadId: "t1", participant: "admin", text: "Reply" }), "replySupportThread", { threadId: "t1", participant: "admin", text: "Reply" }],
     ["status", () => api.setSupportStatus({ threadId: "t1", status: "fixed" }), "setSupportStatus", { threadId: "t1", status: "fixed" }],
-    ["user read marker", () => api.markSupportRead({ threadId: "t1", participant: "user" }), "markSupportRead", { threadId: "t1", participant: "user" }],
-    ["admin read marker", () => api.markSupportRead({ threadId: "t1", participant: "admin" }), "markSupportRead", { threadId: "t1", participant: "admin" }],
+    ["user read marker", () => api.markSupportRead({ threadId: "t1", participant: "user", observedAt: { seconds: 1, nanoseconds: 2 } }), "markSupportRead", { threadId: "t1", participant: "user", observedAt: { seconds: 1, nanoseconds: 2 } }],
+    ["admin read marker", () => api.markSupportRead({ threadId: "t1", participant: "admin", observedAt: { seconds: 1, nanoseconds: 2 } }), "markSupportRead", { threadId: "t1", participant: "admin", observedAt: { seconds: 1, nanoseconds: 2 } }],
   ] as const;
 
   it.each(mutations)("waits for App Check before sending a %s", async (_label, mutate, name, payload) => {

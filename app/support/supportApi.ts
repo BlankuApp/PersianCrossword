@@ -82,7 +82,7 @@ export function setSupportStatus(input: { threadId: string; status: SupportStatu
   return call("setSupportStatus", input);
 }
 
-export function markSupportRead(input: { threadId: string; participant: SupportParticipant }): Promise<{ ok: true }> {
+export function markSupportRead(input: { threadId: string; participant: SupportParticipant; observedAt: { seconds: number; nanoseconds: number } }): Promise<{ ok: true }> {
   return call("markSupportRead", input);
 }
 
