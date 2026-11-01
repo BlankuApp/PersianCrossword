@@ -811,7 +811,7 @@ export function SolverPage({ id, slotId, json, solutionImageUrl, sourceImageUrl,
           aria-label="پاسخ جدول"
           onClick={closeSolution}
         >
-          <div className="solution-modal" onClick={(e) => e.stopPropagation()}>
+          <div className={`solution-modal${solutionState ? " solution-grid-modal" : ""}`} onClick={(e) => e.stopPropagation()}>
             <div className="solution-modal-header">
               <h2>پاسخ جدول</h2>
               <div className="solution-modal-actions">
@@ -827,7 +827,7 @@ export function SolverPage({ id, slotId, json, solutionImageUrl, sourceImageUrl,
               </div>
             </div>
             {solutionState ? (
-              <div className="solution-board">
+              <BoardWithLabels puzzle={activePuzzle!}>
                 <CrosswordBoard
                   boardRef={solutionBoardRef}
                   puzzle={activePuzzle!}
@@ -838,7 +838,7 @@ export function SolverPage({ id, slotId, json, solutionImageUrl, sourceImageUrl,
                   onCellClick={() => {}}
                   onKeyDown={() => {}}
                 />
-              </div>
+              </BoardWithLabels>
             ) : (
               <div className="solution-image">
                 <img src={solutionImageUrl} alt="تصویر پاسخ جدول" />

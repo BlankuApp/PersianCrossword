@@ -255,7 +255,10 @@ describe("Persian crossword UI", () => {
     expect(firstAcross.map((slot) => slot.answer)).toEqual(["کولر", "بوینوسایرس"]);
     render(<SolverPage id="223" json={json} editor={draft ? { kind: "draft", save: vi.fn() } : undefined} />);
     await userEvent.click(screen.getByRole("button", { name: "نمایش پاسخ" }));
-    const cells = within(screen.getByRole("dialog", { name: "پاسخ جدول" })).getAllByRole("gridcell");
+    const dialog = screen.getByRole("dialog", { name: "پاسخ جدول" });
+    expect(Array.from(dialog.querySelectorAll(".row-number"), (label) => label.textContent)).toEqual(Array.from({ length: puzzle.size.rows }, (_, i) => String(i + 1)));
+    expect(Array.from(dialog.querySelectorAll(".col-number"), (label) => label.textContent)).toEqual(Array.from({ length: puzzle.size.cols }, (_, i) => String(i + 1)));
+    const cells = within(dialog).getAllByRole("gridcell");
     expect(cells.slice(0, 15).map((cell) => cell.textContent?.trim() ?? "")).toEqual([...referencePuzzle.grid[0]!].reverse());
     expect(cells[14]).toHaveTextContent("ک"); // right edge of the LTR board
     expect(cells[0]).toHaveTextContent("س"); // left edge
