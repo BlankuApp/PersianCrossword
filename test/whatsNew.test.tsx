@@ -21,6 +21,7 @@ describe("WhatsNewButton", () => {
     render(<HomePage />);
 
     await user.click(screen.getByRole("button", { name: /چه خبر؟ — ۱ خبر تازه/ }));
+    expect(document.querySelector(".whats-new-entry-title")?.textContent).toContain("منوی تازهٔ حساب کاربری");
     expect(screen.getAllByText("تازه")).toHaveLength(1);
     expect(localStorage.getItem(SEEN_KEY)).toBe(WHATS_NEW[0]!.date);
 

@@ -64,7 +64,9 @@ export function loadGeminiKey(): string {
 
 export function saveGeminiKey(value: string): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(GEMINI_KEY_KEY, value);
+  const key = value.trim();
+  if (key) window.localStorage.setItem(GEMINI_KEY_KEY, key);
+  else window.localStorage.removeItem(GEMINI_KEY_KEY);
 }
 
 // Dash, not STORAGE_PREFIX: credentials must never be synced as puzzle progress.
