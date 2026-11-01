@@ -50,7 +50,7 @@ describe("Android app promo", () => {
 
   it("hides every Play Store link and web-only news in the Android app", async () => {
     platform.native = true;
-    localStorage.setItem("persian-crossword-whats-new-seen", WHATS_NEW[1]!.date);
+    localStorage.setItem("persian-crossword-whats-new-seen", WHATS_NEW[0]!.date);
     const user = userEvent.setup();
     render(<HomePage />);
     expect(playLinks()).toHaveLength(0);
@@ -58,6 +58,6 @@ describe("Android app promo", () => {
     expect(document.querySelector(".whats-new-badge")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "چه خبر؟" }));
-    expect(screen.queryByText(WHATS_NEW[0]!.title)).toBeNull();
+    expect(screen.queryByText(WHATS_NEW.find((entry) => entry.webOnly)!.title)).toBeNull();
   });
 });
