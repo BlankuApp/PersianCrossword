@@ -1146,7 +1146,6 @@ select {
 
 .active-clue-block + .active-clue-block {
   margin-top: 4px;
-  border-top: 1px solid var(--line-strong);
 }
 
 .active-clue-block-active {
