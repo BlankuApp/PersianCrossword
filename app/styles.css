@@ -660,6 +660,10 @@ select {
   overflow: auto;
 }
 
+.solution-grid-modal {
+  max-width: min(95vw, 720px);
+}
+
 .solution-modal-header {
   display: flex;
   align-items: center;
@@ -1506,12 +1510,12 @@ select {
 
   /* Drop the row/column index labels and let the grid bleed into the
      shell's padding so it gets the most space on small screens. */
-  .board-top-row,
-  .row-numbers {
+  .board-panel .board-top-row,
+  .board-panel .row-numbers {
     display: none;
   }
 
-  .board-with-labels {
+  .board-panel .board-with-labels {
     width: calc(100% + 4px);
     margin-inline: -2px;
   }
