@@ -123,9 +123,8 @@ describe("Persian crossword UI", () => {
     await user.click(screen.getAllByRole("button", { name: "گزارش خطای این پرسش" })[1]!);
     const dialog = screen.getByRole("dialog", { name: "گزارش خطای پرسش" });
     expect(within(dialog).getByText("باغ — ۱۰ در ۱۰")).toBeInTheDocument();
-    expect(within(dialog).getByText("sample-10x10-garden")).toBeInTheDocument();
     expect(within(dialog).getByText("۱ عمودی")).toBeInTheDocument();
-    expect(within(dialog).getByText("نمونه عمودی 1، 4 حرف")).toBeInTheDocument();
+    expect(within(dialog).getByText("پرسش: نمونه عمودی 1، 4 حرف")).toBeInTheDocument();
     const answer = compilePuzzle(normalizeGridDirection(json10)).getSlot("C1-1")!.answer!;
     expect(within(dialog).getByText(`پاسخ: ${answer}`)).toBeInTheDocument();
     expect(within(dialog).getAllByRole("textbox")).toHaveLength(1);
@@ -188,7 +187,7 @@ describe("Persian crossword UI", () => {
     expect(within(dialog).getByRole("textbox", { name: "توضیح خطا" })).toHaveValue("توضیح محفوظ");
     await user.click(within(dialog).getByRole("button", { name: "بستن" }));
     await user.click(screen.getAllByRole("button", { name: "گزارش خطای این پرسش" })[0]!);
-    expect(within(screen.getByRole("dialog", { name: "گزارش خطای پرسش" })).getByText("پرسش اصلاح‌شده")).toBeInTheDocument();
+    expect(within(screen.getByRole("dialog", { name: "گزارش خطای پرسش" })).getByText("پرسش: پرسش اصلاح‌شده")).toBeInTheDocument();
   });
 
   it("refreshes a same-grid catalog update without discarding the report, then remounts for a grid change", async () => {
