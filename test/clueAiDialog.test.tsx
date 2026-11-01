@@ -178,19 +178,33 @@ describe("ActiveClue AI letters", () => {
     localStorage.setItem("persian-crossword-gemini-key", "k");
   });
 
-  it("explains only when the word is filled in correctly", () => {
+  it("searches Vajehyab only for a completed answer", async () => {
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+    const { rerender } = render(<ActiveClue slots={{ down: slot }} getCellValue={(c) => ["ش", "ک", undefined][c.row]} getSolutionValue={(c) => solution[c.row]} />);
+    await userEvent.click(screen.getByRole("button", { name: "گزینه‌های پرسش" }));
+    expect(screen.queryByRole("button", { name: "جستجو در واژه‌یاب" })).not.toBeInTheDocument();
+    rerender(<ActiveClue slots={{ down: slot }} getCellValue={(c) => solution[c.row]} getSolutionValue={(c) => solution[c.row]} />);
+    await userEvent.click(screen.getByRole("button", { name: "جستجو در واژه‌یاب" }));
+    expect(open).toHaveBeenCalledWith("https://vajehyab.com/?q=%D8%B4%DA%A9%D9%86&d=", "_blank", "noopener,noreferrer");
+    open.mockRestore();
+  });
+
+  it("explains only when the word is filled in correctly", async () => {
     renderClue(["ش", "ک", "ن"]);
+    await userEvent.click(screen.getByRole("button", { name: "گزینه‌های پرسش" }));
     expect(screen.getByRole("button", { name: /توضیح با هوشواره/ })).toBeInTheDocument();
   });
 
   it("stays in ask mode and hides wrong letters when the word is filled in wrongly", async () => {
     renderClue(["ش", "ک", "ه"]);
+    await userEvent.click(screen.getByRole("button", { name: "گزینه‌های پرسش" }));
     await userEvent.setup().click(screen.getByRole("button", { name: /از هوشواره بپرس/ }));
     expect(mocks.streamGemini.mock.calls[0]?.[0]).toContain("حرف ۱: ش، حرف ۲: ک، حرف ۳: ؟");
   });
 
   it("explains the player's letters when the puzzle has no solution", async () => {
     renderClue(["ش", "ک", "ن"], false);
+    await userEvent.click(screen.getByRole("button", { name: "گزینه‌های پرسش" }));
     await userEvent.setup().click(screen.getByRole("button", { name: /توضیح با هوشواره/ }));
     expect(mocks.streamGemini.mock.calls[0]?.[0]).toContain("پاسخ: «شکن»");
   });
