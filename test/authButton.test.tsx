@@ -231,14 +231,14 @@ describe("AuthButton", () => {
     expect(authState.syncNow).toHaveBeenCalledOnce();
   });
 
-  it("shows no dot or retry when everything is saved", async () => {
+  it("hides sync status when everything is saved", async () => {
     authState.user = { uid: "u1", isAnonymous: false, displayName: "کاربر", email: null, providerData: [] };
     const user = userEvent.setup();
     const { container } = render(<AuthButton />);
     expect(container.querySelector(".auth-sync-dot")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "حساب کاربری: کاربر" }));
-    expect(screen.getByRole("status")).toHaveTextContent("همهٔ پیشرفت‌ها در فضای ابری ذخیره شده است.");
+    expect(screen.queryByText("همهٔ پیشرفت‌ها در فضای ابری ذخیره شده است.")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "همین حالا تلاش کن" })).not.toBeInTheDocument();
   });
 

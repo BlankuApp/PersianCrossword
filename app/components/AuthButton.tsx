@@ -201,14 +201,16 @@ function UserMenu() {
               </div>
             </div>
 
-            <p className={`auth-sync-status auth-sync-${syncStatus.kind}`} role="status">
-              {syncStatusText(syncStatus)}
-              {(syncStatus.kind === "error" || syncStatus.kind === "offline") && (
-                <button type="button" className="auth-sync-retry" onClick={() => void syncNow()}>
-                  همین حالا تلاش کن
-                </button>
-              )}
-            </p>
+            {syncStatus.kind !== "synced" ? (
+              <p className={`auth-sync-status auth-sync-${syncStatus.kind}`} role="status">
+                {syncStatusText(syncStatus)}
+                {(syncStatus.kind === "error" || syncStatus.kind === "offline") && (
+                  <button type="button" className="auth-sync-retry" onClick={() => void syncNow()}>
+                    همین حالا تلاش کن
+                  </button>
+                )}
+              </p>
+            ) : null}
 
             <div className="auth-menu-tabs" role="tablist" aria-label="بخش حساب کاربری">
               <button
