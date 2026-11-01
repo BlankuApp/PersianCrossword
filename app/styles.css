@@ -50,7 +50,7 @@
   /* Sizing tokens — desktop values; redeclared per breakpoint tier further down. */
   --shell-padding: 20px;
   --toolbar-btn-min-h: 40px;
-  --active-clue-pad-v: 14px;
+  --active-clue-pad-v: 10px;
   --active-clue-pad-h: 16px;
   --active-clue-min-h: 84px;
   --stack-gap: 12px;
@@ -1145,7 +1145,7 @@ select {
 }
 
 .active-clue-block + .active-clue-block {
-  margin-top: 8px;
+  margin-top: 4px;
   border-top: 1px solid var(--line-strong);
 }
 
@@ -1160,9 +1160,9 @@ select {
 }
 
 .active-clue p {
-  margin: 8px 0 0;
+  margin: 0;
   font-size: 1.1rem;
-  line-height: 1.7;
+  line-height: 1.4;
 }
 
 /* A tinted pill in the direction's color, with an arrow showing which way the word runs. */
@@ -1199,7 +1199,7 @@ select {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: var(--stack-gap);
+  margin-top: min(var(--stack-gap), 6px);
 }
 
 .tray-tile {
@@ -1224,7 +1224,7 @@ select {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: var(--stack-gap);
+  margin-top: min(var(--stack-gap), 6px);
 }
 
 /* The delete key is the row's last box, so a long word wraps it along with its letters. */
@@ -1291,12 +1291,28 @@ select {
 }
 
 .active-clue-head-actions {
-  position: static;
+  position: relative;
   display: flex;
-  flex-direction: row;
   align-items: center;
-  gap: 8px;
 }
+
+.clue-actions-menu button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  gap: 10px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  text-align: right;
+  cursor: pointer;
+}
+
+.clue-actions-menu button:hover,
+.clue-actions-menu button:focus-visible { background: var(--brand-soft); }
 
 /* Per-clue actions: small squares like the letter boxes, each in its own color; filled on hover. */
 .clue-icon-btn,
@@ -1392,7 +1408,7 @@ select {
 @media (max-width: 860px) {
   :root {
     --shell-padding: 10px;
-    --active-clue-pad-v: 8px;
+    --active-clue-pad-v: 6px;
     --active-clue-pad-h: 10px;
     --active-clue-min-h: 52px;
     --stack-gap: 6px;
@@ -1411,16 +1427,13 @@ select {
     width: auto;
   }
 
-  .active-clue p {
-    margin: 6px 0 0;
-  }
 }
 
 @media (max-width: 480px) {
   :root {
     --shell-padding: 4px;
     --toolbar-btn-min-h: 32px;
-    --active-clue-pad-v: 6px;
+    --active-clue-pad-v: 4px;
     --active-clue-pad-h: 8px;
     --active-clue-min-h: 40px;
     --stack-gap: 4px;
@@ -1504,9 +1517,6 @@ select {
     margin-inline: -2px;
   }
 
-  .active-clue p {
-    margin: 4px 0 0;
-  }
 
   /* Tighter gaps keep a 7-letter word and its delete key on one line. */
   .word-cells-row,
