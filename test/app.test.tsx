@@ -62,19 +62,17 @@ describe("Persian crossword UI", () => {
     if (hash !== "#/contact") expect(screen.getByText(/برای پیگیری.*وارد حساب/)).toBeInTheDocument();
   });
 
-  it("keeps a report icon in each existing clue action strip without adding clue rows", () => {
+  it("shows clue actions in a menu and closes it with Escape", async () => {
+    const user = userEvent.setup();
     render(<SolverPage id="sample-10x10-garden" json={json10} />);
     const panel = screen.getByLabelText("پرسش فعال");
-    const reports = within(panel).getAllByRole("button", { name: "گزارش خطای این پرسش" });
-    expect(reports).toHaveLength(2);
-    expect(panel.children).toHaveLength(2);
-    for (const button of reports) {
-      expect(button).toHaveClass("clue-icon-btn");
-      expect(button).toHaveAttribute("title", "گزارش خطای پرسش");
-      expect(button.parentElement).toHaveClass("active-clue-head-actions");
-      expect(button.querySelector("svg")).toHaveClass("lucide-flag");
-      expect(button.closest(".active-clue-block")?.children).toHaveLength(3);
-    }
+    const toggles = within(panel).getAllByRole("button", { name: "گزینه‌های پرسش" });
+    expect(toggles).toHaveLength(2);
+    await user.click(toggles[0]!);
+    expect(within(panel).getByRole("button", { name: "گزارش خطای این پرسش" })).toBeVisible();
+    await user.keyboard("{Escape}");
+    expect(toggles[0]).toHaveFocus();
+    expect(toggles[0]).toHaveAttribute("aria-expanded", "false");
   });
 
   it("returns an admin support puzzle to the support inbox from its visible back button", async () => {
@@ -97,7 +95,8 @@ describe("Persian crossword UI", () => {
     authState.user = anonymous ? { uid: "guest", isAnonymous: true } as User : null;
     const { rerender } = render(<SolverPage id="sample-10x10-garden" json={json10} />);
     await user.click(screen.getByLabelText("ردیف 1 ستون 7"));
-    await user.click(screen.getAllByRole("button", { name: "گزارش خطای این پرسش" })[0]!);
+    await user.click(screen.getAllByRole("button", { name: "گزینه‌های پرسش" })[0]!);
+    await user.click(screen.getByRole("button", { name: "گزارش خطای این پرسش" }));
     const dialog = screen.getByRole("dialog", { name: "گزارش خطای پرسش" });
     const explanation = within(dialog).getByRole("textbox", { name: "توضیح خطا" });
     await user.type(explanation, "پرسش با پاسخ هماهنگ نیست");
@@ -120,12 +119,12 @@ describe("Persian crossword UI", () => {
     authState.user = { uid: "player", isAnonymous: false } as User;
     const user = userEvent.setup();
     render(<SolverPage id="sample-10x10-garden" json={json10} />);
-    await user.click(screen.getAllByRole("button", { name: "گزارش خطای این پرسش" })[1]!);
+    await user.click(screen.getAllByRole("button", { name: "گزینه‌های پرسش" })[1]!);
+    await user.click(screen.getByRole("button", { name: "گزارش خطای این پرسش" }));
     const dialog = screen.getByRole("dialog", { name: "گزارش خطای پرسش" });
     expect(within(dialog).getByText("باغ — ۱۰ در ۱۰")).toBeInTheDocument();
-    expect(within(dialog).getByText("sample-10x10-garden")).toBeInTheDocument();
     expect(within(dialog).getByText("۱ عمودی")).toBeInTheDocument();
-    expect(within(dialog).getByText("نمونه عمودی 1، 4 حرف")).toBeInTheDocument();
+    expect(within(dialog).getByText("پرسش: نمونه عمودی 1، 4 حرف")).toBeInTheDocument();
     const answer = compilePuzzle(normalizeGridDirection(json10)).getSlot("C1-1")!.answer!;
     expect(within(dialog).getByText(`پاسخ: ${answer}`)).toBeInTheDocument();
     expect(within(dialog).getAllByRole("textbox")).toHaveLength(1);
@@ -143,7 +142,8 @@ describe("Persian crossword UI", () => {
     expect(within(dialog).queryByRole("button", { name: "ارسال گزارش" })).not.toBeInTheDocument();
     await user.click(within(dialog).getByRole("button", { name: "بستن" }));
     expect(dialog).not.toBeInTheDocument();
-    await user.click(screen.getAllByRole("button", { name: "گزارش خطای این پرسش" })[0]!);
+    await user.click(screen.getAllByRole("button", { name: "گزینه‌های پرسش" })[0]!);
+    await user.click(screen.getByRole("button", { name: "گزارش خطای این پرسش" }));
     expect(screen.getByRole("textbox", { name: "توضیح خطا" })).toHaveValue("");
   });
 
@@ -152,7 +152,8 @@ describe("Persian crossword UI", () => {
     vi.mocked(createClueReport).mockRejectedValueOnce(new Error("offline"));
     const user = userEvent.setup();
     render(<SolverPage id="sample-10x10-garden" json={json10} />);
-    await user.click(screen.getAllByRole("button", { name: "گزارش خطای این پرسش" })[0]!);
+    await user.click(screen.getAllByRole("button", { name: "گزینه‌های پرسش" })[0]!);
+    await user.click(screen.getByRole("button", { name: "گزارش خطای این پرسش" }));
     await user.type(screen.getByRole("textbox", { name: "توضیح خطا" }), "شرح خطا");
     await user.click(screen.getByRole("button", { name: "ارسال گزارش" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("ارسال گزارش انجام نشد");
@@ -166,7 +167,8 @@ describe("Persian crossword UI", () => {
     const user = userEvent.setup();
     const { rerender } = render(<App />);
     expect(screen.getByLabelText("پرسش فعال").querySelector(".active-clue-block-active")).toHaveTextContent("۲ عمودی");
-    await user.click(screen.getAllByRole("button", { name: "گزارش خطای این پرسش" })[1]!);
+    await user.click(screen.getAllByRole("button", { name: "گزینه‌های پرسش" })[1]!);
+    await user.click(screen.getByRole("button", { name: "گزارش خطای این پرسش" }));
     const dialog = screen.getByRole("dialog", { name: "گزارش خطای پرسش" });
     await user.type(within(dialog).getByRole("textbox", { name: "توضیح خطا" }), "توضیح محفوظ");
     authState.user = { uid: "admin", isAnonymous: false } as User;
@@ -187,15 +189,17 @@ describe("Persian crossword UI", () => {
     expect(screen.getByRole("dialog", { name: "گزارش خطای پرسش" })).toBe(dialog);
     expect(within(dialog).getByRole("textbox", { name: "توضیح خطا" })).toHaveValue("توضیح محفوظ");
     await user.click(within(dialog).getByRole("button", { name: "بستن" }));
-    await user.click(screen.getAllByRole("button", { name: "گزارش خطای این پرسش" })[0]!);
-    expect(within(screen.getByRole("dialog", { name: "گزارش خطای پرسش" })).getByText("پرسش اصلاح‌شده")).toBeInTheDocument();
+    await user.click(screen.getAllByRole("button", { name: "گزینه‌های پرسش" })[0]!);
+    await user.click(screen.getByRole("button", { name: "گزارش خطای این پرسش" }));
+    expect(within(screen.getByRole("dialog", { name: "گزارش خطای پرسش" })).getByText("پرسش: پرسش اصلاح‌شده")).toBeInTheDocument();
   });
 
   it("refreshes a same-grid catalog update without discarding the report, then remounts for a grid change", async () => {
     window.location.hash = "#/puzzle/sample-10x10-garden";
     const user = userEvent.setup();
     const { rerender } = render(<App />);
-    await user.click(screen.getAllByRole("button", { name: "گزارش خطای این پرسش" })[0]!);
+    await user.click(screen.getAllByRole("button", { name: "گزینه‌های پرسش" })[0]!);
+    await user.click(screen.getByRole("button", { name: "گزارش خطای این پرسش" }));
     const dialog = screen.getByRole("dialog", { name: "گزارش خطای پرسش" });
     await user.type(within(dialog).getByRole("textbox", { name: "توضیح خطا" }), "توضیح محفوظ");
     window.localStorage.setItem("persian-crossword:sample-10x10-garden", JSON.stringify({ cells: { "0,9": "س" } }));
@@ -396,6 +400,7 @@ describe("Persian crossword UI", () => {
     render(<SolverPage id="sample-10x10-garden" json={json10} editor={editor} />);
 
     async function editClue(pencil: HTMLElement, text: string): Promise<void> {
+      await user.click(pencil.closest(".active-clue-head-actions")!.querySelector("button")!);
       await user.click(pencil);
       const box = screen.getByRole("textbox", { name: "" });
       await user.clear(box);
@@ -438,6 +443,7 @@ describe("Persian crossword UI", () => {
     expect(metaSaves[0]![0].meta).toMatchObject({ title: "عنوان تازه", id: "sample-10x10-garden", size: { rows: 10, cols: 10 } });
 
     // The page's json prop never changed, yet a later clue save must build on the new metadata.
+    await user.click(screen.getAllByRole("button", { name: "گزینه‌های پرسش" })[0]!);
     await user.click(screen.getAllByTitle("ویرایش متن پرسش (دیباگ)")[0]!);
     const box = screen.getByRole("textbox", { name: "" });
     await user.clear(box);

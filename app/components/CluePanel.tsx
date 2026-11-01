@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowLeft, Delete, Flag, Pencil, Search, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, Delete, EllipsisVertical, Flag, Pencil, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { normalizePersianText, splitPersianGraphemes, type Coord, type Direction, type Slot } from "../../src/index";
 import { buildLetterTray } from "../crosswordUi";
@@ -158,6 +158,22 @@ function ClueBlock({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
   const rowRef = useRef<HTMLDivElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function outside(event: PointerEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) setMenuOpen(false);
+    }
+    function escape(event: KeyboardEvent) {
+      if (event.key === "Escape") { setMenuOpen(false); menuButtonRef.current?.focus(); }
+    }
+    document.addEventListener("pointerdown", outside);
+    window.addEventListener("keydown", escape);
+    return () => { document.removeEventListener("pointerdown", outside); window.removeEventListener("keydown", escape); };
+  }, [menuOpen]);
 
   // A tapped tile lands in the first empty box at or after `from` (wrapping around), so boxes
   // already filled — by this word or a crossing one — are skipped. The grid selection never
@@ -306,47 +322,17 @@ function ClueBlock({
           </span>{" "}
           <span>{slot.clue}</span>
         </p>
-        <div className="active-clue-head-actions">
-          {isSolved ? null : (
-            <button
-              type="button"
-              onClick={handleGoogleSearch}
-              className="clue-icon-btn clue-icon-search"
-              title="جستجو در گوگل"
-              aria-label="جستجو در گوگل برای این پرسش"
-            >
-              <Search size={20} aria-hidden="true" />
-            </button>
-          )}
-          <ClueAiButton
-            clue={slot.clue}
-            isSolved={isSolved}
-            cellValues={aiLetters}
-            answer={aiLetters.join("")}
-            trayLetters={trayTiles.map((t) => t.letter)}
-          />
-          {onReportClue ? (
-            <button
-              type="button"
-              onClick={() => onReportClue(slot)}
-              className="clue-icon-btn"
-              title="گزارش خطای پرسش"
-              aria-label="گزارش خطای این پرسش"
-            >
-              <Flag size={20} aria-hidden="true" />
-            </button>
-          ) : null}
-          {isDebugMode ? (
-            <button
-              type="button"
-              onClick={openEditModal}
-              className="clue-icon-btn clue-icon-edit"
-              title="ویرایش متن پرسش (دیباگ)"
-              aria-label="ویرایش متن پرسش"
-            >
-              <Pencil size={20} aria-hidden="true" />
-            </button>
-          ) : null}
+        <div className="active-clue-head-actions" ref={menuRef}>
+          <button ref={menuButtonRef} type="button" className="clue-icon-btn" onClick={() => setMenuOpen((open) => !open)} aria-label="گزینه‌های پرسش" aria-expanded={menuOpen} aria-haspopup="true">
+            <EllipsisVertical size={20} aria-hidden="true" />
+          </button>
+          <div hidden={!menuOpen} className={`toolbar-menu clue-actions-menu${menuOpen ? " toolbar-menu-open" : ""}`}>
+            {!isSolved ? <button type="button" onClick={() => { handleGoogleSearch(); setMenuOpen(false); }}><Search size={18} aria-hidden="true" /><span>جستجو در گوگل</span></button> : null}
+            {isSolved ? <button type="button" onClick={() => { window.open(`https://vajehyab.com/?q=${encodeURIComponent(aiLetters.join(""))}&d=`, "_blank", "noopener,noreferrer"); setMenuOpen(false); }}><Search size={18} aria-hidden="true" /><span>جستجو در واژه‌یاب</span></button> : null}
+            <ClueAiButton clue={slot.clue} isSolved={isSolved} cellValues={aiLetters} answer={aiLetters.join("")} trayLetters={trayTiles.map((t) => t.letter)} onStart={() => setMenuOpen(false)} />
+            {onReportClue ? <button type="button" aria-label="گزارش خطای این پرسش" onClick={() => { setMenuOpen(false); onReportClue(slot); }}><Flag size={18} aria-hidden="true" /><span>گزارش خطای پرسش</span></button> : null}
+            {isDebugMode ? <button type="button" title="ویرایش متن پرسش (دیباگ)" onClick={() => { setMenuOpen(false); openEditModal(); }}><Pencil size={18} aria-hidden="true" /><span>ویرایش پرسش</span></button> : null}
+          </div>
         </div>
       </div>
       {isDebugMode && isEditOpen ? (

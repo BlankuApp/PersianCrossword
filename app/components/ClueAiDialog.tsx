@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Sparkles, X } from "lucide-react";
 import { signInAnonymously } from "firebase/auth";
 import { useAuth } from "../AuthContext";
@@ -76,9 +77,10 @@ interface ClueAiButtonProps {
   readonly cellValues: readonly (string | undefined)[];
   readonly answer: string;
   readonly trayLetters?: readonly string[];
+  readonly onStart?: () => void;
 }
 
-export function ClueAiButton({ clue, isSolved, cellValues, answer, trayLetters = [] }: ClueAiButtonProps) {
+export function ClueAiButton({ clue, isSolved, cellValues, answer, trayLetters = [], onStart }: ClueAiButtonProps) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error" | "quota">("idle");
@@ -146,6 +148,7 @@ export function ClueAiButton({ clue, isSolved, cellValues, answer, trayLetters =
 
   function start(): void {
     setOpen(true);
+    onStart?.();
     const apiKey = loadGeminiKey();
     setKeyInput(apiKey);
     void runRequest(apiKey);
@@ -160,11 +163,12 @@ export function ClueAiButton({ clue, isSolved, cellValues, answer, trayLetters =
 
   return (
     <>
-      <button type="button" onClick={start} className="clue-icon-btn clue-icon-ai" title={label} aria-label={label}>
-        <Sparkles size={20} aria-hidden="true" />
+      <button type="button" onClick={start} title={label} aria-label={label}>
+        <Sparkles size={18} aria-hidden="true" />
+        <span>{label}</span>
       </button>
 
-      {open ? (
+      {open ? createPortal(
         <div className="solution-modal-backdrop" role="dialog" aria-modal="true" aria-label={title} onClick={close}>
           <div className="solution-modal clue-ai-modal" onClick={(e) => e.stopPropagation()}>
             <div className="solution-modal-header">
@@ -211,7 +215,7 @@ export function ClueAiButton({ clue, isSolved, cellValues, answer, trayLetters =
             )}
           </div>
         </div>
-      ) : null}
+      , document.body) : null}
     </>
   );
 }
