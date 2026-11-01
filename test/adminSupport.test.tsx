@@ -23,7 +23,7 @@ import AdminPage from "../app/admin/AdminPage";
 
 const date = (day: number) => Timestamp.fromDate(new Date(`2026-10-${day}T10:00:00Z`));
 const clue: Thread = { id: "report/ب", kind: "clue_error", ownerUid: "player", subject: "پرسش اشتباه", status: "submitted", createdAt: date(24), updatedAt: date(24), lastMessageAt: date(24), userUnread: 0, adminUnread: 2,
-  clue: { puzzleId: "جدول/۱", puzzleTitle: "جدول نمونه", slotId: "R1-2", direction: "across", groupNum: 3, text: "سرنخ ثبت‌شده" } };
+  clue: { puzzleId: "جدول/۱", puzzleTitle: "جدول نمونه", slotId: "R1-2", direction: "across", groupNum: 3, text: "سرنخ ثبت‌شده", answer: "پاسخ ثبت‌شده" } };
 const contact: Thread = { id: "contact", kind: "contact", subject: "کمک", status: "answered", createdAt: date(25), updatedAt: date(25), lastMessageAt: date(25), userUnread: 0, adminUnread: 0 };
 const messages: SupportMessage[] = [{ id: "m1", sender: "user", text: "متن پیام", createdAt: date(24) }];
 
@@ -81,6 +81,7 @@ describe("admin support inbox", () => {
     await openInbox();
     await userEvent.click(await screen.findByRole("button", { name: /پرسش اشتباه/ }));
     expect(await screen.findByText("سرنخ ثبت‌شده")).toBeInTheDocument();
+    expect(screen.getByText("پاسخ: پاسخ ثبت‌شده")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "باز کردن جدول" })).toHaveAttribute("href", "#/puzzle/%D8%AC%D8%AF%D9%88%D9%84%2F%DB%B1?slot=R1-2&from=admin-support");
     expect(api.read).toHaveBeenCalledWith({ threadId: clue.id, participant: "admin", observedAt: { seconds: clue.lastMessageAt.seconds, nanoseconds: clue.lastMessageAt.nanoseconds } });
     const status = screen.getByLabelText("وضعیت گزارش");
@@ -91,6 +92,16 @@ describe("admin support inbox", () => {
     await userEvent.type(screen.getByRole("textbox", { name: "پاسخ شما" }), "پاسخ مدیر");
     await userEvent.click(screen.getByRole("button", { name: "ارسال پاسخ" }));
     await waitFor(() => expect(api.reply).toHaveBeenCalledWith({ threadId: clue.id, participant: "admin", text: "پاسخ مدیر" }));
+  });
+
+  it("still renders legacy clue reports without an answer", async () => {
+    const legacy = { ...clue, clue: { ...clue.clue! } };
+    delete legacy.clue?.answer;
+    api.subscribe.mockImplementation((next) => { next([legacy]); return vi.fn(); });
+    await openInbox();
+    await userEvent.click(await screen.findByRole("button", { name: /پرسش اشتباه/ }));
+    expect(await screen.findByText("سرنخ ثبت‌شده")).toBeInTheDocument();
+    expect(screen.queryByText("پاسخ: پاسخ ثبت‌شده")).not.toBeInTheDocument();
   });
 
   it("opens the support tab from an explicit admin link despite saved tab", async () => {

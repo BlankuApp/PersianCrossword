@@ -18,6 +18,7 @@ export interface ClueSnapshot {
   direction: "across" | "down";
   groupNum: number;
   text: string;
+  answer?: string;
 }
 
 export interface SupportThread {
