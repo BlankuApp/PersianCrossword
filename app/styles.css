@@ -1967,7 +1967,8 @@ select {
 
 .auth-gemini-actions .auth-btn,
 .auth-clear-key {
-  min-height: 40px;
+  box-sizing: border-box;
+  height: 44px;
 }
 
 .auth-clear-key {
@@ -2040,9 +2041,7 @@ select {
     padding-top: 12px;
   }
 
-  .auth-menu-tabs button,
-  .auth-gemini-actions .auth-btn,
-  .auth-clear-key {
+  .auth-menu-tabs button {
     min-height: 44px;
   }
 }
