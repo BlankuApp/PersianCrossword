@@ -13,6 +13,7 @@ interface MockUser {
 
 const authState = vi.hoisted(() => ({
   user: null as null | MockUser,
+  isAdmin: false,
   signOut: vi.fn(),
   syncNow: vi.fn(),
   syncStatus: { kind: "synced", unsent: 0 } as { kind: "synced" | "pending" | "offline" | "error"; unsent: number },
@@ -35,6 +36,7 @@ const nativeAuthMocks = vi.hoisted(() => ({ signInWithGoogle: vi.fn() }));
 vi.mock("../app/AuthContext", () => ({
   useAuth: () => ({
     user: authState.user,
+    isAdmin: authState.isAdmin,
     signOut: authState.signOut,
     syncNow: authState.syncNow,
     syncStatus: authState.syncStatus,
@@ -84,7 +86,9 @@ async function fillEmailForm(user: ReturnType<typeof userEvent.setup>) {
 
 describe("AuthButton", () => {
   beforeEach(() => {
+    localStorage.clear();
     authState.user = null;
+    authState.isAdmin = false;
     authState.syncStatus = { kind: "synced", unsent: 0 };
     platform.native = false;
     vi.clearAllMocks();
@@ -236,6 +240,76 @@ describe("AuthButton", () => {
     await user.click(screen.getByRole("button", { name: "حساب کاربری: کاربر" }));
     expect(screen.getByRole("status")).toHaveTextContent("همهٔ پیشرفت‌ها در فضای ابری ذخیره شده است.");
     expect(screen.queryByRole("button", { name: "همین حالا تلاش کن" })).not.toBeInTheDocument();
+  });
+
+  it("keeps key edits local until save and reopens on the activity tab", async () => {
+    localStorage.setItem("persian-crossword-gemini-key", "saved-key");
+    authState.user = { uid: "u1", isAnonymous: false, displayName: "کاربر", email: null, providerData: [] };
+    const user = userEvent.setup();
+    render(<AuthButton />);
+
+    const accountButton = screen.getByRole("button", { name: "حساب کاربری: کاربر" });
+    await user.click(accountButton);
+    expect(screen.getByRole("tab", { name: "فعالیت من" })).toHaveAttribute("aria-selected", "true");
+
+    await user.click(screen.getByRole("tab", { name: "تنظیمات حساب" }));
+    const keyInput = screen.getByLabelText("کلید هوشواره (Gemini)");
+    await user.clear(keyInput);
+    await user.type(keyInput, "new-key");
+    expect(localStorage.getItem("persian-crossword-gemini-key")).toBe("saved-key");
+
+    await user.click(screen.getByRole("button", { name: "ذخیره کلید" }));
+    expect(localStorage.getItem("persian-crossword-gemini-key")).toBe("new-key");
+    expect(screen.getByText("کلید هوشواره ذخیره شد.")).toBeInTheDocument();
+
+    await user.click(accountButton);
+    await user.click(accountButton);
+    expect(screen.getByRole("tab", { name: "فعالیت من" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("keeps a saved key when clearing is cancelled and removes it after confirmation", async () => {
+    localStorage.setItem("persian-crossword-gemini-key", "saved-key");
+    authState.user = { uid: "u1", isAnonymous: false, displayName: "کاربر", email: null, providerData: [] };
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValueOnce(false).mockReturnValueOnce(true);
+    const user = userEvent.setup();
+    render(<AuthButton />);
+
+    await user.click(screen.getByRole("button", { name: "حساب کاربری: کاربر" }));
+    await user.click(screen.getByRole("tab", { name: "تنظیمات حساب" }));
+    const keyInput = screen.getByLabelText("کلید هوشواره (Gemini)");
+
+    await user.click(screen.getByRole("button", { name: "پاک کردن کلید" }));
+    expect(localStorage.getItem("persian-crossword-gemini-key")).toBe("saved-key");
+    expect(keyInput).toHaveValue("saved-key");
+
+    await user.click(screen.getByRole("button", { name: "پاک کردن کلید" }));
+    expect(localStorage.getItem("persian-crossword-gemini-key")).toBeNull();
+    expect(keyInput).toHaveValue("");
+    expect(screen.queryByRole("button", { name: "پاک کردن کلید" })).not.toBeInTheDocument();
+    expect(screen.getByText("کلید هوشواره پاک شد.")).toBeInTheDocument();
+    confirmSpy.mockRestore();
+  });
+
+  it("switches the accessible account panels with RTL arrow keys and keeps account actions available", async () => {
+    authState.user = { uid: "u1", isAnonymous: false, displayName: "مدیر", email: null, providerData: [] };
+    authState.isAdmin = true;
+    const user = userEvent.setup();
+    render(<AuthButton />);
+
+    await user.click(screen.getByRole("button", { name: "حساب کاربری: مدیر" }));
+    expect(screen.getByRole("tablist", { name: "بخش حساب کاربری" })).toBeInTheDocument();
+    expect(screen.getByRole("tabpanel", { name: "فعالیت من" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "گزارش‌ها و پیام‌های من" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "پنل مدیریت" })).toBeInTheDocument();
+
+    screen.getByRole("tab", { name: "فعالیت من" }).focus();
+    await user.keyboard("{ArrowLeft}");
+    expect(screen.getByRole("tab", { name: "تنظیمات حساب" })).toHaveFocus();
+    expect(screen.getByRole("tabpanel", { name: "تنظیمات حساب" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "خروج از حساب" })).toBeInTheDocument();
+
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("tab", { name: "فعالیت من" })).toHaveFocus();
   });
 
   it("lets an anonymous guest open sign-in when allowGuestUpgrade", async () => {

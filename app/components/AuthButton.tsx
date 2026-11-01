@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import {
   createUserWithEmailAndPassword,
@@ -21,6 +21,7 @@ import { FREE_AI_LIMITS, freeAiUsageText, loadFreeAiUsed } from "../gemini";
 import { isRealUser, subscribeOwnThreads } from "../support/supportApi";
 
 type EmailMode = "signin" | "signup" | "reset";
+type UserMenuTab = "activity" | "settings";
 
 const NO_DIFFICULTY = "بدون سطح";
 const fa = (n: number) => n.toLocaleString("fa-IR");
@@ -74,8 +75,13 @@ function syncStatusText({ kind, unsent }: SyncStatus): string {
 function UserMenu() {
   const { user, isAdmin, signOut, syncVersion, syncStatus, syncNow } = useAuth();
   const [open, setOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<UserMenuTab>("activity");
   const [signingOut, setSigningOut] = useState(false);
-  const [geminiKey, setGeminiKey] = useState(loadGeminiKey);
+  const [savedGeminiKey, setSavedGeminiKey] = useState(loadGeminiKey);
+  const [geminiKey, setGeminiKey] = useState(savedGeminiKey);
+  const [keyNotice, setKeyNotice] = useState<string | null>(null);
+  const activityTabRef = useRef<HTMLButtonElement>(null);
+  const settingsTabRef = useRef<HTMLButtonElement>(null);
   const [aiUsed, setAiUsed] = useState<number | null>(null);
   const [supportUnread, setSupportUnread] = useState<{ uid: string; count: number } | null>(null);
   const supportUid = isRealUser(user) ? user!.uid : null;
@@ -112,6 +118,42 @@ function UserMenu() {
     }
   }
 
+  function handleMenuToggle() {
+    if (!open) {
+      const storedKey = loadGeminiKey();
+      setActiveTab("activity");
+      setSavedGeminiKey(storedKey);
+      setGeminiKey(storedKey);
+      setKeyNotice(null);
+    }
+    setOpen(!open);
+  }
+
+  function handleSaveGeminiKey() {
+    const key = geminiKey.trim();
+    if (!key) return;
+    saveGeminiKey(key);
+    setGeminiKey(key);
+    setSavedGeminiKey(key);
+    setKeyNotice("کلید هوشواره ذخیره شد.");
+  }
+
+  function handleClearGeminiKey() {
+    if (!window.confirm("کلید هوشواره از این دستگاه پاک شود؟")) return;
+    saveGeminiKey("");
+    setGeminiKey("");
+    setSavedGeminiKey("");
+    setKeyNotice("کلید هوشواره پاک شد.");
+  }
+
+  function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    const nextTab = event.key === "ArrowLeft" ? "settings" : event.key === "ArrowRight" ? "activity" : null;
+    if (!nextTab) return;
+    event.preventDefault();
+    setActiveTab(nextTab);
+    (nextTab === "activity" ? activityTabRef : settingsTabRef).current?.focus();
+  }
+
   if (!user) return null;
 
   const name = user.isAnonymous ? "مهمان" : (user.displayName ?? user.email ?? "کاربر");
@@ -133,7 +175,7 @@ function UserMenu() {
       <button
         type="button"
         className="auth-avatar-btn"
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleMenuToggle}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={`حساب کاربری: ${name}`}
@@ -168,80 +210,145 @@ function UserMenu() {
               )}
             </p>
 
-            <table className="auth-stats">
-              <thead>
-                <tr>
-                  <th>سطح</th>
-                  <th>حل‌شده</th>
-                  <th>نیمه‌کاره</th>
-                  <th>حل‌نشده</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.map((s) => (
-                  <tr key={s.label}>
-                    <th scope="row">{s.label}</th>
-                    <td>{s.solved.toLocaleString("fa-IR")}</td>
-                    <td>{s.inProgress.toLocaleString("fa-IR")}</td>
-                    <td>{s.untouched.toLocaleString("fa-IR")}</td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <th scope="row">همه ({totals.total.toLocaleString("fa-IR")})</th>
-                  <td>{totals.solved.toLocaleString("fa-IR")}</td>
-                  <td>{totals.inProgress.toLocaleString("fa-IR")}</td>
-                  <td>{totals.untouched.toLocaleString("fa-IR")}</td>
-                </tr>
-              </tfoot>
-            </table>
+            <div className="auth-menu-tabs" role="tablist" aria-label="بخش حساب کاربری">
+              <button
+                ref={activityTabRef}
+                id="auth-activity-tab"
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "activity"}
+                aria-controls="auth-activity-panel"
+                tabIndex={activeTab === "activity" ? 0 : -1}
+                onClick={() => setActiveTab("activity")}
+                onKeyDown={handleTabKeyDown}
+              >
+                فعالیت من
+              </button>
+              <button
+                ref={settingsTabRef}
+                id="auth-settings-tab"
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "settings"}
+                aria-controls="auth-settings-panel"
+                tabIndex={activeTab === "settings" ? 0 : -1}
+                onClick={() => setActiveTab("settings")}
+                onKeyDown={handleTabKeyDown}
+              >
+                تنظیمات حساب
+              </button>
+            </div>
 
-            <div className="auth-gemini-section">
-              <label htmlFor="auth-gemini-key">کلید هوشواره (Gemini)</label>
-              <input
-                id="auth-gemini-key"
-                type="password"
-                value={geminiKey}
-                onChange={(e) => {
-                  setGeminiKey(e.target.value);
-                  saveGeminiKey(e.target.value);
-                }}
-                placeholder="کلید API خود را این‌جا وارد کنید"
-                dir="ltr"
-              />
-              <p className="auth-gemini-hint">
-                هوشواره روزانه تا {fa(user.isAnonymous ? FREE_AI_LIMITS.guest : FREE_AI_LIMITS.account)} پرسش رایگان
-                پاسخ می‌دهد. برای استفادهٔ بیشتر می‌توانید یک کلید رایگان از{" "}
-                <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">
-                  Google AI Studio
-                </a>{" "}
-                بسازید و این‌جا وارد کنید (اختیاری). این کلید فقط در همین مرورگر ذخیره می‌شود و به هیچ سروری ارسال
-                نمی‌شود.
-              </p>
-              {aiUsed !== null ? <p className="auth-gemini-hint">{freeAiUsageText(aiUsed, user.isAnonymous)}</p> : null}
+            <div
+              id="auth-activity-panel"
+              className="auth-menu-panel"
+              role="tabpanel"
+              aria-labelledby="auth-activity-tab"
+              hidden={activeTab !== "activity"}
+            >
+              <div className="auth-stat-summary" aria-label="خلاصهٔ فعالیت">
+                <div><strong>{fa(totals.solved)}</strong><span>حل‌شده</span></div>
+                <div><strong>{fa(totals.inProgress)}</strong><span>نیمه‌کاره</span></div>
+                <div><strong>{fa(totals.untouched)}</strong><span>حل‌نشده</span></div>
+              </div>
+
+              <table className="auth-stats">
+                <thead>
+                  <tr>
+                    <th>سطح</th>
+                    <th>حل‌شده</th>
+                    <th>نیمه‌کاره</th>
+                    <th>حل‌نشده</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.map((s) => (
+                    <tr key={s.label}>
+                      <th scope="row">{s.label}</th>
+                      <td>{fa(s.solved)}</td>
+                      <td>{fa(s.inProgress)}</td>
+                      <td>{fa(s.untouched)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <th scope="row">همه ({fa(totals.total)})</th>
+                    <td>{fa(totals.solved)}</td>
+                    <td>{fa(totals.inProgress)}</td>
+                    <td>{fa(totals.untouched)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+
               {user.isAnonymous ? (
-                <p className="auth-gemini-hint">
+                <p className="auth-account-upsell">
                   ساخت حساب = {fa(FREE_AI_LIMITS.account)} پرسش در روز{" "}
                   <AuthButton allowGuestUpgrade initialMode="signup" label="ساخت حساب" />
                 </p>
               ) : null}
+
+              <div className="auth-menu-links">
+                {isRealUser(user) ? <a className="auth-menu-link" href="#/support" onClick={() => setOpen(false)}>
+                  <span>گزارش‌ها و پیام‌های من</span>{unread > 0 ? <span className="auth-menu-count">{fa(unread)}</span> : null}
+                </a> : null}
+                {isAdmin ? (
+                  <a className="auth-menu-link" href="#/admin" onClick={() => setOpen(false)}>
+                    <ShieldCheck size={18} strokeWidth={2} aria-hidden="true" />
+                    <span>پنل مدیریت</span>
+                  </a>
+                ) : null}
+              </div>
             </div>
 
-            {isRealUser(user) ? <a className="auth-btn auth-btn-block" href="#/support" onClick={() => setOpen(false)}>
-              گزارش‌ها و پیام‌های من{unread > 0 ? ` (${fa(unread)})` : ""}
-            </a> : null}
-
-            {isAdmin ? (
-              <a className="auth-btn auth-btn-block auth-admin-link" href="#/admin" onClick={() => setOpen(false)}>
-                <ShieldCheck size={16} strokeWidth={2} aria-hidden="true" />
-                پنل مدیریت
-              </a>
-            ) : null}
+            <div
+              id="auth-settings-panel"
+              className="auth-menu-panel"
+              role="tabpanel"
+              aria-labelledby="auth-settings-tab"
+              hidden={activeTab !== "settings"}
+            >
+              <div className="auth-gemini-section">
+                <label htmlFor="auth-gemini-key">کلید هوشواره (Gemini)</label>
+                <input
+                  id="auth-gemini-key"
+                  type="password"
+                  value={geminiKey}
+                  onChange={(event) => {
+                    setGeminiKey(event.target.value);
+                    setKeyNotice(null);
+                  }}
+                  placeholder="کلید API خود را این‌جا وارد کنید"
+                  dir="ltr"
+                />
+                <div className="auth-gemini-actions">
+                  <button
+                    type="button"
+                    className="auth-btn auth-primary-btn"
+                    onClick={handleSaveGeminiKey}
+                    disabled={!geminiKey.trim() || geminiKey.trim() === savedGeminiKey}
+                  >
+                    ذخیره کلید
+                  </button>
+                  {savedGeminiKey ? (
+                    <button type="button" className="auth-clear-key" onClick={handleClearGeminiKey}>
+                      پاک کردن کلید
+                    </button>
+                  ) : null}
+                </div>
+                {keyNotice ? <p className="auth-key-notice" role="status">{keyNotice}</p> : null}
+                {aiUsed !== null ? <p className="auth-gemini-usage">{freeAiUsageText(aiUsed, user.isAnonymous)}</p> : null}
+                <p className="auth-gemini-hint">
+                  برای استفادهٔ بیشتر از هوشواره، کلید رایگان خود را از{" "}
+                  <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">Google AI Studio</a>{" "}
+                  وارد کنید. کلید فقط در همین مرورگر ذخیره می‌شود.
+                </p>
+              </div>
+            </div>
 
             <button
               type="button"
-              className="auth-btn auth-btn-block auth-signout-btn"
+              className="auth-btn auth-signout-btn"
               onClick={handleSignOut}
               disabled={signingOut}
             >
