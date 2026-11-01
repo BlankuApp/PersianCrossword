@@ -730,6 +730,19 @@ select {
   width: min(90vw, 440px);
 }
 
+.clue-report-modal .clue-report-snapshot {
+  padding: 10px 12px;
+  border: 1px solid var(--brand-border);
+  border-radius: 8px;
+}
+
+.clue-report-context {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
 .clue-report-snapshot {
   display: grid;
   gap: 4px;
